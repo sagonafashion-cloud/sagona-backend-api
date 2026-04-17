@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Your Cart – SAGONA Luxury Kids Wear</title>
+
+    <!-- SEO + Mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Review your shopping cart at SAGONA. Luxury kids wear with exclusive offers.">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="nc_assets/css/style.css">
+</head>
+
+<body data-page="cart">
+
+    <!-- ================= HEADER ================= -->
+    <header class="lux-header">
+        <h1 class="brand">SAGONA</h1>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="wishlist.html">Wishlist</a>
+        </nav>
+    </header>
+
+    <!-- ================= CART PAGE ================= -->
+    <main class="cart-page">
+
+        <h2>Your Cart</h2>
+
+        <!-- Cart Items -->
+        <div id="cart-items" class="cart-items"></div>
+
+        <!-- Empty Cart Message -->
+        <p id="empty-cart" class="empty-cart" style="display:none;">
+            Your cart is currently empty.
+        </p>
+
+        <!-- Loyalty Info -->
+        <p id="loyaltyPoints" class="loyalty-info"></p>
+
+        <!-- Cart Summary -->
+        <div class="cart-summary">
+            <p class="total-line">
+                <strong>Total:</strong>
+                ₹<span id="cart-total">0</span>
+            </p>
+
+            <button id="checkoutBtn" class="lux-btn" disabled>
+                Proceed to Checkout
+            </button>
+        </div>
+
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+        <a href="returns.html">Returns & Exchange</a>
+    </footer>
+
+    <!-- ================= SCRIPTS ================= -->
+
+    <!-- App bootstrap (REQUIRED) -->
+    <script src="nc_assets/js/app.js"></script>
+
+    <!-- Main site logic -->
+    <script src="nc_assets/js/main.js"></script>
+
+    <!-- Page-specific trigger -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const checkoutBtn = document.getElementById("checkoutBtn");
+
+            if (typeof renderCart === "function") {
+                renderCart();
+            }
+
+            if (checkoutBtn) {
+                checkoutBtn.addEventListener("click", () => {
+                    window.location.href = "checkout.html";
+                });
+            }
+        });
+    </script>
+
+</body>
+
+</html>

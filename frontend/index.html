@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Primary SEO -->
+    <title>SAGONA Luxury Kids Wear | Premium Designer Clothing for Kids</title>
+    <meta name="description"
+        content="Shop luxury kids wear online at SAGONA. Premium dresses, outfits and accessories for stylish kids.">
+    <meta name="keywords" content="luxury kids wear, designer kids dresses, premium kids clothing, sagona">
+    <meta name="author" content="SAGONA">
+
+    <!-- Mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="SAGONA Luxury Kids Wear">
+    <meta property="og:description" content="Premium designer clothing for kids. Shop luxury fashion at SAGONA.">
+    <meta property="og:image" content="https://sagona.in/nc_assets/img/logo.png">
+    <meta property="og:url" content="https://sagona.in">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Favicon -->
+    <link rel="icon" href="/nc_assets/img/favicon.png" type="image/png">
+
+    <!-- Luxury Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="nc_assets/css/style.css">
+    <link rel="preload" href="nc_assets/css/style.css" as="style">
+
+</head>
+
+<body>
+
+    <!-- ================= HEADER ================= -->
+    <header class="lux-header">
+        <div class="logo">
+            <a href="index.html" aria-label="Sagona Home">SAGONA</a>
+        </div>
+        <nav aria-label="Main navigation">
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="cart.html">Cart</a>
+            <a href="wishlist.html">Wishlist</a>
+        </nav>
+    </header>
+
+    <!-- ================= HERO ================= -->
+    <section class="hero fade-in">
+        <div class="hero-content">
+            <h1>Luxury Kids Wear, Redefined</h1>
+            <p>Exclusive designer collections crafted for bold little icons.</p>
+
+            <a href="shop.html" class="btn-gold">Shop Collection</a>
+
+            <!-- Keeping your test order button -->
+            <button id="orderBtn" class="lux-btn">
+                Place Test Order
+            </button>
+        </div>
+    </section>
+
+    <!-- ================= FEATURED PRODUCTS ================= -->
+    <section class="featured fade-in">
+        <h2>Featured Collection</h2>
+
+        <div class="product-grid" id="productGrid"></div>
+
+        <div class="product-card fade-in">
+            <img src="https://via.placeholder.com/300x400" alt="Royal Embroidered Dress">
+            <h3>Royal Embroidered Dress</h3>
+            <p>₹6,999</p>
+            <button>Add to Cart</button>
+        </div>
+
+        <div class="product-card">
+            <img src="https://via.placeholder.com/300x400" alt="Signature Gold Jacket">
+            <h3>Signature Gold Jacket</h3>
+            <p>₹8,499</p>
+            <button>Add to Cart</button>
+        </div>
+
+        <div class="product-card">
+            <img src="https://via.placeholder.com/300x400" alt="Velvet Classic Suit">
+            <h3>Velvet Classic Suit</h3>
+            <p>₹9,999</p>
+            <button>Add to Cart</button>
+        </div>
+
+        </div>
+    </section>
+
+    <!-- Repeat Orders injected by JS -->
+    <section id="repeatOrdersWrapper"></section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+        <nav aria-label="Footer navigation">
+            <a href="returns.html">Returns & Exchange</a>
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="terms.html">Terms & Conditions</a>
+        </nav>
+        <p>&copy; <span id="year"></span> SAGONA. All rights reserved.</p>
+    </footer>
+
+    <!-- ================= SCRIPTS ================= -->
+    <script src="nc_assets/js/main.js" defer></script>
+
+    <script>
+        document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+
+</body>
+
+</html>

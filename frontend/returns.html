@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <!-- SEO -->
+    <title>Returns & Exchange – SAGONA Luxury Kids Wear</title>
+    <meta name="description"
+        content="Request a return or exchange for your SAGONA luxury kids wear order. Easy returns within 7 days.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="nc_assets/css/style.css">
+
+    <!-- Favicon -->
+    <link rel="icon" href="nc_assets/img/favicon.png" type="image/png">
+</head>
+
+<body data-page="returns">
+
+    <!-- ================= HEADER ================= -->
+    <header class="lux-header">
+        <h1 class="brand">SAGONA</h1>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="cart.html">Cart</a>
+            <a href="wishlist.html">Wishlist</a>
+        </nav>
+    </header>
+
+    <!-- ================= RETURNS ================= -->
+    <main class="returns-page">
+
+        <h2>Returns & Exchange</h2>
+
+        <p class="returns-note">
+            We accept returns or exchanges within <strong>7 days</strong> of delivery,
+            provided the product is unused and in original condition.
+        </p>
+
+        <div class="returns-form">
+
+            <label for="orderId">
+                Order ID
+                <input type="text" id="orderId" placeholder="Enter your Order ID">
+            </label>
+
+            <label for="reason">
+                Reason for Return / Exchange
+                <select id="reason">
+                    <option value="Size Issue">Size issue</option>
+                    <option value="Defective Item">Defective item</option>
+                    <option value="Wrong Product">Wrong product received</option>
+                    <option value="Other">Other</option>
+                </select>
+            </label>
+
+            <button id="submitReturn" class="lux-btn">
+                Submit Request
+            </button>
+
+        </div>
+
+        <!-- Info -->
+        <div class="returns-info">
+            <p>✔ Our team will contact you within 24–48 hours</p>
+            <p>✔ Refunds processed after quality check</p>
+            <p>✔ Exchange subject to stock availability</p>
+        </div>
+
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+        <a href="returns.html">Returns & Exchange</a>
+    </footer>
+
+    <!-- ================= SCRIPT ================= -->
+    <script src="nc_assets/js/return.js"></script>
+    <script src="nc_assets/js/main.js"></script>
+    <style>
+        /* ================= RETURNS PAGE ================= */
+
+        .returns-page {
+            max-width: 600px;
+            margin: 60px auto;
+            padding: 20px;
+        }
+
+        .returns-note {
+            margin-bottom: 25px;
+            color: #555;
+        }
+
+        .returns-form label {
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .returns-form input,
+        .returns-form select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 6px;
+        }
+
+        .returns-info {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #444;
+        }
+    </style>

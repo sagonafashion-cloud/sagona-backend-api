@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://sagona.in/sitemap.xml

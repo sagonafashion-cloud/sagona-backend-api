@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <!-- SEO -->
+    <title>Your Wishlist | SAGONA Luxury Kids Wear</title>
+    <meta name="description" content="View and manage your wishlist at Sagona Luxury Kids Wear.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="nc_assets/css/style.css">
+</head>
+
+<body>
+
+    <!-- ================= HEADER ================= -->
+    <header class="lux-header">
+        <h1 class="brand">SAGONA</h1>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="cart.html">Cart</a>
+            <a href="wishlist.html" class="active">Wishlist</a>
+        </nav>
+    </header>
+
+    <!-- ================= WISHLIST ================= -->
+    <main class="wishlist-page">
+
+        <h2 class="page-title">Your Wishlist</h2>
+
+        <!-- Empty message -->
+        <p id="emptyWishlist" style="display:none;">
+            Your wishlist is empty.
+        </p>
+
+        <!-- Wishlist items injected by JS -->
+        <div id="wishlistItems" class="wishlist-items"></div>
+
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+        <a href="returns.html">Returns & Exchange</a>
+        <a href="shop.html">Continue Shopping</a>
+    </footer>
+
+    <!-- ================= SCRIPT ================= -->
+    <script src="nc_assets/js/main.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof loadWishlist === "function") {
+                loadWishlist();
+            }
+        });
+    </script>
+
+</body>
+
+</html>
