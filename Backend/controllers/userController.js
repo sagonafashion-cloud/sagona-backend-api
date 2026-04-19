@@ -2,6 +2,9 @@ import User from "../Models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+/* =========================
+   REGISTER
+========================= */
 export const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -13,19 +16,25 @@ export const registerUser = async (req, res) => {
 
         const hashed = await bcrypt.hash(password, 10);
 
-        await User.create({
+        const user = await User.create({
             name,
             email,
-            password: hashed
+            password: hashed,
+            role: "user" // ✅ ensure role always exists
         });
 
-        res.json({ message: "Registered successfully" });
+        res.json({
+            message: "Registered successfully"
+        });
 
     } catch (error) {
         res.status(500).json({ message: "Registration failed" });
     }
 };
 
+/* =========================
+   LOGIN
+========================= */
 export const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -44,13 +53,15 @@ export const loginUser = async (req, res) => {
 
         const token = jwt.sign(
             { id: user._id, role: user.role },
-            "sagonaSecret",
+            "sagonaSecret", // ⚠️ must match middleware
             { expiresIn: "7d" }
         );
 
         res.json({
             token,
-            name: user.name
+            name: user.name,
+            id: user._id,        // ✅ CRITICAL FIX
+            role: user.role      // ✅ useful for frontend/admin
         });
 
     } catch (error) {
