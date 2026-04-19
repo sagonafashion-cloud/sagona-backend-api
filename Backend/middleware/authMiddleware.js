@@ -1,20 +1,38 @@
 import jwt from "jsonwebtoken";
+import User from "../Models/User.js";
 
-export const protect = (req, res, next) => {
-    const token = req.headers.authorization;
-
-    if (!token) return res.status(401).json({ message: "No token" });
-
+export const protect = async (req, res, next) => {
     try {
-        const decoded = jwt.verify(token, "sagonaSecret");
-        req.user = decoded;
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader) {
+            return res.status(401).json({ message: "No token" });
+        }
+
+        const token = authHeader.split(" ")[1];
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const user = await User.findById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ message: "User not found" });
+        }
+
+        req.user = user;
+
         next();
-    } catch {
-        res.status(401).json({ message: "Invalid token" });
+
+    } catch (err) {
+        console.log("JWT ERROR:", err.message); // 🔥 IMPORTANT LOG
+        return res.status(401).json({ message: "Invalid token" });
     }
 };
 
 export const isAdmin = (req, res, next) => {
-    if (req.user?.role === "admin") next();
-    else res.status(403).json({ message: "Admin only" });
+    if (req.user?.role === "admin") {
+        next();
+    } else {
+        res.status(403).json({ message: "Admin only" });
+    }
 };
