@@ -4,9 +4,9 @@ const API = "https://sagona-backend-api.onrender.com/api";
    REGISTER
 ========================= */
 async function register() {
-    const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
 
     try {
         const res = await fetch(`${API}/auth/register`, {
@@ -20,54 +20,46 @@ async function register() {
         const data = await res.json();
 
         if (res.ok) {
-            alert("Registered successfully");
+            document.getElementById("status").innerText = "Registered successfully";
             window.location.href = "login.html";
         } else {
-            alert(data.message);
+            document.getElementById("status").innerText = data.message;
         }
+
     } catch (err) {
-        alert("Registration failed");
-        console.error(err);
+        document.getElementById("status").innerText = "Registration failed";
     }
 }
 
 /* =========================
-   LOGIN
+   LOGIN (CRITICAL FIX)
 ========================= */
 async function login() {
+    console.log("LOGIN CLICKED");
+
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
-    try {
-        const res = await fetch(`${API}/auth/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ email, password })
-        });
+    const res = await fetch("https://sagona-backend-api.onrender.com/api/auth/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password })
+    });
 
-        const data = await res.json();
+    const data = await res.json();
 
-        if (res.ok) {
-            // ✅ Store token
-            localStorage.setItem("token", data.token);
+    console.log("LOGIN RESPONSE:", data);
 
-            // Optional user info
-            localStorage.setItem("user", JSON.stringify({
-                name: data.name,
-                id: data.id
-            }));
+    if (res.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data));
 
-            alert("Login successful");
+        alert("Login success");
 
-            window.location.href = "admin.html";
-        } else {
-            alert(data.message);
-        }
-
-    } catch (err) {
-        alert("Login failed");
-        console.error(err);
+        window.location.href = "admin.html";
+    } else {
+        alert(data.message);
     }
 }
