@@ -3,89 +3,35 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Checkout – SAGONA Luxury Kids Wear</title>
-
-    <!-- SEO + Mobile -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Secure checkout at SAGONA. Luxury kids wear with exclusive rewards.">
-
-    <!-- Styles -->
+    <title>Checkout – SAGONA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="nc_assets/css/style.css">
 </head>
 
-<body data-page="checkout">
+<body>
 
-    <!-- ================= HEADER ================= -->
     <header class="lux-header">
-        <h1 class="brand">SAGONA</h1>
+        <h1>SAGONA Checkout</h1>
     </header>
 
-    <!-- ================= CHECKOUT ================= -->
-    <main class="checkout-page">
+    <main style="max-width:600px;margin:50px auto;">
 
-        <h2>Checkout</h2>
+        <h2>Delivery Details</h2>
 
-        <form id="checkoutForm" class="checkout-form" autocomplete="on">
+        <input id="parentName" placeholder="Full Name" style="width:100%;padding:10px;margin-bottom:10px;">
+        <input id="address" placeholder="Address" style="width:100%;padding:10px;margin-bottom:10px;">
 
-            <!-- Parent Name -->
-            <label>
-                Parent Name
-                <input type="text" id="parentName" placeholder="Enter parent name" required>
-            </label>
+        <select id="paymentMethod" style="width:100%;padding:10px;margin-bottom:20px;">
+            <option value="COD">Cash on Delivery</option>
+            <option value="ONLINE">Online Payment</option>
+        </select>
 
-            <!-- Child Birthday -->
-            <label>
-                Child’s Birthday
-                <input type="date" id="childBirthday">
-                <small class="hint">
-                    🎂 Birthday discount applies only for online payments
-                </small>
-            </label>
-
-            <!-- Address -->
-            <label>
-                Delivery Address
-                <textarea id="address" placeholder="Full delivery address" required></textarea>
-            </label>
-
-            <!-- Payment -->
-            <label>
-                Payment Method
-                <select id="paymentMethod" required>
-                    <option value="COD">Cash on Delivery</option>
-                    <option value="ONLINE">Online Payment</option>
-                </select>
-            </label>
-
-            <!-- Info -->
-            <div class="checkout-info">
-                <p>✔ Loyalty points & birthday discount apply only for <strong>online payments</strong></p>
-            </div>
-
-            <!-- Submit -->
-            <button type="button" id="placeOrder" class="lux-btn">
-                Place Order
-            </button>
-
-        </form>
+        <button id="placeOrder">Place Order</button>
 
     </main>
 
-    <!-- ================= FOOTER ================= -->
-    <footer class="footer">
-        <a href="returns.html">Returns & Exchange</a>
-    </footer>
-
-    <!-- ================= SCRIPTS ================= -->
-
-    <!-- App bootstrap -->
-    <script src="nc_assets/js/app.js"></script>
-
-    <!-- Main logic -->
-    <script src="nc_assets/js/main.js"></script>
-
-    <!-- Checkout logic -->
     <script src="nc_assets/js/checkout.js"></script>
 
 </body>
+
 </html>

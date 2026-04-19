@@ -1,25 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Admin Panel</title>
+    <meta charset="UTF-8">
+    <title>SAGONA Admin Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="nc_assets/css/style.css">
+
+    <style>
+        body {
+            background: #faf8f3;
+        }
+
+        .admin-container {
+            max-width: 900px;
+            margin: 60px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .admin-title {
+            font-size: 28px;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .admin-form input,
+        .admin-form textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .admin-btn {
+            background: #b2955b;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .product-list {
+            margin-top: 40px;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .delete-btn {
+            background: black;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 
 <body>
 
-<h2>Admin Panel</h2>
+<header class="lux-header">
+    <h1>SAGONA ADMIN</h1>
+</header>
 
-<input id="name" placeholder="Product name"><br>
-<input id="price" placeholder="Price"><br>
-<input id="image" placeholder="Image URL"><br>
+<div class="admin-container">
 
-<button onclick="addProduct()">Add Product</button>
+    <div class="admin-title">Add Product</div>
 
-<hr>
+    <div class="admin-form">
+        <input id="name" placeholder="Product Name">
+        <input id="price" type="number" placeholder="Price">
+        <textarea id="description" placeholder="Description"></textarea>
+        <input id="image" placeholder="Image URL">
 
-<h3>Orders</h3>
-<div id="orders"></div>
+        <button class="admin-btn" onclick="addProduct()">Add Product</button>
+        <p id="status"></p>
+    </div>
 
+    <div class="product-list">
+        <h3>All Products</h3>
+        <div id="products"></div>
+    </div>
+
+</div>
+
+<!-- ✅ IMPORTANT: correct JS path -->
 <script src="nc_assets/js/admin.js"></script>
+
+<script>
+    // 🔐 Protect page (must be logged in)
+    const token = localStorage.getItem("token");
+    if (!token) {
+        alert("Please login first");
+        window.location.href = "login.html";
+    }
+
+    // 🚀 Load products on page load
+    window.onload = function () {
+        if (typeof loadProducts === "function") {
+            loadProducts();
+        }
+    };
+</script>
 
 </body>
 </html>

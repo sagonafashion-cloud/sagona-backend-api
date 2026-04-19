@@ -3,86 +3,84 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Your Cart – SAGONA Luxury Kids Wear</title>
-
-    <!-- SEO + Mobile -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Review your shopping cart at SAGONA. Luxury kids wear with exclusive offers.">
-
-    <!-- Styles -->
+    <title>Your Cart – SAGONA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="nc_assets/css/style.css">
 </head>
 
-<body data-page="cart">
+<body>
 
-    <!-- ================= HEADER ================= -->
     <header class="lux-header">
         <h1 class="brand">SAGONA</h1>
         <nav>
             <a href="index.html">Home</a>
             <a href="shop.html">Shop</a>
-            <a href="wishlist.html">Wishlist</a>
         </nav>
     </header>
 
-    <!-- ================= CART PAGE ================= -->
-    <main class="cart-page">
+    <main style="max-width:800px;margin:50px auto;">
 
         <h2>Your Cart</h2>
 
-        <!-- Cart Items -->
-        <div id="cart-items" class="cart-items"></div>
+        <div id="cartItems"></div>
 
-        <!-- Empty Cart Message -->
-        <p id="empty-cart" class="empty-cart" style="display:none;">
-            Your cart is currently empty.
-        </p>
+        <p id="emptyMsg" style="display:none;">Your cart is empty</p>
 
-        <!-- Loyalty Info -->
-        <p id="loyaltyPoints" class="loyalty-info"></p>
+        <h3>Total: ₹<span id="total">0</span></h3>
 
-        <!-- Cart Summary -->
-        <div class="cart-summary">
-            <p class="total-line">
-                <strong>Total:</strong>
-                ₹<span id="cart-total">0</span>
-            </p>
-
-            <button id="checkoutBtn" class="lux-btn" disabled>
-                Proceed to Checkout
-            </button>
-        </div>
+        <a href="checkout.html">
+            <button>Proceed to Checkout</button>
+        </a>
 
     </main>
 
-    <!-- ================= FOOTER ================= -->
-    <footer class="footer">
-        <a href="returns.html">Returns & Exchange</a>
-    </footer>
-
-    <!-- ================= SCRIPTS ================= -->
-
-    <!-- App bootstrap (REQUIRED) -->
-    <script src="nc_assets/js/app.js"></script>
-
-    <!-- Main site logic -->
-    <script src="nc_assets/js/main.js"></script>
-
-    <!-- Page-specific trigger -->
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
+        function loadCart() {
+            let cart = [];
+
+            try {
+                cart = JSON.parse(localStorage.getItem("cart")) || [];
+            } catch {
+                cart = [];
+            }
+
+            const container = document.getElementById("cartItems");
+            const totalEl = document.getElementById("total");
+            const emptyMsg = document.getElementById("emptyMsg");
             const checkoutBtn = document.getElementById("checkoutBtn");
 
-            if (typeof renderCart === "function") {
-                renderCart();
+            if (!cart || cart.length === 0) {
+                emptyMsg.style.display = "block";
+                container.innerHTML = "";
+                totalEl.innerText = "0";
+                if (checkoutBtn) checkoutBtn.disabled = true;
+                return;
             }
 
-            if (checkoutBtn) {
-                checkoutBtn.addEventListener("click", () => {
-                    window.location.href = "checkout.html";
-                });
-            }
-        });
+            emptyMsg.style.display = "none";
+            if (checkoutBtn) checkoutBtn.disabled = false;
+
+            let total = 0;
+
+            container.innerHTML = cart.map(item => {
+                const name = item.name || "Product";
+                const price = Number(item.price) || 0;
+                const qty = item.quantity || 1;
+
+                total += price * qty;
+
+                return `
+            <div style="border-bottom:1px solid #ddd; padding:10px 0;">
+                <h4>${name}</h4>
+                <p>₹${price} x ${qty}</p>
+            </div>
+        `;
+            }).join("");
+
+            totalEl.innerText = total;
+        }
+
+        loadCart();
     </script>
 
 </body>
