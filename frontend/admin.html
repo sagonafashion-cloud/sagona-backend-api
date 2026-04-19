@@ -71,49 +71,54 @@
 
 <body>
 
-<header class="lux-header">
-    <h1>SAGONA ADMIN</h1>
-</header>
+    <header class="lux-header">
+        <h1>SAGONA ADMIN</h1>
+    </header>
 
-<div class="admin-container">
+    <div class="admin-container">
 
-    <div class="admin-title">Add Product</div>
+        <div class="admin-title">Add Product</div>
 
-    <div class="admin-form">
-        <input id="name" placeholder="Product Name">
-        <input id="price" type="number" placeholder="Price">
-        <textarea id="description" placeholder="Description"></textarea>
-        <input id="image" placeholder="Image URL">
+        <div class="admin-form">
+            <input id="name" placeholder="Product Name">
+            <input id="price" type="number" placeholder="Price">
+            <textarea id="description" placeholder="Description"></textarea>
+            <input id="image" placeholder="Image URL">
 
-        <button class="admin-btn" onclick="addProduct()">Add Product</button>
-        <p id="status"></p>
+            <button class="admin-btn" onclick="addProduct()">Add Product</button>
+            <p id="status"></p>
+        </div>
+
+        <div class="product-list">
+            <h3>All Products</h3>
+            <div id="products"></div>
+        </div>
+
     </div>
 
-    <div class="product-list">
-        <h3>All Products</h3>
-        <div id="products"></div>
-    </div>
+    <!-- ✅ IMPORTANT: correct JS path -->
+    <script src="nc_assets/js/admin.js"></script>
 
-</div>
-
-<!-- ✅ IMPORTANT: correct JS path -->
-<script src="nc_assets/js/admin.js"></script>
-
-<script>
-    // 🔐 Protect page (must be logged in)
-    const token = localStorage.getItem("token");
-    if (!token) {
-        alert("Please login first");
-        window.location.href = "login.html";
-    }
-
-    // 🚀 Load products on page load
-    window.onload = function () {
-        if (typeof loadProducts === "function") {
-            loadProducts();
+    <script>
+        // 🔐 Protect page (must be logged in)
+        const token = localStorage.getItem("token");
+        if (!token) {
+            alert("Please login first");
+            window.location.href = "login.html";
         }
-    };
-</script>
+
+        // 🚀 Load products on page load
+        window.onload = function () {
+            if (typeof loadProducts === "function") {
+                loadProducts();
+            }
+        };
+        <div class="product-list">
+            <h3>Orders</h3>
+            <div id="orders"></div>
+        </div>
+    </script>
 
 </body>
+
 </html>

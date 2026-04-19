@@ -1,127 +1,103 @@
-const API_PRODUCTS = "https://sagona-backend-api.onrender.com/api/products";
-const API_ORDERS = "https://sagona-backend-api.onrender.com/api/orders";
+const API = "https://sagona-backend-api.onrender.com/api";
 
-/* =========================
-   AUTH CHECK
-========================= */
-const token = localStorage.getItem("token");
-
-if (!token) {
-    alert("Login required");
-    window.location.href = "login.html";
-}
-
-/* =========================
-   ADD PRODUCT
-========================= */
+// ✅ ADD PRODUCT
 async function addProduct() {
-    const name = document.getElementById("name").value;
-    const price = document.getElementById("price").value;
-    const description = document.getElementById("description").value;
-    const image = document.getElementById("image").value;
+    const token = localStorage.getItem("token");
 
-    try {
-        const res = await fetch(API_PRODUCTS, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify({ name, price, description, image })
-        });
+    if (!token) {
+        alert("Login required");
+        window.location.href = "login.html";
+        return;
+    }
 
-        const data = await res.json();
+    const product = {
+        name: document.getElementById("name").value,
+        price: document.getElementById("price").value,
+        description: document.getElementById("description").value,
+        image: document.getElementById("image").value
+    };
 
-        if (res.ok) {
-            alert("Product added");
-            loadProducts();
-        } else {
-            alert(data.message);
-        }
+    const res = await fetch(`${API}/products`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token
+        },
+        body: JSON.stringify(product)
+    });
 
-    } catch {
-        alert("Error adding product");
+    const data = await res.json();
+
+    if (res.ok) {
+        alert("Product added");
+        loadProducts();
+    } else {
+        alert(data.message);
     }
 }
 
-/* =========================
-   LOAD PRODUCTS
-========================= */
+// ✅ LOAD PRODUCTS
 async function loadProducts() {
-    const res = await fetch(API_PRODUCTS);
+    const res = await fetch(`${API}/products`);
     const products = await res.json();
 
     const container = document.getElementById("products");
+    if (!container) return;
 
-    container.innerHTML = products.map(p => `
-        <div class="product-item">
-            <span>${p.name} - ₹${p.price}</span>
-            <button onclick="deleteProduct('${p._id}')">Delete</button>
-        </div>
-    `).join("");
+    container.innerHTML = "";
+
+    products.forEach(p => {
+        container.innerHTML += `
+            <div class="product-item">
+                <span>${p.name} - ₹${p.price}</span>
+            </div>
+        `;
+    });
 }
 
-/* =========================
-   DELETE PRODUCT
-========================= */
-async function deleteProduct(id) {
-    if (!confirm("Delete product?")) return;
+// ✅ LOAD ORDERS (FIXED)
+async function loadOrders() {
+    const token = localStorage.getItem("token");
 
-    await fetch(`${API_PRODUCTS}/${id}`, {
-        method: "DELETE",
+    if (!token) {
+        console.log("No token found");
+        return;
+    }
+
+    const res = await fetch(`${API}/orders`, {
         headers: {
-            "Authorization": "Bearer " + token
+            Authorization: "Bearer " + token
         }
     });
 
-    loadProducts();
-}
+    const data = await res.json();
 
-/* =========================
-   LOAD ORDERS 🔥
-========================= */
-async function loadOrders() {
-    try {
-        const res = await fetch(API_ORDERS, {
-            headers: {
-                "Authorization": "Bearer " + token
-            }
-        });
+    const container = document.getElementById("orders");
 
-        const orders = await res.json();
-
-        const container = document.getElementById("orders");
-
-        if (!orders.length) {
-            container.innerHTML = "<p>No orders yet</p>";
-            return;
-        }
-
-        container.innerHTML = orders.map(o => `
-            <div style="border:1px solid #ddd; padding:15px; margin-bottom:15px;">
-                
-                <p><strong>Order ID:</strong> ${o._id}</p>
-                <p><strong>Total:</strong> ₹${o.total}</p>
-                <p><strong>Payment:</strong> ${o.paymentMethod}</p>
-                <p><strong>Address:</strong> ${o.address}</p>
-
-                <p><strong>Items:</strong></p>
-                <ul>
-                    ${o.items.map(i => `<li>${i.name} - ₹${i.price}</li>`).join("")}
-                </ul>
-
-            </div>
-        `).join("");
-
-    } catch (err) {
-        console.error(err);
-        document.getElementById("orders").innerHTML =
-            "<p>Error loading orders</p>";
+    if (!container) {
+        console.log("Orders container missing");
+        return;
     }
+
+    container.innerHTML = "";
+
+    if (!res.ok) {
+        container.innerHTML = "Error loading orders";
+        console.log(data);
+        return;
+    }
+
+    data.forEach(order => {
+        container.innerHTML += `
+            <div class="product-item">
+                <span>Order: ₹${order.total}</span>
+            </div>
+        `;
+    });
 }
 
-/* =========================
-   INIT
-========================= */
-loadProducts();
-loadOrders();
+// ✅ INIT
+window.onload = () => {
+    loadProducts();
+    loadOrders();
+};

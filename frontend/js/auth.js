@@ -35,8 +35,6 @@ async function register() {
    LOGIN (CRITICAL FIX)
 ========================= */
 async function login() {
-    console.log("LOGIN CLICKED");
-
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
@@ -50,13 +48,16 @@ async function login() {
 
     const data = await res.json();
 
-    console.log("LOGIN RESPONSE:", data);
-
     if (res.ok) {
+        // ✅ SAVE TOKEN (CRITICAL)
         localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data));
 
-        alert("Login success");
+        localStorage.setItem("user", JSON.stringify({
+            id: data.id,
+            name: data.name
+        }));
+
+        alert("Login successful");
 
         window.location.href = "admin.html";
     } else {
