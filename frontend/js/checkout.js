@@ -37,13 +37,20 @@ async function placeOrder() {
         return sum + item.price * (item.quantity || 1);
     }, 0);
 
-    const orderData = {
+    body: JSON.stringify({
         userId: user.id,
         items: cart,
-        total,
-        paymentMethod,
-        address
-    };
+        total: pricing.total,
+        paymentMethod: formData.paymentMethod,
+        address: formData.address,
+
+        // ✅ NEW CUSTOMER DATA
+        customer: {
+            name: user.name,
+            email: user.email || "N/A",
+            phone: user.phone || "N/A"
+        }
+    })
 
     try {
         const res = await fetch(API, {

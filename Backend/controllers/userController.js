@@ -60,8 +60,8 @@ export const loginUser = async (req, res) => {
         res.json({
             token,
             name: user.name,
-            id: user._id,        // ✅ CRITICAL FIX
-            role: user.role      // ✅ useful for frontend/admin
+            id: user._id,
+            email: user.email
         });
 
     } catch (error) {

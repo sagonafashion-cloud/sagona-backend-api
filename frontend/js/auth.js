@@ -53,8 +53,9 @@ async function login() {
         localStorage.setItem("token", data.token);
 
         localStorage.setItem("user", JSON.stringify({
+            name: data.name,
             id: data.id,
-            name: data.name
+            email: data.email
         }));
 
         alert("Login successful");
