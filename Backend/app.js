@@ -30,6 +30,10 @@ app.get("/", (_req, res) => {
   res.json({ name: "SAGONA API", status: "ok" });
 });
 
+app.get("/api", (_req, res) => {
+  res.json({ name: "SAGONA API", status: "ok" });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);

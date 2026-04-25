@@ -5,6 +5,8 @@
 
 const storedApiBase = window.localStorage.getItem('SAGONA_API_BASE');
 
-const API_BASE = storedApiBase || (window.location.hostname.endsWith('sagona.in') ? `${window.location.protocol}//${window.location.host}/api` : 'http://localhost:5000/api');
+const API_BASE = storedApiBase || (window.location.hostname === 'sagona.in'
+    ? 'https://sagona-backend-api.onrender.com/api'
+    : (window.location.hostname.endsWith('sagona.in') ? `${window.location.protocol}//${window.location.host}/api` : 'http://localhost:5000/api'));
 
 export { API_BASE };
