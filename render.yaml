@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: sagona-backend
+    env: node
+    region: oregon
+    branch: main
+    root: Backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URI
+      - key: JWT_SECRET
+      - key: RAZORPAY_KEY_ID
+      - key: RAZORPAY_KEY_SECRET
+      - key: PORT
+
+  - type: static
+    name: sagona-frontend
+    env: static
+    region: oregon
+    branch: main
+    root: frontend
+    publishPath: .
