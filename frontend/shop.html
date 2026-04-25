@@ -1,109 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAGONA</title>
 
-    <!-- SEO -->
-    <title>Shop Luxury Kids Wear | SAGONA</title>
-    <meta name="description"
-        content="Shop premium luxury kids dresses and outfits at SAGONA. Designer wear crafted for elegance.">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="nc_assets/css/style.css">
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="nc_assets/css/style.css">
+<style>
+body {
+    margin: 0;
+    font-family: "Helvetica Neue", sans-serif;
+    background: #f8f6f2;
+    color: #111;
+}
+
+/* HEADER */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 60px;
+    background: #f8f6f2;
+}
+
+.logo {
+    font-size: 28px;
+    letter-spacing: 4px;
+}
+
+.nav {
+    display: flex;
+    gap: 40px;
+}
+
+.nav a {
+    text-decoration: none;
+    color: #222;
+    font-size: 14px;
+    letter-spacing: 2px;
+}
+
+/* HERO */
+.hero {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    align-items: center;
+}
+
+.hero img {
+    width: 100%;
+    height: 90vh;
+    object-fit: cover;
+}
+
+.hero-text {
+    padding: 60px;
+}
+
+.hero-text h1 {
+    font-size: 60px;
+    font-weight: 300;
+}
+
+.hero-text p {
+    margin-top: 20px;
+    line-height: 1.6;
+}
+
+.hero-btn {
+    margin-top: 30px;
+    padding: 14px 30px;
+    border: none;
+    background: black;
+    color: white;
+    letter-spacing: 2px;
+    cursor: pointer;
+}
+
+/* PRODUCTS */
+.section {
+    padding: 80px 60px;
+}
+
+.section h2 {
+    font-size: 40px;
+    font-weight: 300;
+}
+
+.products {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    margin-top: 40px;
+}
+
+.product {
+    cursor: pointer;
+}
+
+.product img {
+    width: 100%;
+    height: 350px;
+    object-fit: cover;
+}
+
+.product h3 {
+    margin: 10px 0 5px;
+    font-size: 18px;
+}
+
+.product p {
+    color: #555;
+}
+
+/* FOOTER */
+.footer {
+    background: #111;
+    color: #ccc;
+    padding: 60px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.footer h2 {
+    color: white;
+}
+
+.footer-links {
+    display: flex;
+    gap: 80px;
+}
+
+.footer-links div p {
+    margin: 8px 0;
+    cursor: pointer;
+}
+</style>
+
 </head>
 
 <body>
 
-    <!-- ================= HEADER ================= -->
-    <header class="lux-header">
-        <h1 class="brand">SAGONA</h1>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="shop.html" class="active">Shop</a>
-            <a href="cart.html">Cart</a>
-            <a href="wishlist.html">Wishlist</a>
-        </nav>
-    </header>
+<!-- HEADER -->
+<div class="header">
+    <div class="nav">
+        <a href="#">SHOP</a>
+        <a href="#">GIRLS</a>
+        <a href="#">BOYS</a>
+        <a href="#">BABY</a>
+    </div>
 
-    <!-- ================= SHOP ================= -->
-    <main class="shop-page">
+    <div class="logo">SAGONA</div>
 
-        <h2 class="page-title">Luxury Kids Collection</h2>
+    <div>
+        <a href="cart.html">🛍</a>
+    </div>
+</div>
 
-        <!-- ✅ DYNAMIC PRODUCT GRID -->
-        <section class="products" id="productGrid">
-            <p>Loading products...</p>
-        </section>
+<!-- HERO -->
+<div class="hero">
+    <img src="https://images.unsplash.com/photo-1604917018610-2dffebbf6b5d" alt="hero">
 
-    </main>
+    <div class="hero-text">
+        <h1>A slow atelier for the very small.</h1>
+        <p>
+            Tailored by hand in limited runs. Italian wools, French lace, organic cotton.
+        </p>
 
-    <!-- ================= FOOTER ================= -->
-    <footer class="footer">
-        <a href="returns.html">Returns & Exchange</a>
-    </footer>
+        <button class="hero-btn">EXPLORE COLLECTION</button>
+    </div>
+</div>
 
-    <!-- ================= SCRIPT ================= -->
-    <script>
-        const API = "https://sagona-backend-api.onrender.com/api/products";
+<!-- PRODUCTS -->
+<div class="section">
+    <h2>Quiet favourites.</h2>
 
-        async function loadProducts() {
-            try {
-                const res = await fetch(API);
-                const products = await res.json();
+    <div class="products" id="products"></div>
+</div>
 
-                const grid = document.getElementById("productGrid");
+<!-- FOOTER -->
+<div class="footer">
+    <div>
+        <h2>SAGONA</h2>
+        <p>Heirloom-quality kidswear.</p>
+    </div>
 
-                if (!products.length) {
-                    grid.innerHTML = "<p>No products available</p>";
-                    return;
-                }
+    <div class="footer-links">
+        <div>
+            <p>All</p>
+            <p>Girls</p>
+            <p>Boys</p>
+            <p>Baby</p>
+        </div>
 
-                grid.innerHTML = products.map(p => `
-                    <div class="product-card">
-                        <img src="nc_assets/img/product1.jpg">
+        <div>
+            <p>Atelier</p>
+            <p>Care</p>
+            <p>Shipping</p>
+        </div>
+    </div>
+</div>
 
-                        <h3 class="product-title">${p.name}</h3>
-
-                        <p class="price luxury">₹${p.price}</p>
-
-                        <div class="product-actions">
-                            <button onclick="addToCart('${p._id}', '${p.name}', ${p.price})">
-                                Add to Cart
-                            </button>
-
-                            <button onclick="addToWishlist('${p._id}', '${p.name}', ${p.price})">
-                                ♡ Wishlist
-                            </button>
-                        </div>
-                    </div>
-                `).join("");
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById("productGrid").innerHTML =
-                    "<p>Error loading products</p>";
-            }
-        }
-
-        function addToCart(id, name, price) {
-            const cart = JSON.parse(localStorage.getItem("cart")) || [];
-            cart.push({ id, name, price, quantity: 1 });
-            localStorage.setItem("cart", JSON.stringify(cart));
-            alert("Added to cart");
-        }
-
-        function addToWishlist(id, name, price) {
-            const wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
-            wishlist.push({ id, name, price });
-            localStorage.setItem("wishlist", JSON.stringify(wishlist));
-            alert("Added to wishlist");
-        }
-
-        loadProducts();
-    </script>
+<script src="nc_assets/js/shop.js"></script>
 
 </body>
-
 </html>
