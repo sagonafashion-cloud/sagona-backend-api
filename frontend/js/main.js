@@ -54,12 +54,17 @@ const renderFeatured = async () => {
       .join('');
 
     featuredContainer.addEventListener('click', (event) => {
-      const id = event.target.dataset.id;
+      const button = event.target.closest('button');
+      if (!button) return;
+
+      const id = button.dataset.id;
+      if (!id) return;
+
       const product = products.find((p) => p._id === id);
       if (!product) return;
 
-      if (event.target.classList.contains('add')) addToCart(product);
-      if (event.target.classList.contains('wish')) addToWishlist(product);
+      if (button.classList.contains('add')) addToCart(product);
+      if (button.classList.contains('wish')) addToWishlist(product);
     });
   } catch (error) {
     featuredContainer.innerHTML = '<p>Unable to load featured products right now.</p>';

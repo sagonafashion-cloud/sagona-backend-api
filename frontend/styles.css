@@ -80,6 +80,11 @@ a {
   padding: 0.75rem 1rem;
   border-radius: 10px;
   cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
 }
 
 .btn.gold {
@@ -88,10 +93,18 @@ a {
   font-weight: 600;
 }
 
+.btn.gold:hover {
+  background: #d19b56;
+}
+
 .btn.ghost {
   background: transparent;
   border: 1px solid var(--gold);
   color: var(--black);
+}
+
+.btn.ghost:hover {
+  background: rgba(181, 138, 66, 0.08);
 }
 
 .grid {
@@ -180,6 +193,7 @@ a {
 }
 
 @media (max-width: 800px) {
+
   .hero,
   .layout-2 {
     grid-template-columns: 1fr;
