@@ -14,9 +14,10 @@ Environment variables:
 
 ## 2) Frontend (Static Hosting / CDN)
 - Upload `frontend/` as static site.
-- Configure API URL at runtime from browser console/localStorage:
+- If the frontend is hosted on the same domain as the backend, it will use same-origin `/api` automatically.
+- If the frontend is hosted separately, configure the backend URL at runtime:
   - `localStorage.setItem('SAGONA_API_BASE', 'https://<your-backend-domain>/api')`
-  - `localStorage.setItem('SAGONA_RAZORPAY_KEY_ID', '<your_razorpay_key_id>')`
+- The frontend fetches the Razorpay public key from the backend at `/api/payment/key`.
 
 ## 3) Git / VS Code workflow
 - Open repository in VS Code.
