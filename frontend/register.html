@@ -1,36 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Register | SAGONA</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container" style="padding: 4rem 0">
+      <form id="register-form" class="panel" style="max-width: 480px; margin: auto">
+        <h1 class="page-title">Register</h1>
+        <input name="name" class="field" placeholder="Name" required />
+        <input name="email" type="email" class="field" placeholder="Email" required />
+        <input name="password" type="password" class="field" placeholder="Password" required />
+        <input name="birthday" type="date" class="field" />
+        <button class="btn gold" type="submit">Create account</button>
+        <p>Already have an account? <a href="login.html">Login</a></p>
+      </form>
+    </main>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAGONA Register</title>
-
-    <!-- Optional: reuse your main CSS -->
-    <link rel="stylesheet" href="nc_assets/css/style.css">
-</head>
-
-<body>
-
-    <div style="max-width:400px; margin:80px auto; text-align:center;">
-        <h2>Register</h2>
-
-        <input id="name" placeholder="Name" style="width:100%; padding:10px;"><br><br>
-        <input id="email" placeholder="Email" style="width:100%; padding:10px;"><br><br>
-        <input id="password" type="password" placeholder="Password" style="width:100%; padding:10px;"><br><br>
-
-        <button onclick="register()" style="padding:10px 20px;">Register</button>
-
-        <p id="status" style="margin-top:15px; color:#333;"></p>
-
-        <p style="margin-top:10px;">
-            Already have an account? <a href="login.html">Login</a>
-        </p>
-    </div>
-
-    <!-- IMPORTANT: Correct JS path -->
-    <script src="nc_assets/js/auth.js"></script>
-
-</body>
-
+    <script type="module" src="js/auth.js"></script>
+  </body>
 </html>

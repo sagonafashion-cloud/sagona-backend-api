@@ -1,95 +1,18 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Order Confirmed – SAGONA</title>
-
-    <!-- SEO + Mobile -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Your order has been placed successfully at SAGONA Luxury Kids Wear.">
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="nc_assets/css/style.css">
-</head>
-
-<body data-page="order-success">
-
-    <!-- ================= HEADER ================= -->
-    <header class="lux-header">
-        <h1 class="brand">SAGONA</h1>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="shop.html">Shop</a>
-        </nav>
-    </header>
-
-    <!-- ================= SUCCESS ================= -->
-    <main class="order-success-page">
-
-        <h2>🎉 Order Placed Successfully!</h2>
-
-        <p class="success-msg">
-            Thank you for shopping with <strong>SAGONA Luxury Kids Wear</strong>.
-        </p>
-
-        <div class="order-summary">
-
-            <p>
-                <strong>Payment Method:</strong>
-                <span id="paymentMethod">—</span>
-            </p>
-
-            <p>
-                <strong>Birthday Discount:</strong>
-                ₹<span id="discount">0</span>
-            </p>
-
-            <p>
-                <strong>Loyalty Points Earned:</strong>
-                <span id="points">0</span>
-            </p>
-
-        </div>
-
-        <div class="success-actions">
-            <a href="shop.html" class="lux-btn">Continue Shopping</a>
-            <a href="index.html" class="lux-btn outline">Go to Home</a>
-        </div>
-
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Order Success | SAGONA</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container" style="padding: 4rem 0">
+      <div class="panel">
+        <h1 class="page-title">Order Confirmed</h1>
+        <p>Thank you for shopping with SAGONA.</p>
+        <a class="btn gold" href="shop.html">Continue Shopping</a>
+      </div>
     </main>
-
-    <!-- ================= FOOTER ================= -->
-    <footer class="footer">
-        <a href="returns.html">Returns & Exchange</a>
-    </footer>
-
-    <!-- ================= SCRIPTS ================= -->
-
-    <!-- App bootstrap -->
-    <script src="nc_assets/js/app.js"></script>
-
-    <!-- Shared logic -->
-    <script src="nc_assets/js/main.js"></script>
-
-    <!-- Page logic -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-
-            const payment = localStorage.getItem("lastPayment") || "—";
-            const discount = localStorage.getItem("lastDiscount") || 0;
-            const loyaltyPoints = localStorage.getItem("loyaltyPoints") || 0;
-
-            document.getElementById("paymentMethod").textContent = payment;
-            document.getElementById("discount").textContent = discount;
-            document.getElementById("points").textContent = loyaltyPoints;
-
-            /* Cleanup temp values (safe) */
-            localStorage.removeItem("lastPayment");
-            localStorage.removeItem("lastDiscount");
-        });
-    </script>
-
-</body>
-
+  </body>
 </html>

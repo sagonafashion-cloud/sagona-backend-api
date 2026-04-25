@@ -1,28 +1,50 @@
 import Product from "../Models/Product.js";
 
-export const getProducts = async (req, res) => {
-    try {
-        const products = await Product.find();
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ message: "Error fetching products" });
+export const getProducts = async (_req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    return res.json(products);
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to fetch products" });
+  }
+};
+
+export const getProductById = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
     }
+    return res.json(product);
+  } catch (error) {
+    return res.status(400).json({ message: "Invalid product id" });
+  }
 };
 
 export const createProduct = async (req, res) => {
-    try {
-        const product = await Product.create(req.body);
-        res.json(product);
-    } catch {
-        res.status(500).json({ message: "Error creating product" });
+  try {
+    const { name, price, image, description, featured = false } = req.body;
+
+    if (!name || !price || !image || !description) {
+      return res.status(400).json({ message: "name, price, image, description are required" });
     }
+
+    const product = await Product.create({ name, price, image, description, featured });
+    return res.status(201).json(product);
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to create product" });
+  }
 };
 
 export const deleteProduct = async (req, res) => {
-    try {
-        await Product.findByIdAndDelete(req.params.id);
-        res.json({ message: "Product deleted" });
-    } catch {
-        res.status(500).json({ message: "Delete failed" });
+  try {
+    const deleted = await Product.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Product not found" });
     }
+
+    return res.json({ message: "Product deleted" });
+  } catch (error) {
+    return res.status(400).json({ message: "Invalid product id" });
+  }
 };

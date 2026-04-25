@@ -1,31 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login | SAGONA</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container" style="padding: 4rem 0">
+      <form id="login-form" class="panel" style="max-width: 480px; margin: auto">
+        <h1 class="page-title">Login</h1>
+        <input name="email" type="email" class="field" placeholder="Email" required />
+        <input name="password" type="password" class="field" placeholder="Password" required />
+        <button class="btn gold" type="submit">Login</button>
+        <p>No account? <a href="register.html">Register</a></p>
+      </form>
+    </main>
 
-<head>
-    <meta charset="UTF-8">
-    <title>SAGONA Login</title>
-    <link rel="stylesheet" href="nc_assets/css/style.css">
-</head>
-
-<body>
-
-    <header class="lux-header">
-        <h1>SAGONA</h1>
-    </header>
-
-    <section style="max-width:400px; margin:80px auto;">
-        <h2>Login</h2>
-
-        <input id="email" placeholder="Email"><br><br>
-        <input id="password" type="password" placeholder="Password"><br><br>
-
-        <button onclick="login()">Login</button>
-
-        <p id="status"></p>
-    </section>
-
-    <script src="nc_assets/js/auth.js"></script>
-
-</body>
-
+    <script type="module" src="js/auth.js"></script>
+  </body>
 </html>

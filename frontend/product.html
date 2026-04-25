@@ -1,103 +1,25 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Luxury Kids Dress – SAGONA</title>
-
-    <!-- SEO -->
-    <meta name="description"
-        content="Luxury Kids Dress by SAGONA. Premium fabric, elegant design and royal comfort for kids.">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="nc_assets/css/style.css">
-
-    <!-- Favicon -->
-    <link rel="icon" href="nc_assets/img/favicon.png">
-</head>
-
-<body>
-
-    <!-- ================= HEADER ================= -->
-    <header class="lux-header">
-        <h1 class="brand">SAGONA</h1>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="shop.html">Shop</a>
-            <a href="cart.html">Cart</a>
-            <a href="wishlist.html">Wishlist</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Product | SAGONA</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container nav">
+        <a class="brand" href="index.html">SAGONA</a>
+        <nav class="nav-links">
+          <a href="shop.html">Shop</a>
+          <a href="wishlist.html">Wishlist</a>
+          <a href="cart.html">Cart</a>
         </nav>
+      </div>
     </header>
 
-    <!-- ================= PRODUCT ================= -->
-    <main class="product-page">
+    <main class="container" id="product-view" style="padding: 2rem 0"></main>
 
-        <div class="product-wrapper">
-
-            <!-- Product Image -->
-            <div class="product-image">
-                <img src="nc_assets/img/luxury-dress.jpg" alt="Luxury Kids Dress">
-            </div>
-
-            <!-- Product Details -->
-            <div class="product-details">
-
-                <h2 class="product-title">Luxury Kids Dress</h2>
-
-                <p class="product-price luxury">
-                    ₹999
-                </p>
-
-                <p class="product-desc">
-                    Crafted with premium fabric and elegant design,
-                    this luxury kids dress offers unmatched comfort and royal style.
-                    Perfect for parties, celebrations, and special occasions.
-                </p>
-
-                <ul class="product-features">
-                    <li>✔ Premium Fabric</li>
-                    <li>✔ Soft & Skin-Friendly</li>
-                    <li>✔ Elegant Party Wear</li>
-                    <li>✔ Easy Return Available</li>
-                </ul>
-
-                <div class="product-actions">
-                    <button id="addBtn" class="lux-btn">
-                        Add to Cart
-                    </button>
-
-                    <button id="wishlistBtn" class="lux-btn outline">
-                        ♡ Add to Wishlist
-                    </button>
-                </div>
-
-            </div>
-
-        </div>
-
-    </main>
-
-    <!-- ================= FOOTER ================= -->
-    <footer class="footer">
-        <a href="returns.html">Returns & Exchange</a>
-        <a href="shop.html">Back to Shop</a>
-    </footer>
-
-    <!-- ================= SCRIPT ================= -->
-    <script src="nc_assets/js/main.js"></script>
-
-    <!-- FORCE GOLD PRICE (bulletproof fallback) -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const price = document.querySelector(".product-price");
-            if (price) {
-                price.style.color = "#b2955b";
-                price.style.fontWeight = "700";
-            }
-        });
-    </script>
-
-</body>
-
+    <script type="module" src="js/product.js"></script>
+  </body>
 </html>

@@ -1,88 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Your Cart – SAGONA</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="nc_assets/css/style.css">
-</head>
-
-<body>
-
-    <header class="lux-header">
-        <h1 class="brand">SAGONA</h1>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="shop.html">Shop</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cart | SAGONA</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container nav">
+        <a class="brand" href="index.html">SAGONA</a>
+        <nav class="nav-links">
+          <a href="shop.html">Shop</a>
+          <a href="wishlist.html">Wishlist</a>
+          <a href="checkout.html">Checkout</a>
         </nav>
+      </div>
     </header>
 
-    <main style="max-width:800px;margin:50px auto;">
-
-        <h2>Your Cart</h2>
-
-        <div id="cartItems"></div>
-
-        <p id="emptyMsg" style="display:none;">Your cart is empty</p>
-
-        <h3>Total: ₹<span id="total">0</span></h3>
-
-        <a href="checkout.html">
-            <button>Proceed to Checkout</button>
-        </a>
-
+    <main class="container">
+      <h1 class="page-title">Your Cart</h1>
+      <section class="panel">
+        <div id="cart-list"></div>
+        <h3>Total: ₹<span id="cart-total">0</span></h3>
+        <a class="btn gold" href="checkout.html">Proceed to Checkout</a>
+      </section>
     </main>
 
-    <script>
-        function loadCart() {
-            let cart = [];
-
-            try {
-                cart = JSON.parse(localStorage.getItem("cart")) || [];
-            } catch {
-                cart = [];
-            }
-
-            const container = document.getElementById("cartItems");
-            const totalEl = document.getElementById("total");
-            const emptyMsg = document.getElementById("emptyMsg");
-            const checkoutBtn = document.getElementById("checkoutBtn");
-
-            if (!cart || cart.length === 0) {
-                emptyMsg.style.display = "block";
-                container.innerHTML = "";
-                totalEl.innerText = "0";
-                if (checkoutBtn) checkoutBtn.disabled = true;
-                return;
-            }
-
-            emptyMsg.style.display = "none";
-            if (checkoutBtn) checkoutBtn.disabled = false;
-
-            let total = 0;
-
-            container.innerHTML = cart.map(item => {
-                const name = item.name || "Product";
-                const price = Number(item.price) || 0;
-                const qty = item.quantity || 1;
-
-                total += price * qty;
-
-                return `
-            <div style="border-bottom:1px solid #ddd; padding:10px 0;">
-                <h4>${name}</h4>
-                <p>₹${price} x ${qty}</p>
-            </div>
-        `;
-            }).join("");
-
-            totalEl.innerText = total;
-        }
-
-        loadCart();
-    </script>
-
-</body>
-
+    <script type="module" src="js/cart.js"></script>
+  </body>
 </html>

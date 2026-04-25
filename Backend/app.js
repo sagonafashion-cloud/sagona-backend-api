@@ -1,30 +1,32 @@
-const productRoutes = require("./routes/productRoutes");
+import express from "express";
+import cors from "cors";
 
-app.use("/api/products", productRoutes);
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
+import authRoutes from "./routes/authRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("MongoDB Connected"))
-    .catch(err => console.log(err));
-
-app.get("/", (req, res) => {
-    res.send("SAGONA API Running");
+app.get("/", (_req, res) => {
+  res.json({ name: "SAGONA API", status: "ok" });
 });
 
-app.listen(process.env.PORT, () => {
-    console.log("Server running on port", process.env.PORT);
-});
-app.use("/api/products", productRoutes);
-const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
-const orderRoutes = require("./routes/orderRoutes");
+app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
-app.use("/api/products", require("./routes/productRoutes"));
+app.use("/api/payment", paymentRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
+});
+
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(err.status || 500).json({ message: err.message || "Internal server error" });
+});
+
+export default app;

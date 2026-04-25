@@ -1,81 +1,112 @@
-const API = "https://sagona-backend-api.onrender.com/api/orders";
+import { request } from './api.js';
+import { getAuth, getCart, saveCart } from './storage.js';
+import { RAZORPAY_KEY_ID } from './config.js';
 
-document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("placeOrder");
-    if (btn) btn.addEventListener("click", placeOrder);
-});
+const form = document.querySelector('#checkout-form');
+const totalEl = document.querySelector('#checkout-total');
+const discountEl = document.querySelector('#birthday-discount');
+const pointsEl = document.querySelector('#loyalty-points');
+const customerNameEl = document.querySelector('#customerName');
 
-async function placeOrder() {
+const cart = getCart();
+const auth = getAuth();
 
-    // 🔐 LOGIN CHECK
-    const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    if (!token || !user) {
-        alert("Please login first");
-        window.location.href = "login.html";
-        return;
-    }
-
-    const name = document.getElementById("parentName").value.trim();
-    const address = document.getElementById("address").value.trim();
-    const paymentMethod = document.getElementById("paymentMethod").value;
-
-    const cart = JSON.parse(localStorage.getItem("cart")) || [];
-
-    if (!name || !address) {
-        alert("Please fill all details");
-        return;
-    }
-
-    if (!cart.length) {
-        alert("Cart is empty");
-        return;
-    }
-
-    const total = cart.reduce((sum, item) => {
-        return sum + item.price * (item.quantity || 1);
-    }, 0);
-
-    body: JSON.stringify({
-        userId: user.id,
-        items: cart,
-        total: pricing.total,
-        paymentMethod: formData.paymentMethod,
-        address: formData.address,
-
-        // ✅ NEW CUSTOMER DATA
-        customer: {
-            name: user.name,
-            email: user.email || "N/A",
-            phone: user.phone || "N/A"
-        }
-    })
-
-    try {
-        const res = await fetch(API, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify(orderData)
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            localStorage.removeItem("cart");
-
-            alert("Order placed successfully");
-
-            window.location.href = "order-success.html";
-        } else {
-            alert(data.message || "Order failed");
-        }
-
-    } catch (err) {
-        console.error(err);
-        alert("Server error");
-    }
+if (!auth) {
+  location.href = 'login.html';
 }
+
+if (!cart.length) {
+  alert('Your cart is empty. Add products before checkout.');
+  location.href = 'shop.html';
+}
+
+if (customerNameEl && auth?.user?.name) {
+  customerNameEl.value = auth.user.name;
+}
+
+const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const loyaltyPoints = auth?.user?.loyaltyPoints || 0;
+pointsEl.textContent = String(loyaltyPoints);
+
+const discountForBirthday = (birthday) => {
+  if (!birthday) return 0;
+  const date = new Date(birthday);
+  const now = new Date();
+  const isBirthday = date.getDate() === now.getDate() && date.getMonth() === now.getMonth();
+  return isBirthday ? Math.round(subtotal * 0.1) : 0;
+};
+
+const updateSummary = () => {
+  const birthday = document.querySelector('#birthday').value;
+  const discount = discountForBirthday(birthday);
+  discountEl.textContent = String(discount);
+  totalEl.textContent = String(Math.max(subtotal - discount, 0));
+};
+
+document.querySelector('#birthday')?.addEventListener('change', updateSummary);
+updateSummary();
+
+const placeOrder = async (paymentMethod) => {
+  const birthday = document.querySelector('#birthday').value;
+  const birthdayDiscount = discountForBirthday(birthday);
+
+  await request('/orders', {
+    method: 'POST',
+    body: JSON.stringify({
+      items: cart,
+      paymentMethod,
+      address: document.querySelector('#address').value,
+      birthday,
+      birthdayDiscount,
+      customer: {
+        name: auth.user.name,
+        email: auth.user.email,
+        phone: document.querySelector('#phone').value,
+      },
+    }),
+  });
+
+  saveCart([]);
+  location.href = 'order-success.html';
+};
+
+form?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  try {
+    const method = document.querySelector('#paymentMethod').value;
+    if (method === 'COD') {
+      await placeOrder('COD');
+      return;
+    }
+
+    const amount = Number(totalEl.textContent);
+    const razorpayOrder = await request('/payment/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
+
+    if (!window.Razorpay || !RAZORPAY_KEY_ID) {
+      alert('Razorpay not configured. Set SAGONA_RAZORPAY_KEY_ID in localStorage first.');
+      return;
+    }
+
+    const rz = new window.Razorpay({
+      key: RAZORPAY_KEY_ID,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      name: 'SAGONA',
+      order_id: razorpayOrder.id,
+      handler: async () => placeOrder('ONLINE'),
+      prefill: {
+        name: auth.user.name,
+        email: auth.user.email,
+      },
+      theme: { color: '#b58a42' },
+    });
+
+    rz.open();
+  } catch (error) {
+    alert(error.message || 'Checkout failed');
+  }
+});

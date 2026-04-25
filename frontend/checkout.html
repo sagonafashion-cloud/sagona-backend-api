@@ -1,37 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Checkout – SAGONA</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="nc_assets/css/style.css">
-</head>
-
-<body>
-
-    <header class="lux-header">
-        <h1>SAGONA Checkout</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout | SAGONA</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="container nav">
+        <a class="brand" href="index.html">SAGONA</a>
+      </div>
     </header>
 
-    <main style="max-width:600px;margin:50px auto;">
+    <main class="container">
+      <h1 class="page-title">Checkout</h1>
+      <div class="layout-2">
+        <form id="checkout-form" class="panel">
+          <label for="customerName">Name</label>
+          <input id="customerName" class="field" disabled />
 
-        <h2>Delivery Details</h2>
+          <label for="phone">Phone</label>
+          <input id="phone" class="field" required />
 
-        <input id="parentName" placeholder="Full Name" style="width:100%;padding:10px;margin-bottom:10px;">
-        <input id="address" placeholder="Address" style="width:100%;padding:10px;margin-bottom:10px;">
+          <label for="address">Address</label>
+          <textarea id="address" class="field" required></textarea>
 
-        <select id="paymentMethod" style="width:100%;padding:10px;margin-bottom:20px;">
+          <label for="birthday">Birthday (for 10% discount on birthday)</label>
+          <input id="birthday" type="date" class="field" />
+
+          <label for="paymentMethod">Payment method</label>
+          <select id="paymentMethod" class="field">
             <option value="COD">Cash on Delivery</option>
-            <option value="ONLINE">Online Payment</option>
-        </select>
+            <option value="ONLINE">Online payment (Razorpay)</option>
+          </select>
 
-        <button id="placeOrder">Place Order</button>
+          <button class="btn gold" type="submit">Place Order</button>
+        </form>
 
+        <aside class="panel">
+          <p>Loyalty points available: <strong id="loyalty-points">0</strong></p>
+          <p>Birthday discount: ₹<strong id="birthday-discount">0</strong></p>
+          <h3>Order total: ₹<span id="checkout-total">0</span></h3>
+        </aside>
+      </div>
     </main>
 
-    <script src="nc_assets/js/checkout.js"></script>
-
-</body>
-
+    <script type="module" src="js/checkout.js"></script>
+  </body>
 </html>

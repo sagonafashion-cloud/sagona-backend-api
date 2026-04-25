@@ -1,114 +1,28 @@
-/* =========================
-   SAGONA – CART LOGIC
-   Production & Backend Ready
-========================= */
+import { getCart, saveCart } from './storage.js';
 
-document.addEventListener("DOMContentLoaded", () => {
-    const cartItemsDiv = document.getElementById("cartItems");
-    const totalDiv = document.getElementById("total");
-    const loyaltyDiv = document.getElementById("loyaltyPoints");
+const container = document.querySelector('#cart-list');
+const totalEl = document.querySelector('#cart-total');
 
-    if (!cartItemsDiv || !totalDiv) return;
+const render = () => {
+  const cart = getCart();
+  if (!container) return;
+  if (!cart.length) {
+    container.innerHTML = '<p>Your cart is empty.</p>';
+    totalEl.textContent = '0';
+    return;
+  }
 
-    const cart = getCart();
+  container.innerHTML = cart.map((item, idx) => `<div class="table-row"><span>${item.name} x ${item.quantity}</span><span>₹${item.price * item.quantity}</span><button class="btn ghost remove" data-idx="${idx}">Remove</button></div>`).join('');
+  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  totalEl.textContent = String(total);
+};
 
-    if (cart.length === 0) {
-        renderEmptyCart(cartItemsDiv);
-        return;
-    }
-
-    renderCartItems(cart, cartItemsDiv);
-    renderTotals(cart, totalDiv, loyaltyDiv);
+container?.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('remove')) return;
+  const cart = getCart();
+  cart.splice(Number(e.target.dataset.idx), 1);
+  saveCart(cart);
+  render();
 });
 
-/* =========================
-   CART HELPERS
-========================= */
-
-function getCart() {
-    try {
-        return JSON.parse(localStorage.getItem("cart")) || [];
-    } catch {
-        return [];
-    }
-}
-
-function renderEmptyCart(container) {
-    container.innerHTML = "<p>Your cart is currently empty.</p>";
-}
-
-function renderCartItems(cart, container) {
-    container.innerHTML = "";
-
-    cart.forEach((item, index) => {
-        const row = document.createElement("div");
-        row.className = "cart-item";
-
-        row.innerHTML = `
-      <span class="cart-item-name">${item.name}</span>
-      <span class="cart-item-price">₹${item.price}</span>
-      <span class="cart-item-qty">Qty: ${item.quantity || 1}</span>
-      <button class="remove-btn" data-index="${index}">Remove</button>
-    `;
-
-        container.appendChild(row);
-    });
-
-    bindRemoveButtons();
-}
-
-function renderTotals(cart, totalDiv, loyaltyDiv) {
-    const total = cart.reduce((sum, item) => {
-        const qty = item.quantity || 1;
-        return sum + item.price * qty;
-    }, 0);
-
-    totalDiv.textContent = `Total: ₹${total}`;
-
-    if (loyaltyDiv) {
-        const points = calculateLoyaltyPoints(total);
-        loyaltyDiv.textContent =
-            `You will earn ${points} loyalty point(s) after checkout.`;
-    }
-}
-
-/* =========================
-   CART ACTIONS
-========================= */
-
-function bindRemoveButtons() {
-    document.querySelectorAll(".remove-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const index = btn.dataset.index;
-            removeFromCart(index);
-        });
-    });
-}
-
-function removeFromCart(index) {
-    const cart = getCart();
-    cart.splice(index, 1);
-    localStorage.setItem("cart", JSON.stringify(cart));
-    location.reload();
-}
-
-/* =========================
-   LOYALTY (READ ONLY)
-========================= */
-
-function calculateLoyaltyPoints(amount) {
-    return Math.floor(amount / 100); // 1 point per ₹100
-}
-
-/* =========================
-   FUTURE BACKEND HOOKS
-========================= */
-
-// When checkout is complete:
-// - Save order
-// - Add loyalty points
-// - Clear cart
-//
-// function completeOrder(orderData) {
-//   api.post("/orders", orderData);
-// }
+render();

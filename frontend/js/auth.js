@@ -1,67 +1,41 @@
-const API = "https://sagona-backend-api.onrender.com/api";
+import { request } from './api.js';
+import { saveAuth } from './storage.js';
 
-/* =========================
-   REGISTER
-========================= */
-async function register() {
-    const name = document.getElementById("name").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
+const showError = (form, message) => {
+  let errorBox = form.querySelector('.error-message');
+  if (!errorBox) {
+    errorBox = document.createElement('p');
+    errorBox.className = 'error-message';
+    errorBox.style.color = '#af2e2e';
+    form.appendChild(errorBox);
+  }
+  errorBox.textContent = message;
+};
 
-    try {
-        const res = await fetch(`${API}/auth/register`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ name, email, password })
-        });
+document.querySelector('#register-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
 
-        const data = await res.json();
+  try {
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const data = await request('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
+    saveAuth(data);
+    location.href = 'shop.html';
+  } catch (error) {
+    showError(form, error.message);
+  }
+});
 
-        if (res.ok) {
-            document.getElementById("status").innerText = "Registered successfully";
-            window.location.href = "login.html";
-        } else {
-            document.getElementById("status").innerText = data.message;
-        }
+document.querySelector('#login-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
 
-    } catch (err) {
-        document.getElementById("status").innerText = "Registration failed";
-    }
-}
-
-/* =========================
-   LOGIN (CRITICAL FIX)
-========================= */
-async function login() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    const res = await fetch("https://sagona-backend-api.onrender.com/api/auth/login", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-        // ✅ SAVE TOKEN (CRITICAL)
-        localStorage.setItem("token", data.token);
-
-        localStorage.setItem("user", JSON.stringify({
-            name: data.name,
-            id: data.id,
-            email: data.email
-        }));
-
-        alert("Login successful");
-
-        window.location.href = "admin.html";
-    } else {
-        alert(data.message);
-    }
-}
+  try {
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const data = await request('/auth/login', { method: 'POST', body: JSON.stringify(payload) });
+    saveAuth(data);
+    location.href = data.user.role === 'admin' ? 'admin.html' : 'shop.html';
+  } catch (error) {
+    showError(form, error.message);
+  }
+});
