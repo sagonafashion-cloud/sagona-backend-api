@@ -9,8 +9,8 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 const app = express();
 
 // CORS Configuration
-const allowedOrigins = process.env.CORS_ORIGINS 
-  ? process.env.CORS_ORIGINS.split(',') 
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',')
   : ['http://localhost:3000', 'http://localhost:5173', 'https://sagona.in'];
 
 app.use(cors({

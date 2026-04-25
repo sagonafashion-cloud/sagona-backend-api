@@ -1,6 +1,14 @@
-// Production URLs (update these with your actual services)
-const PRODUCTION_API = 'https://sagona-backend.onrender.com/api'; // Replace with your Render backend URL
-const PRODUCTION_RAZORPAY_KEY = 'rzp_live_xxxxx'; // Replace with your actual Razorpay key
+// Frontend API configuration.
+// Set `SAGONA_API_BASE` and `SAGONA_RAZORPAY_KEY_ID` in browser localStorage for production.
+// Example:
+// localStorage.setItem('SAGONA_API_BASE', 'https://your-render-backend.onrender.com/api');
+// localStorage.setItem('SAGONA_RAZORPAY_KEY_ID', 'rzp_live_xxxxx');
 
-export const API_BASE = window.localStorage.getItem('SAGONA_API_BASE') || PRODUCTION_API;
-export const RAZORPAY_KEY_ID = window.localStorage.getItem('SAGONA_RAZORPAY_KEY_ID') || PRODUCTION_RAZORPAY_KEY;
+const storedApiBase = window.localStorage.getItem('SAGONA_API_BASE');
+const storedRazorpayKey = window.localStorage.getItem('SAGONA_RAZORPAY_KEY_ID');
+
+const defaultApiBase = storedApiBase || (window.location.hostname.endsWith('sagona.in') ? `${window.location.protocol}//${window.location.host}/api` : 'http://localhost:5000/api');
+const defaultRazorpayKey = storedRazorpayKey || '';
+
+export const API_BASE = defaultApiBase;
+export const RAZORPAY_KEY_ID = defaultRazorpayKey;
