@@ -28,6 +28,16 @@ export const createRazorpayOrder = async (req, res) => {
 
     return res.json(order);
   } catch (error) {
+    console.error("paymentController.createRazorpayOrder", error);
     return res.status(500).json({ message: "Unable to create payment order" });
   }
+};
+
+export const getRazorpayKey = (_req, res) => {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  if (!keyId) {
+    return res.status(500).json({ message: "Razorpay key is not configured" });
+  }
+
+  return res.json({ keyId });
 };

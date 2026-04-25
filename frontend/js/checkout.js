@@ -1,6 +1,5 @@
 import { request } from './api.js';
 import { getAuth, getCart, saveCart } from './storage.js';
-import { RAZORPAY_KEY_ID } from './config.js';
 
 const form = document.querySelector('#checkout-form');
 const totalEl = document.querySelector('#checkout-total');
@@ -86,13 +85,14 @@ form?.addEventListener('submit', async (event) => {
       body: JSON.stringify({ amount }),
     });
 
-    if (!window.Razorpay || !RAZORPAY_KEY_ID) {
-      alert('Razorpay not configured. Set SAGONA_RAZORPAY_KEY_ID in localStorage first.');
+    const razorpayKey = await request('/payment/key');
+    if (!window.Razorpay || !razorpayKey?.keyId) {
+      alert('Razorpay is not configured. Please verify the backend Razorpay keys.');
       return;
     }
 
     const rz = new window.Razorpay({
-      key: RAZORPAY_KEY_ID,
+      key: razorpayKey.keyId,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
       name: 'SAGONA',
