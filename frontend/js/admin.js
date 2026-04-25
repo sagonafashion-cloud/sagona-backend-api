@@ -16,7 +16,7 @@ async function loadDashboard() {
 
   productsWrap.innerHTML = products.map((p) => `<div class="table-row"><span>${p.name} - ₹${p.price}</span><button class="btn ghost del-product" data-id="${p._id}">Delete</button></div>`).join('');
 
-  ordersWrap.innerHTML = orders.map((o) => `<div class="panel"><strong>${o.customer?.name || 'Guest'}</strong> (${o.customer?.email || 'N/A'})<p>Total: ₹${o.total} | Payment: ${o.paymentMethod}</p><p>Address: ${o.address}</p><p>Status: <span class="badge ${o.status === 'DELIVERED' ? 'delivered':'pending'}">${o.status}</span></p>${o.status !== 'DELIVERED' ? `<button class="btn gold deliver" data-id="${o._id}">Mark DELIVERED</button>` : ''}</div>`).join('');
+  ordersWrap.innerHTML = orders.map((o) => `<div class="panel"><strong>${o.customer?.name || 'Guest'}</strong> (${o.customer?.email || 'N/A'})<p>Total: ₹${o.total} | Payment: ${o.paymentMethod}</p><p>Address: ${o.address}</p><p>Status: <span class="badge ${o.status === 'DELIVERED' ? 'delivered' : 'pending'}">${o.status}</span></p>${o.status !== 'DELIVERED' ? `<button class="btn gold deliver" data-id="${o._id}">Mark DELIVERED</button>` : ''}</div>`).join('');
 }
 
 productForm?.addEventListener('submit', async (e) => {
