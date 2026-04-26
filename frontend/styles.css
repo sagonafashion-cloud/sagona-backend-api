@@ -7,11 +7,12 @@
    VARIABLES
 ========================= */
 :root {
-  --cream: #f7f2e9;
-  --black: #121212;
-  --gold: #b58a42;
-  --muted: #6e665c;
-  --card: #fffdfa;
+  --bg: #faf8f4;
+  --surface: #ffffff;
+  --ink: #111111;
+  --muted: #6d6d6d;
+  --border: #e7e2d8;
+  --accent: #b7904f;
 }
 
 /* =========================
@@ -24,9 +25,19 @@
 body {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
+<<<<<<< ours
+<<<<<<< ours
   background: var(--cream);
   color: var(--black);
   line-height: 1.5;
+=======
+  background: var(--bg);
+  color: var(--ink);
+>>>>>>> theirs
+=======
+  background: var(--bg);
+  color: var(--ink);
+>>>>>>> theirs
 }
 
 /* =========================
@@ -41,10 +52,12 @@ a {
    LAYOUT
 ========================= */
 .container {
-  width: min(1120px, 92vw);
+  width: min(1220px, 94vw);
   margin: 0 auto;
 }
 
+<<<<<<< ours
+<<<<<<< ours
 /* =========================
    HEADER (UPGRADED)
 ========================= */
@@ -52,6 +65,34 @@ a {
   border-bottom: 1px solid #e7dfd2;
   background: rgba(255, 250, 242, 0.85);
   backdrop-filter: blur(8px);
+=======
+.top-strip {
+  background: #111;
+  color: #fff;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-align: center;
+  padding: 0.55rem 1rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+>>>>>>> theirs
+=======
+.top-strip {
+  background: #111;
+  color: #fff;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-align: center;
+  padding: 0.55rem 1rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+>>>>>>> theirs
   position: sticky;
   top: 0;
   z-index: 100;
@@ -61,44 +102,126 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 0;
+}
+
+.utility-nav {
+  padding: 1rem 0 0.75rem;
 }
 
 .brand {
+<<<<<<< ours
+<<<<<<< ours
   font-family: "Playfair Display", serif;
   letter-spacing: 0.3rem;
   font-size: 1.5rem;
+=======
+  letter-spacing: 0.24rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+>>>>>>> theirs
+=======
+  letter-spacing: 0.24rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+>>>>>>> theirs
 }
 
 .nav-links {
   display: flex;
+<<<<<<< ours
+<<<<<<< ours
   gap: 1.2rem;
   flex-wrap: wrap;
   font-size: 0.9rem;
+=======
+  gap: 1.3rem;
+  flex-wrap: wrap;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+>>>>>>> theirs
+=======
+  gap: 1.3rem;
+  flex-wrap: wrap;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+>>>>>>> theirs
 }
 
 .nav-links a:hover {
-  color: var(--gold);
+  color: var(--accent);
+<<<<<<< ours
+=======
+}
+
+.category-nav {
+  display: flex;
+  gap: 1.4rem;
+  padding: 0.65rem 0 0.9rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  overflow-x: auto;
+}
+
+.category-nav a {
+  white-space: nowrap;
+}
+
+.category-nav a:hover {
+  color: var(--accent);
+>>>>>>> theirs
+}
+
+.category-nav {
+  display: flex;
+  gap: 1.4rem;
+  padding: 0.65rem 0 0.9rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  overflow-x: auto;
+}
+
+.category-nav a {
+  white-space: nowrap;
+}
+
+.category-nav a:hover {
+  color: var(--accent);
 }
 
 /* =========================
    HERO
 ========================= */
 .hero {
-  padding: 4rem 0;
+  padding: 3.2rem 0 2.5rem;
   display: grid;
+<<<<<<< ours
+<<<<<<< ours
   grid-template-columns: repeat(2, minmax(0, 1fr));
+=======
+  grid-template-columns: 1.1fr 0.9fr;
+>>>>>>> theirs
+=======
+  grid-template-columns: 1.1fr 0.9fr;
+>>>>>>> theirs
   gap: 2.5rem;
   align-items: center;
 }
 
 .hero img {
   width: 100%;
-  border-radius: 18px;
-  height: 420px;
+  border-radius: 0;
+  height: 520px;
   object-fit: cover;
 }
 
+<<<<<<< ours
+<<<<<<< ours
 .hero h1 {
   font-family: "Playfair Display", serif;
   font-size: 2.6rem;
@@ -113,15 +236,46 @@ a {
 /* =========================
    BUTTONS (UPGRADED)
 ========================= */
+=======
+=======
+>>>>>>> theirs
+.eyebrow {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin: 0 0 0.7rem;
+}
+
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 .btn {
   border: none;
-  background: var(--black);
+  background: var(--ink);
   color: white;
+<<<<<<< ours
+<<<<<<< ours
   padding: 0.8rem 1.2rem;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s ease;
   font-size: 0.9rem;
+=======
+=======
+>>>>>>> theirs
+  padding: 0.72rem 1rem;
+  border-radius: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 }
 
 .btn:hover {
@@ -130,23 +284,31 @@ a {
 }
 
 .btn.gold {
-  background: var(--gold);
-  color: #20180f;
+  background: var(--ink);
+  color: #fff;
   font-weight: 600;
 }
 
 .btn.gold:hover {
-  background: #d19b56;
+  background: #2c2c2c;
 }
 
 .btn.ghost {
-  background: transparent;
-  border: 1px solid var(--gold);
-  color: var(--black);
+  background: #fff;
+  border: 1px solid var(--ink);
+  color: var(--ink);
 }
 
 .btn.ghost:hover {
+<<<<<<< ours
+<<<<<<< ours
   background: rgba(181, 138, 66, 0.1);
+=======
+  background: #f2f2f2;
+>>>>>>> theirs
+=======
+  background: #f2f2f2;
+>>>>>>> theirs
 }
 
 /* =========================
@@ -154,17 +316,37 @@ a {
 ========================= */
 .grid {
   display: grid;
+<<<<<<< ours
+<<<<<<< ours
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
+=======
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.2rem;
+>>>>>>> theirs
+=======
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.2rem;
+>>>>>>> theirs
 }
 
 /* =========================
    CARD (PREMIUM)
 ========================= */
 .card {
+<<<<<<< ours
+<<<<<<< ours
   background: var(--card);
   border: 1px solid #ebdfcc;
   border-radius: 16px;
+=======
+  background: var(--surface);
+  border: 1px solid var(--border);
+>>>>>>> theirs
+=======
+  background: var(--surface);
+  border: 1px solid var(--border);
+>>>>>>> theirs
   overflow: hidden;
   transition: all 0.25s ease;
 }
@@ -176,30 +358,131 @@ a {
 
 .card img {
   width: 100%;
+<<<<<<< ours
+<<<<<<< ours
   height: 260px;
+=======
+  height: 300px;
+>>>>>>> theirs
+=======
+  height: 300px;
+>>>>>>> theirs
   object-fit: cover;
 }
 
 .card-body {
+<<<<<<< ours
+<<<<<<< ours
   padding: 1.1rem;
 }
 
 .card h3 {
+=======
+=======
+>>>>>>> theirs
+  padding: 0.85rem 0.85rem 1rem;
+}
+
+.card-body h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
   font-weight: 500;
 }
 
 .price {
-  color: var(--gold);
-  font-weight: 700;
+  color: var(--ink);
+  font-weight: 600;
+  margin: 0.2rem 0 0.8rem;
+  font-size: 0.9rem;
+<<<<<<< ours
+=======
+}
+
+.card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+>>>>>>> theirs
+}
+
+.card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
 }
 
 /* =========================
    TITLES
 ========================= */
 .page-title {
+<<<<<<< ours
+<<<<<<< ours
   font-family: "Playfair Display", serif;
   font-size: 2.2rem;
   margin: 2.5rem 0 1.2rem;
+=======
+=======
+>>>>>>> theirs
+  font-size: clamp(1.9rem, 3.4vw, 2.8rem);
+  margin: 0 0 0.7rem;
+  line-height: 1.1;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 1rem 0 1rem;
+}
+
+.section-head a {
+  font-size: 0.83rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+<<<<<<< ours
+=======
+}
+
+.shop-intro {
+  padding: 2rem 0 1.5rem;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  padding: 0.42rem 0.72rem;
+  font-size: 0.8rem;
+  background: #fff;
+>>>>>>> theirs
+}
+
+.shop-intro {
+  padding: 2rem 0 1.5rem;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  padding: 0.42rem 0.72rem;
+  font-size: 0.8rem;
+  background: #fff;
+>>>>>>> theirs
 }
 
 /* =========================
@@ -215,10 +498,19 @@ a {
    PANEL
 ========================= */
 .panel {
+<<<<<<< ours
+<<<<<<< ours
   background: var(--card);
   border: 1px solid #ebdfcc;
   border-radius: 16px;
   padding: 1.2rem;
+=======
+=======
+>>>>>>> theirs
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1rem;
+>>>>>>> theirs
 }
 
 /* =========================
@@ -227,9 +519,18 @@ a {
 .field {
   width: 100%;
   padding: 0.75rem;
+<<<<<<< ours
+<<<<<<< ours
   border: 1px solid #d9cfbe;
   border-radius: 10px;
   margin: 0.4rem 0 1rem;
+=======
+=======
+>>>>>>> theirs
+  border: 1px solid #d9d9d9;
+  border-radius: 0;
+  margin: 0.4rem 0 0.8rem;
+>>>>>>> theirs
 }
 
 /* =========================
@@ -267,10 +568,24 @@ a {
 ========================= */
 .footer {
   margin-top: 3rem;
+<<<<<<< ours
+<<<<<<< ours
   padding: 1.6rem 0;
   border-top: 1px solid #e7dfd2;
   color: var(--muted);
   font-size: 0.9rem;
+=======
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+>>>>>>> theirs
+=======
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+>>>>>>> theirs
 }
 
 /* =========================
@@ -287,12 +602,25 @@ a {
     height: 300px;
   }
 
+  .category-nav {
+    gap: 1rem;
+    padding-bottom: 0.8rem;
+  }
+
   .table-row {
     flex-wrap: wrap;
   }
+<<<<<<< ours
+<<<<<<< ours
 
   .nav {
     flex-direction: column;
     gap: 10px;
   }
 }
+=======
+}
+>>>>>>> theirs
+=======
+}
+>>>>>>> theirs

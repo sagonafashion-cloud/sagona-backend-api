@@ -33,8 +33,10 @@ if (grid) {
             <div class="card-body">
               <h3>${p.name}</h3>
               <p class="price">₹${p.price}</p>
-              <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
-              <button class="btn ghost wish" data-id="${p._id}">Wishlist</button>
+              <div class="card-actions">
+                <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
+                <button class="btn ghost wish" data-id="${p._id}">Wishlist</button>
+              </div>
             </div>
           </article>
         `

@@ -50,6 +50,8 @@
 
     <script type="module">
         const moduleCandidates = ["./js/checkout.js", "./frontend/js/checkout.js"];
+<<<<<<< ours
+<<<<<<< ours
         let loaded = false;
         for (const modulePath of moduleCandidates) {
             try {
@@ -63,6 +65,28 @@
         if (!loaded) {
             console.error("Unable to load frontend module for checkout.js");
         }
+=======
+=======
+>>>>>>> theirs
+
+        const loadModule = async () => {
+            for (const modulePath of moduleCandidates) {
+                try {
+                    await import(modulePath);
+                    return;
+                } catch (_error) {
+                    // Try next candidate path.
+                }
+            }
+
+            console.error("Unable to load frontend module for checkout.js");
+        };
+
+        loadModule();
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
     </script>
   </body>
 </html>

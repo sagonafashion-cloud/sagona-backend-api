@@ -58,6 +58,7 @@ async function renderFeatured() {
 
   try {
     const products = await request('/products');
+<<<<<<< ours
 
     const display = products.slice(0, 4);
 
@@ -106,6 +107,45 @@ document.addEventListener("click", async (e) => {
 
   } catch (err) {
     console.error("Action error:", err);
+=======
+    const featured = products.filter((p) => p.featured).slice(0, 4);
+
+    featuredContainer.innerHTML = featured
+      .map(
+        (p) => `
+          <article class="card">
+            <a href="product.html?id=${p._id}">
+              <img src="${p.image}" alt="${p.name}" />
+            </a>
+            <div class="card-body">
+              <h3>${p.name}</h3>
+              <p class="price">₹${p.price}</p>
+              <div class="card-actions">
+                <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
+                <button class="btn ghost wish" data-id="${p._id}">Wishlist</button>
+              </div>
+            </div>
+          </article>
+        `
+      )
+      .join('');
+
+    featuredContainer.addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+
+      const id = button.dataset.id;
+      if (!id) return;
+
+      const product = products.find((p) => p._id === id);
+      if (!product) return;
+
+      if (button.classList.contains('add')) addToCart(product);
+      if (button.classList.contains('wish')) addToWishlist(product);
+    });
+  } catch (error) {
+    featuredContainer.innerHTML = '<p>Unable to load featured products right now.</p>';
+>>>>>>> theirs
   }
 });
 

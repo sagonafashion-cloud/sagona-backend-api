@@ -11,15 +11,24 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <div class="top-strip">NEW SEASON FOR KIDS · FREE SHIPPING ABOVE ₹7,500</div>
     <header class="header">
-      <div class="container nav">
-        <a class="brand" href="index.html">SAGONA</a>
-        <nav class="nav-links">
-          <a href="shop.html">Shop</a>
-          <a href="wishlist.html">Wishlist</a>
-          <a href="cart.html">Cart</a>
-          <a href="checkout.html">Checkout</a>
-          <a href="login.html">Login</a>
+      <div class="container">
+        <div class="nav utility-nav">
+          <a class="brand" href="index.html">SAGONA</a>
+          <nav class="nav-links">
+            <a href="shop.html">New Arrivals</a>
+            <a href="wishlist.html">Wishlist</a>
+            <a href="cart.html">Cart</a>
+            <a href="login.html">Sign In</a>
+          </nav>
+        </div>
+        <nav class="category-nav">
+          <a href="shop.html">Designers</a>
+          <a href="shop.html">Clothing</a>
+          <a href="shop.html">Shoes</a>
+          <a href="shop.html">Accessories</a>
+          <a href="returns.html">Returns</a>
         </nav>
       </div>
     </header>
@@ -27,6 +36,7 @@
     <main class="container">
       <section class="hero">
         <div>
+          <p class="eyebrow">SPRING IN FULL SWING</p>
           <h1 class="page-title">Luxury Kidswear, Crafted for Moments</h1>
           <p>Premium silhouettes, timeless tones, and heritage-level craftsmanship for modern children.</p>
           <a href="shop.html" class="btn gold">Shop Collection</a>
@@ -35,7 +45,10 @@
       </section>
 
       <section>
-        <h2 class="page-title">Featured Collection</h2>
+        <div class="section-head">
+          <h2 class="page-title">Featured Collection</h2>
+          <a href="shop.html">See all</a>
+        </div>
         <div id="featured-products" class="grid"></div>
       </section>
     </main>
@@ -46,6 +59,8 @@
 
     <script type="module">
         const moduleCandidates = ["./js/main.js", "./frontend/js/main.js"];
+<<<<<<< ours
+<<<<<<< ours
         let loaded = false;
         for (const modulePath of moduleCandidates) {
             try {
@@ -59,6 +74,28 @@
         if (!loaded) {
             console.error("Unable to load frontend module for main.js");
         }
+=======
+=======
+>>>>>>> theirs
+
+        const loadModule = async () => {
+            for (const modulePath of moduleCandidates) {
+                try {
+                    await import(modulePath);
+                    return;
+                } catch (_error) {
+                    // Try next candidate path.
+                }
+            }
+
+            console.error("Unable to load frontend module for main.js");
+        };
+
+        loadModule();
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
     </script>
   </body>
 </html>

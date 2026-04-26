@@ -15,20 +15,40 @@
 </head>
 
 <body>
+    <div class="top-strip">CURATED DESIGNER EDIT FOR LITTLE ONES</div>
     <header class="header">
-        <div class="container nav">
-            <a class="brand" href="index.html">SAGONA</a>
-            <nav class="nav-links">
-                <a href="wishlist.html">Wishlist</a>
-                <a href="cart.html">Cart</a>
-                <a href="checkout.html">Checkout</a>
-                <a href="login.html">Login</a>
+        <div class="container">
+            <div class="nav utility-nav">
+                <a class="brand" href="index.html">SAGONA</a>
+                <nav class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="wishlist.html">Wishlist</a>
+                    <a href="cart.html">Cart</a>
+                    <a href="login.html">Sign In</a>
+                </nav>
+            </div>
+            <nav class="category-nav">
+                <a href="#">New Arrivals</a>
+                <a href="#">Designers</a>
+                <a href="#">Clothing</a>
+                <a href="#">Shoes</a>
+                <a href="#">Accessories</a>
             </nav>
         </div>
     </header>
 
     <main class="container">
-        <h1 class="page-title">Shop</h1>
+        <section class="shop-intro">
+            <p class="eyebrow">KIDS</p>
+            <h1 class="page-title">Shop the Latest Arrivals</h1>
+            <p>Season-ready pieces from refined labels, selected for comfort, quality, and timeless styling.</p>
+            <div class="chip-row">
+                <span class="chip">Girls</span>
+                <span class="chip">Boys</span>
+                <span class="chip">Baby</span>
+                <span class="chip">Occasion Wear</span>
+            </div>
+        </section>
         <div id="shop-grid" class="grid"></div>
     </main>
 
@@ -38,6 +58,8 @@
 
     <script type="module">
         const moduleCandidates = ["./js/shop.js", "./frontend/js/shop.js"];
+<<<<<<< ours
+<<<<<<< ours
         let loaded = false;
         for (const modulePath of moduleCandidates) {
             try {
@@ -51,6 +73,28 @@
         if (!loaded) {
             console.error("Unable to load frontend module for shop.js");
         }
+=======
+=======
+>>>>>>> theirs
+
+        const loadModule = async () => {
+            for (const modulePath of moduleCandidates) {
+                try {
+                    await import(modulePath);
+                    return;
+                } catch (_error) {
+                    // Try next candidate path.
+                }
+            }
+
+            console.error("Unable to load frontend module for shop.js");
+        };
+
+        loadModule();
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
     </script>
 </body>
 
