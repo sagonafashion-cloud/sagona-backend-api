@@ -14,7 +14,20 @@ Environment variables:
 
 ## 2) Frontend (Static Hosting / CDN)
 - Upload `frontend/` as static site.
+<<<<<<< ours
+<<<<<<< ours
 - If your host serves the repository root instead of `frontend/`, root-level compatibility files are provided (`styles.css`, `favicon.ico`, and `js/*.js`) that proxy to `frontend/*` assets.
+=======
+=======
+>>>>>>> theirs
+- Standard frontend asset paths are now:
+  - CSS: `styles.css`
+  - JS entry files: `js/*.js`
+- Do not mix `style.css` and `styles.css`; production pages should reference only `styles.css`.
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 - By default, production frontend uses `https://sagona-backend-api.onrender.com/api`.
 - If the frontend is hosted on the same domain as the backend and you proxy `/api`, enable same-origin mode:
   - `localStorage.setItem('SAGONA_USE_SAME_ORIGIN_API', 'true')`

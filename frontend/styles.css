@@ -30,6 +30,9 @@ body {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   background: var(--cream);
   color: var(--black);
   line-height: 1.5;
@@ -51,12 +54,21 @@ body {
 >>>>>>> theirs
 =======
 >>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
   background: var(--bg);
   color: var(--ink);
 }
 
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
@@ -80,6 +92,9 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 /* =========================
    HEADER (UPGRADED)
 ========================= */
@@ -87,6 +102,48 @@ a {
   border-bottom: 1px solid #e7dfd2;
   background: rgba(255, 250, 242, 0.85);
   backdrop-filter: blur(8px);
+=======
+.top-strip {
+  background: #111;
+  color: #fff;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-align: center;
+  padding: 0.55rem 1rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+>>>>>>> theirs
+=======
+.top-strip {
+  background: #111;
+  color: #fff;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-align: center;
+  padding: 0.55rem 1rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+>>>>>>> theirs
+=======
+.top-strip {
+  background: #111;
+  color: #fff;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-align: center;
+  padding: 0.55rem 1rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+>>>>>>> theirs
 =======
 .top-strip {
   background: #111;
@@ -178,9 +235,27 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   font-family: "Playfair Display", serif;
   letter-spacing: 0.3rem;
   font-size: 1.5rem;
+=======
+  letter-spacing: 0.24rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+>>>>>>> theirs
+=======
+  letter-spacing: 0.24rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+>>>>>>> theirs
+=======
+  letter-spacing: 0.24rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+>>>>>>> theirs
 =======
   letter-spacing: 0.24rem;
   font-size: 1.5rem;
@@ -215,6 +290,9 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   gap: 1.2rem;
   flex-wrap: wrap;
   font-size: 0.9rem;
@@ -230,6 +308,8 @@ a {
 >>>>>>> theirs
 =======
 >>>>>>> theirs
+=======
+>>>>>>> theirs
   gap: 1.3rem;
   flex-wrap: wrap;
   font-size: 0.86rem;
@@ -237,6 +317,23 @@ a {
   letter-spacing: 0.07em;
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+=======
+>>>>>>> theirs
+  gap: 1.3rem;
+  flex-wrap: wrap;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
   gap: 1.3rem;
@@ -244,8 +341,6 @@ a {
   font-size: 0.86rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
->>>>>>> theirs
-=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
@@ -257,7 +352,16 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
 =======
@@ -278,17 +382,45 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 =======
 =======
 >>>>>>> theirs
 =======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+}
+
+.category-nav a {
+  white-space: nowrap;
+}
+
+.category-nav a:hover {
+  color: var(--accent);
 >>>>>>> theirs
 }
 
 .category-nav a {
   white-space: nowrap;
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 =======
+=======
+=======
+>>>>>>> theirs
+}
+
+.category-nav a:hover {
+  color: var(--accent);
+<<<<<<< ours
+>>>>>>> theirs
 }
 
 .category-nav a:hover {
@@ -299,6 +431,8 @@ a {
 .category-nav a:hover {
   color: var(--accent);
 <<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 }
 
@@ -343,7 +477,19 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   grid-template-columns: repeat(2, minmax(0, 1fr));
+=======
+  grid-template-columns: 1.1fr 0.9fr;
+>>>>>>> theirs
+=======
+  grid-template-columns: 1.1fr 0.9fr;
+>>>>>>> theirs
+=======
+  grid-template-columns: 1.1fr 0.9fr;
+>>>>>>> theirs
 =======
   grid-template-columns: 1.1fr 0.9fr;
 >>>>>>> theirs
@@ -375,6 +521,9 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 .hero h1 {
   font-family: "Playfair Display", serif;
   font-size: 2.6rem;
@@ -398,6 +547,12 @@ a {
 >>>>>>> theirs
 =======
 >>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 .eyebrow {
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -410,6 +565,15 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
@@ -423,6 +587,9 @@ a {
   border: none;
   background: var(--ink);
   color: white;
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
@@ -442,6 +609,12 @@ a {
 >>>>>>> theirs
 =======
 >>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
   padding: 0.72rem 1rem;
   border-radius: 0;
   cursor: pointer;
@@ -453,6 +626,15 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
@@ -491,7 +673,16 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   background: rgba(181, 138, 66, 0.1);
+=======
+  background: #f2f2f2;
+>>>>>>> theirs
+=======
+  background: #f2f2f2;
+>>>>>>> theirs
 =======
   background: #f2f2f2;
 >>>>>>> theirs
@@ -507,8 +698,18 @@ a {
   display: grid;
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
+=======
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.2rem;
+>>>>>>> theirs
+=======
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.2rem;
+>>>>>>> theirs
 =======
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1.2rem;
@@ -523,6 +724,8 @@ a {
    CARD (PREMIUM)
 ========================= */
 .card {
+<<<<<<< ours
+<<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
   background: var(--card);
@@ -541,6 +744,8 @@ a {
 >>>>>>> theirs
 =======
 >>>>>>> theirs
+=======
+>>>>>>> theirs
   background: #f2f2f2;
 }
 
@@ -555,10 +760,21 @@ a {
   border: 1px solid var(--border);
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
 >>>>>>> theirs
 =======
 >>>>>>> theirs
 =======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+  background: var(--surface);
+  border: 1px solid var(--border);
+>>>>>>> theirs
+=======
+  background: var(--surface);
+  border: 1px solid var(--border);
 >>>>>>> theirs
   overflow: hidden;
   transition: all 0.25s ease;
@@ -576,7 +792,19 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   height: 260px;
+=======
+  height: 300px;
+>>>>>>> theirs
+=======
+  height: 300px;
+>>>>>>> theirs
+=======
+  height: 300px;
+>>>>>>> theirs
 =======
   height: 300px;
 >>>>>>> theirs
@@ -601,11 +829,20 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   padding: 1.1rem;
 }
 
 .card h3 {
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
 =======
@@ -624,6 +861,15 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
@@ -645,7 +891,12 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 =======
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
 }
@@ -655,6 +906,13 @@ a {
   grid-template-columns: 1fr 1fr;
   gap: 0.45rem;
 <<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
@@ -679,10 +937,19 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   font-family: "Playfair Display", serif;
   font-size: 2.2rem;
   margin: 2.5rem 0 1.2rem;
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
 =======
@@ -704,7 +971,16 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
 =======
@@ -715,6 +991,14 @@ a {
   font-size: 0.83rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+=======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 }
 
 .shop-intro {
@@ -726,6 +1010,31 @@ a {
   flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 1rem;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  padding: 0.42rem 0.72rem;
+  font-size: 0.8rem;
+  background: #fff;
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+}
+
+.shop-intro {
+  padding: 2rem 0 1.5rem;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1rem;
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 }
 
 .chip {
@@ -806,11 +1115,20 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   background: var(--card);
   border: 1px solid #ebdfcc;
   border-radius: 16px;
   padding: 1.2rem;
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
 =======
@@ -836,10 +1154,19 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   border: 1px solid #d9cfbe;
   border-radius: 10px;
   margin: 0.4rem 0 1rem;
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
 =======
@@ -894,10 +1221,31 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
   padding: 1.6rem 0;
   border-top: 1px solid #e7dfd2;
   color: var(--muted);
   font-size: 0.9rem;
+=======
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+>>>>>>> theirs
+=======
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+>>>>>>> theirs
+=======
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+>>>>>>> theirs
 =======
   padding: 2rem 0;
   border-top: 1px solid var(--border);
@@ -957,12 +1305,24 @@ a {
 <<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 
   .nav {
     flex-direction: column;
     gap: 10px;
   }
 }
+=======
+}
+>>>>>>> theirs
+=======
+}
+>>>>>>> theirs
+=======
+}
+>>>>>>> theirs
 =======
 }
 >>>>>>> theirs

@@ -53,6 +53,8 @@ function addToWishlist(product) {
   }
 }
 
+<<<<<<< ours
+<<<<<<< ours
 /* =========================
    RENDER PRODUCTS
 ========================= */
@@ -63,6 +65,7 @@ async function renderFeatured() {
 
   try {
     const products = await request('/products');
+<<<<<<< ours
     allProducts = products;
 
     // Prefer featured products, fallback to first 4
@@ -119,6 +122,132 @@ document.addEventListener("click", (e) => {
 
   if (button.classList.contains("wish")) {
     addToWishlist(product);
+=======
+    const featured = products.filter((p) => p.featured).slice(0, 4);
+    const displayProducts = featured.length ? featured : products.slice(0, 4);
+
+    featuredContainer.innerHTML = displayProducts
+      .map(
+        (p) => `
+          <article class="card">
+            <a href="product.html?id=${p._id}">
+              <img src="${p.image}" alt="${p.name}" />
+            </a>
+            <div class="card-body">
+              <h3>${p.name}</h3>
+              <p class="price">₹${p.price}</p>
+              <div class="card-actions">
+                <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
+                <button class="btn ghost wish" data-id="${p._id}">Wishlist</button>
+              </div>
+            </div>
+          </article>
+        `
+      )
+      .join('');
+
+    featuredContainer.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-id]');
+      if (!button) return;
+=======
+  alert('Added to wishlist');
+};
+
+const getDisplayProducts = (products) => {
+  const featured = products.filter((product) => product.featured).slice(0, 4);
+  return featured.length ? featured : products.slice(0, 4);
+};
+
+const renderCards = (products) => products
+  .map(
+    (product) => `
+      <article class="card">
+        <a href="product.html?id=${product._id}">
+          <img src="${product.image}" alt="${product.name}" />
+        </a>
+        <div class="card-body">
+          <h3>${product.name}</h3>
+          <p class="price">₹${product.price}</p>
+          <div class="card-actions">
+            <button class="btn gold add" data-id="${product._id}">Add to Cart</button>
+            <button class="btn ghost wish" data-id="${product._id}">Wishlist</button>
+          </div>
+        </div>
+      </article>
+    `
+  )
+  .join('');
+
+const bindActions = (products) => {
+  featuredContainer?.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-id]');
+    if (!button) return;
+>>>>>>> theirs
+
+    const product = products.find((item) => item._id === button.dataset.id);
+    if (!product) return;
+
+<<<<<<< ours
+      const product = displayProducts.find((p) => p._id === id) || products.find((p) => p._id === id);
+      if (!product) return;
+=======
+=======
+  alert('Added to wishlist');
+};
+
+const getDisplayProducts = (products) => {
+  const featured = products.filter((product) => product.featured).slice(0, 4);
+  return featured.length ? featured : products.slice(0, 4);
+};
+
+const renderCards = (products) => products
+  .map(
+    (product) => `
+      <article class="card">
+        <a href="product.html?id=${product._id}">
+          <img src="${product.image}" alt="${product.name}" />
+        </a>
+        <div class="card-body">
+          <h3>${product.name}</h3>
+          <p class="price">₹${product.price}</p>
+          <div class="card-actions">
+            <button class="btn gold add" data-id="${product._id}">Add to Cart</button>
+            <button class="btn ghost wish" data-id="${product._id}">Wishlist</button>
+          </div>
+        </div>
+      </article>
+    `
+  )
+  .join('');
+
+const bindActions = (products) => {
+  featuredContainer?.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-id]');
+    if (!button) return;
+
+    const product = products.find((item) => item._id === button.dataset.id);
+    if (!product) return;
+
+>>>>>>> theirs
+    if (button.classList.contains('add')) addToCart(product);
+    if (button.classList.contains('wish')) addToWishlist(product);
+  });
+};
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+
+const renderFeatured = async () => {
+  if (!featuredContainer) return;
+  try {
+    const products = await request('/products');
+    const displayProducts = getDisplayProducts(products);
+    featuredContainer.innerHTML = renderCards(displayProducts);
+    bindActions(displayProducts);
+  } catch (error) {
+    featuredContainer.innerHTML = '<p>Unable to load featured products right now.</p>';
+>>>>>>> theirs
   }
 });
 
