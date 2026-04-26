@@ -4,7 +4,7 @@ import { getCart, saveCart, getWishlist, saveWishlist } from './storage.js';
 const featuredContainer = document.querySelector('#featured-products');
 
 /* =========================
-   STATE CACHE (IMPORTANT)
+   STATE CACHE
 ========================= */
 let allProducts = [];
 
@@ -14,7 +14,7 @@ let allProducts = [];
 function addToCart(product) {
   const cart = getCart();
 
-  const existing = cart.find(i => i.id === product._id);
+  const existing = cart.find(item => item.id === product._id);
 
   if (existing) {
     existing.quantity += 1;
@@ -38,7 +38,9 @@ function addToCart(product) {
 function addToWishlist(product) {
   const wishlist = getWishlist();
 
-  if (!wishlist.some(i => i.id === product._id)) {
+  const exists = wishlist.some(item => item.id === product._id);
+
+  if (!exists) {
     wishlist.push({
       id: product._id,
       name: product.name,
@@ -53,56 +55,44 @@ function addToWishlist(product) {
   }
 }
 
-<<<<<<< ours
-<<<<<<< ours
 /* =========================
-   RENDER PRODUCTS
+   GET DISPLAY PRODUCTS
 ========================= */
-async function renderFeatured() {
-  if (!featuredContainer) return;
-
-  featuredContainer.innerHTML = "<p>Loading...</p>";
-
-  try {
-    const products = await request('/products');
-<<<<<<< ours
-    allProducts = products;
-
-    // Prefer featured products, fallback to first 4
-    const featured = products.filter(p => p.featured);
-    const displayProducts = featured.length ? featured.slice(0, 4) : products.slice(0, 4);
-
-    featuredContainer.innerHTML = displayProducts.map(p => `
-      <article class="card">
-        <a href="product.html?id=${p._id}">
-          <img src="${p.image || 'https://picsum.photos/400/500'}" alt="${p.name}">
-        </a>
-
-        <div class="card-body">
-          <h3>${p.name}</h3>
-          <p class="price">₹${p.price}</p>
-
-          <div class="card-actions">
-            <button class="btn gold add" data-id="${p._id}">
-              Add to Cart
-            </button>
-
-            <button class="btn ghost wish" data-id="${p._id}">
-              Wishlist
-            </button>
-          </div>
-        </div>
-      </article>
-    `).join("");
-
-  } catch (err) {
-    console.error("Product load error:", err);
-    featuredContainer.innerHTML = "<p>Failed to load products</p>";
-  }
+function getDisplayProducts(products) {
+  const featured = products.filter(p => p.featured);
+  return featured.length ? featured.slice(0, 4) : products.slice(0, 4);
 }
 
 /* =========================
-   GLOBAL EVENT HANDLER (OPTIMIZED)
+   RENDER CARDS
+========================= */
+function renderCards(products) {
+  return products.map(p => `
+    <article class="card">
+      <a href="product.html?id=${p._id}">
+        <img src="${p.image || 'https://picsum.photos/400/500'}" alt="${p.name}">
+      </a>
+
+      <div class="card-body">
+        <h3>${p.name}</h3>
+        <p class="price">₹${p.price}</p>
+
+        <div class="card-actions">
+          <button class="btn gold add" data-id="${p._id}">
+            Add to Cart
+          </button>
+
+          <button class="btn ghost wish" data-id="${p._id}">
+            Wishlist
+          </button>
+        </div>
+      </div>
+    </article>
+  `).join('');
+}
+
+/* =========================
+   EVENT HANDLER (GLOBAL)
 ========================= */
 document.addEventListener("click", (e) => {
   const button = e.target.closest("button[data-id]");
@@ -111,9 +101,7 @@ document.addEventListener("click", (e) => {
   const id = button.dataset.id;
   if (!id) return;
 
-  const product =
-    allProducts.find(p => p._id === id);
-
+  const product = allProducts.find(p => p._id === id);
   if (!product) return;
 
   if (button.classList.contains("add")) {
@@ -122,134 +110,30 @@ document.addEventListener("click", (e) => {
 
   if (button.classList.contains("wish")) {
     addToWishlist(product);
-=======
-    const featured = products.filter((p) => p.featured).slice(0, 4);
-    const displayProducts = featured.length ? featured : products.slice(0, 4);
-
-    featuredContainer.innerHTML = displayProducts
-      .map(
-        (p) => `
-          <article class="card">
-            <a href="product.html?id=${p._id}">
-              <img src="${p.image}" alt="${p.name}" />
-            </a>
-            <div class="card-body">
-              <h3>${p.name}</h3>
-              <p class="price">₹${p.price}</p>
-              <div class="card-actions">
-                <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
-                <button class="btn ghost wish" data-id="${p._id}">Wishlist</button>
-              </div>
-            </div>
-          </article>
-        `
-      )
-      .join('');
-
-    featuredContainer.addEventListener('click', (event) => {
-      const button = event.target.closest('button[data-id]');
-      if (!button) return;
-=======
-  alert('Added to wishlist');
-};
-
-const getDisplayProducts = (products) => {
-  const featured = products.filter((product) => product.featured).slice(0, 4);
-  return featured.length ? featured : products.slice(0, 4);
-};
-
-const renderCards = (products) => products
-  .map(
-    (product) => `
-      <article class="card">
-        <a href="product.html?id=${product._id}">
-          <img src="${product.image}" alt="${product.name}" />
-        </a>
-        <div class="card-body">
-          <h3>${product.name}</h3>
-          <p class="price">₹${product.price}</p>
-          <div class="card-actions">
-            <button class="btn gold add" data-id="${product._id}">Add to Cart</button>
-            <button class="btn ghost wish" data-id="${product._id}">Wishlist</button>
-          </div>
-        </div>
-      </article>
-    `
-  )
-  .join('');
-
-const bindActions = (products) => {
-  featuredContainer?.addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-id]');
-    if (!button) return;
->>>>>>> theirs
-
-    const product = products.find((item) => item._id === button.dataset.id);
-    if (!product) return;
-
-<<<<<<< ours
-      const product = displayProducts.find((p) => p._id === id) || products.find((p) => p._id === id);
-      if (!product) return;
-=======
-=======
-  alert('Added to wishlist');
-};
-
-const getDisplayProducts = (products) => {
-  const featured = products.filter((product) => product.featured).slice(0, 4);
-  return featured.length ? featured : products.slice(0, 4);
-};
-
-const renderCards = (products) => products
-  .map(
-    (product) => `
-      <article class="card">
-        <a href="product.html?id=${product._id}">
-          <img src="${product.image}" alt="${product.name}" />
-        </a>
-        <div class="card-body">
-          <h3>${product.name}</h3>
-          <p class="price">₹${product.price}</p>
-          <div class="card-actions">
-            <button class="btn gold add" data-id="${product._id}">Add to Cart</button>
-            <button class="btn ghost wish" data-id="${product._id}">Wishlist</button>
-          </div>
-        </div>
-      </article>
-    `
-  )
-  .join('');
-
-const bindActions = (products) => {
-  featuredContainer?.addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-id]');
-    if (!button) return;
-
-    const product = products.find((item) => item._id === button.dataset.id);
-    if (!product) return;
-
->>>>>>> theirs
-    if (button.classList.contains('add')) addToCart(product);
-    if (button.classList.contains('wish')) addToWishlist(product);
-  });
-};
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-
-const renderFeatured = async () => {
-  if (!featuredContainer) return;
-  try {
-    const products = await request('/products');
-    const displayProducts = getDisplayProducts(products);
-    featuredContainer.innerHTML = renderCards(displayProducts);
-    bindActions(displayProducts);
-  } catch (error) {
-    featuredContainer.innerHTML = '<p>Unable to load featured products right now.</p>';
->>>>>>> theirs
   }
 });
+
+/* =========================
+   RENDER FEATURED
+========================= */
+async function renderFeatured() {
+  if (!featuredContainer) return;
+
+  featuredContainer.innerHTML = "<p>Loading...</p>";
+
+  try {
+    const products = await request('/products');
+    allProducts = products;
+
+    const displayProducts = getDisplayProducts(products);
+
+    featuredContainer.innerHTML = renderCards(displayProducts);
+
+  } catch (error) {
+    console.error("Error loading products:", error);
+    featuredContainer.innerHTML = "<p>Unable to load products</p>";
+  }
+}
 
 /* =========================
    INIT
