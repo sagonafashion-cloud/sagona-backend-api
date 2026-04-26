@@ -10,12 +10,14 @@ const app = express();
 
 // CORS Configuration
 const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',')
-  : ['http://localhost:3000', 'http://localhost:5173', 'https://sagona.in'];
+  ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : ['http://localhost:3000', 'http://localhost:5173', 'https://sagona.in', 'https://www.sagona.in'];
+
+const isSagonaDomain = (origin) => /^https?:\/\/([a-z0-9-]+\.)*sagona\.in$/i.test(origin);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin) || isSagonaDomain(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

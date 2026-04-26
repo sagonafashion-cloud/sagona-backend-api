@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Wishlist | SAGONA</title>
-    <base href="/" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="header">
@@ -24,6 +24,21 @@
       <section class="panel" id="wishlist-list"></section>
     </main>
 
-    <script type="module" src="js/wishlist.js"></script>
+    <script type="module">
+        const moduleCandidates = ["./js/wishlist.js", "./frontend/js/wishlist.js"];
+        let loaded = false;
+        for (const modulePath of moduleCandidates) {
+            try {
+                await import(modulePath);
+                loaded = true;
+                break;
+            } catch (_error) {
+                // Try next candidate path.
+            }
+        }
+        if (!loaded) {
+            console.error("Unable to load frontend module for wishlist.js");
+        }
+    </script>
   </body>
 </html>

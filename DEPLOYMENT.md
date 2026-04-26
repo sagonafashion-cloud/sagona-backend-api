@@ -14,8 +14,11 @@ Environment variables:
 
 ## 2) Frontend (Static Hosting / CDN)
 - Upload `frontend/` as static site.
-- If the frontend is hosted on the same domain as the backend, it will use same-origin `/api` automatically.
-- If the frontend is hosted separately, configure the backend URL at runtime:
+- If your host serves the repository root instead of `frontend/`, root-level compatibility files are provided (`styles.css`, `favicon.ico`, and `js/*.js`) that proxy to `frontend/*` assets.
+- By default, production frontend uses `https://sagona-backend-api.onrender.com/api`.
+- If the frontend is hosted on the same domain as the backend and you proxy `/api`, enable same-origin mode:
+  - `localStorage.setItem('SAGONA_USE_SAME_ORIGIN_API', 'true')`
+- Or configure any backend URL at runtime:
   - `localStorage.setItem('SAGONA_API_BASE', 'https://<your-backend-domain>/api')`
 - The frontend fetches the Razorpay public key from the backend at `/api/payment/key`.
 
@@ -24,4 +27,3 @@ Environment variables:
 - Pull latest branch commits.
 - Push the branch to GitHub:
   - `git push origin <branch-name>`
-

@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SAGONA | Luxury Kidswear</title>
-    <base href="/" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="header">
@@ -44,6 +44,21 @@
       <div class="container">© SAGONA</div>
     </footer>
 
-    <script type="module" src="js/main.js"></script>
+    <script type="module">
+        const moduleCandidates = ["./js/main.js", "./frontend/js/main.js"];
+        let loaded = false;
+        for (const modulePath of moduleCandidates) {
+            try {
+                await import(modulePath);
+                loaded = true;
+                break;
+            } catch (_error) {
+                // Try next candidate path.
+            }
+        }
+        if (!loaded) {
+            console.error("Unable to load frontend module for main.js");
+        }
+    </script>
   </body>
 </html>

@@ -5,13 +5,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Shop | SAGONA</title>
-    <base href="/" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
@@ -36,7 +36,22 @@
         <div class="container">© SAGONA</div>
     </footer>
 
-    <script type="module" src="js/shop.js"></script>
+    <script type="module">
+        const moduleCandidates = ["./js/shop.js", "./frontend/js/shop.js"];
+        let loaded = false;
+        for (const modulePath of moduleCandidates) {
+            try {
+                await import(modulePath);
+                loaded = true;
+                break;
+            } catch (_error) {
+                // Try next candidate path.
+            }
+        }
+        if (!loaded) {
+            console.error("Unable to load frontend module for shop.js");
+        }
+    </script>
 </body>
 
 </html>

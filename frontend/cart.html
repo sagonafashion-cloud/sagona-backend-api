@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cart | SAGONA</title>
-    <base href="/" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="header">
@@ -28,6 +28,21 @@
       </section>
     </main>
 
-    <script type="module" src="js/cart.js"></script>
+    <script type="module">
+        const moduleCandidates = ["./js/cart.js", "./frontend/js/cart.js"];
+        let loaded = false;
+        for (const modulePath of moduleCandidates) {
+            try {
+                await import(modulePath);
+                loaded = true;
+                break;
+            } catch (_error) {
+                // Try next candidate path.
+            }
+        }
+        if (!loaded) {
+            console.error("Unable to load frontend module for cart.js");
+        }
+    </script>
   </body>
 </html>

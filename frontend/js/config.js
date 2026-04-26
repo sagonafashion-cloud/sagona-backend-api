@@ -4,9 +4,15 @@
 // localStorage.setItem('SAGONA_API_BASE', 'https://your-render-backend.onrender.com/api');
 
 const storedApiBase = window.localStorage.getItem('SAGONA_API_BASE');
+const hostname = window.location.hostname.toLowerCase();
+const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+const useSameOriginApi = window.localStorage.getItem('SAGONA_USE_SAME_ORIGIN_API') === 'true';
 
-const API_BASE = storedApiBase || (window.location.hostname === 'sagona.in'
-    ? 'https://sagona-backend-api.onrender.com/api'
-    : (window.location.hostname.endsWith('sagona.in') ? `${window.location.protocol}//${window.location.host}/api` : 'http://localhost:5000/api'));
+const API_BASE = storedApiBase
+    || (isLocalhost
+        ? 'http://localhost:5000/api'
+        : (useSameOriginApi
+            ? `${window.location.protocol}//${window.location.host}/api`
+            : 'https://sagona-backend-api.onrender.com/api'));
 
 export { API_BASE };

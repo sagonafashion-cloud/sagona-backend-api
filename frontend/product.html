@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Product | SAGONA</title>
-    <base href="/" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="header">
@@ -21,6 +21,21 @@
 
     <main class="container" id="product-view" style="padding: 2rem 0"></main>
 
-    <script type="module" src="js/product.js"></script>
+    <script type="module">
+        const moduleCandidates = ["./js/product.js", "./frontend/js/product.js"];
+        let loaded = false;
+        for (const modulePath of moduleCandidates) {
+            try {
+                await import(modulePath);
+                loaded = true;
+                break;
+            } catch (_error) {
+                // Try next candidate path.
+            }
+        }
+        if (!loaded) {
+            console.error("Unable to load frontend module for product.js");
+        }
+    </script>
   </body>
 </html>
