@@ -56,7 +56,7 @@ function addToWishlist(product) {
 }
 
 /* =========================
-   GET DISPLAY PRODUCTS
+   SELECT PRODUCTS TO DISPLAY
 ========================= */
 function getDisplayProducts(products) {
   const featured = products.filter(p => p.featured);
@@ -64,7 +64,7 @@ function getDisplayProducts(products) {
 }
 
 /* =========================
-   RENDER CARDS
+   RENDER PRODUCT CARDS
 ========================= */
 function renderCards(products) {
   return products.map(p => `
@@ -92,7 +92,7 @@ function renderCards(products) {
 }
 
 /* =========================
-   EVENT HANDLER (GLOBAL)
+   GLOBAL CLICK HANDLER
 ========================= */
 document.addEventListener("click", (e) => {
   const button = e.target.closest("button[data-id]");
@@ -114,7 +114,7 @@ document.addEventListener("click", (e) => {
 });
 
 /* =========================
-   RENDER FEATURED
+   LOAD & RENDER PRODUCTS
 ========================= */
 async function renderFeatured() {
   if (!featuredContainer) return;
