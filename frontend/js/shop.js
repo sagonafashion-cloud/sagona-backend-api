@@ -44,7 +44,9 @@ if (grid) {
       .join('');
 
     grid.addEventListener('click', (event) => {
-      const target = event.target;
+      const target = event.target.closest('button[data-id]');
+      if (!target) return;
+
       const product = products.find((p) => p._id === target.dataset.id);
       if (!product) return;
 

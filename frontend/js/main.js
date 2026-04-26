@@ -109,8 +109,9 @@ document.addEventListener("click", async (e) => {
     console.error("Action error:", err);
 =======
     const featured = products.filter((p) => p.featured).slice(0, 4);
+    const displayProducts = featured.length ? featured : products.slice(0, 4);
 
-    featuredContainer.innerHTML = featured
+    featuredContainer.innerHTML = displayProducts
       .map(
         (p) => `
           <article class="card">
@@ -131,13 +132,13 @@ document.addEventListener("click", async (e) => {
       .join('');
 
     featuredContainer.addEventListener('click', (event) => {
-      const button = event.target.closest('button');
+      const button = event.target.closest('button[data-id]');
       if (!button) return;
 
       const id = button.dataset.id;
       if (!id) return;
 
-      const product = products.find((p) => p._id === id);
+      const product = displayProducts.find((p) => p._id === id) || products.find((p) => p._id === id);
       if (!product) return;
 
       if (button.classList.contains('add')) addToCart(product);
