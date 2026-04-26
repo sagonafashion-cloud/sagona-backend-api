@@ -4,6 +4,11 @@ import { getCart, saveCart, getWishlist, saveWishlist } from './storage.js';
 const featuredContainer = document.querySelector('#featured-products');
 
 /* =========================
+   STATE CACHE (IMPORTANT)
+========================= */
+let allProducts = [];
+
+/* =========================
    ADD TO CART
 ========================= */
 function addToCart(product) {
@@ -58,95 +63,62 @@ async function renderFeatured() {
 
   try {
     const products = await request('/products');
-<<<<<<< ours
+    allProducts = products;
 
-    const display = products.slice(0, 4);
+    // Prefer featured products, fallback to first 4
+    const featured = products.filter(p => p.featured);
+    const displayProducts = featured.length ? featured.slice(0, 4) : products.slice(0, 4);
 
-    featuredContainer.innerHTML = display.map(p => `
+    featuredContainer.innerHTML = displayProducts.map(p => `
       <article class="card">
-        <img src="${p.image || 'https://picsum.photos/400/500'}">
+        <a href="product.html?id=${p._id}">
+          <img src="${p.image || 'https://picsum.photos/400/500'}" alt="${p.name}">
+        </a>
+
         <div class="card-body">
           <h3>${p.name}</h3>
           <p class="price">₹${p.price}</p>
 
-          <button class="btn gold add" data-id="${p._id}">
-            Add to Cart
-          </button>
+          <div class="card-actions">
+            <button class="btn gold add" data-id="${p._id}">
+              Add to Cart
+            </button>
 
-          <button class="btn ghost wish" data-id="${p._id}">
-            Wishlist
-          </button>
+            <button class="btn ghost wish" data-id="${p._id}">
+              Wishlist
+            </button>
+          </div>
         </div>
       </article>
     `).join("");
 
   } catch (err) {
-    console.error(err);
+    console.error("Product load error:", err);
     featuredContainer.innerHTML = "<p>Failed to load products</p>";
   }
 }
 
 /* =========================
-   EVENTS (GLOBAL SAFE)
+   GLOBAL EVENT HANDLER (OPTIMIZED)
 ========================= */
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
+document.addEventListener("click", (e) => {
+  const button = e.target.closest("button[data-id]");
+  if (!button) return;
 
-  const id = btn.dataset.id;
+  const id = button.dataset.id;
   if (!id) return;
 
-  try {
-    const products = await request('/products');
-    const product = products.find(p => p._id === id);
+  const product =
+    allProducts.find(p => p._id === id);
 
-    if (!product) return;
+  if (!product) return;
 
-    if (btn.classList.contains("add")) addToCart(product);
-    if (btn.classList.contains("wish")) addToWishlist(product);
+  if (button.classList.contains("add")) {
+    addToCart(product);
+  }
 
-  } catch (err) {
-    console.error("Action error:", err);
-=======
-    const featured = products.filter((p) => p.featured).slice(0, 4);
-    const displayProducts = featured.length ? featured : products.slice(0, 4);
-
-    featuredContainer.innerHTML = displayProducts
-      .map(
-        (p) => `
-          <article class="card">
-            <a href="product.html?id=${p._id}">
-              <img src="${p.image}" alt="${p.name}" />
-            </a>
-            <div class="card-body">
-              <h3>${p.name}</h3>
-              <p class="price">₹${p.price}</p>
-              <div class="card-actions">
-                <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
-                <button class="btn ghost wish" data-id="${p._id}">Wishlist</button>
-              </div>
-            </div>
-          </article>
-        `
-      )
-      .join('');
-
-    featuredContainer.addEventListener('click', (event) => {
-      const button = event.target.closest('button[data-id]');
-      if (!button) return;
-
-      const id = button.dataset.id;
-      if (!id) return;
-
-      const product = displayProducts.find((p) => p._id === id) || products.find((p) => p._id === id);
-      if (!product) return;
-
-      if (button.classList.contains('add')) addToCart(product);
-      if (button.classList.contains('wish')) addToWishlist(product);
-    });
-  } catch (error) {
-    featuredContainer.innerHTML = '<p>Unable to load featured products right now.</p>';
->>>>>>> theirs
+  if (button.classList.contains("wish")) {
+    addToWishlist(product);
   }
 });
 
