@@ -1,39 +1,69 @@
-/* =========================
-   SAGONA CORE APP
-========================= */
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
 
-(function () {
-  "use strict";
+// ROUTES
+import authRoutes from "./routes/authRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
-  window.SAGONA = {
-    version: "2.0.0",
-    API_URL: "https://sagona-backend-api.onrender.com/api"
-  };
+// MIDDLEWARE
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
-  /* STORAGE */
-  window.safeStorage = {
-    get(key, fallback = null) {
-      try {
-        const val = localStorage.getItem(key);
-        return val ? JSON.parse(val) : fallback;
-      } catch {
-        return fallback;
-      }
-    },
-    set(key, value) {
-      localStorage.setItem(key, JSON.stringify(value));
-    },
-    remove(key) {
-      localStorage.removeItem(key);
-    }
-  };
+const app = express();
 
-  /* UTILITIES */
-  window.utils = {
-    currency(n) {
-      return `₹${Number(n || 0).toLocaleString("en-IN")}`;
-    }
-  };
+/* =========================================
+   CORE MIDDLEWARE
+========================================= */
 
-  console.log("SAGONA READY");
-})();
+// Security headers
+app.use(helmet());
+
+// Logging (dev only)
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan("dev"));
+}
+
+// CORS (allow all for now – restrict in prod if needed)
+app.use(cors());
+
+// Body parser
+app.use(express.json());
+
+/* =========================================
+   HEALTH CHECK
+========================================= */
+
+app.get("/", (req, res) => {
+  res.json({
+    message: "SAGONA API is running 🚀",
+    env: process.env.NODE_ENV || "development",
+  });
+});
+
+/* =========================================
+   API ROUTES
+========================================= */
+
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/payment", paymentRoutes);
+
+/* =========================================
+   404 + ERROR HANDLING
+========================================= */
+
+// Not Found
+app.use(notFound);
+
+// Global Error Handler
+app.use(errorHandler);
+
+/* =========================================
+   EXPORT
+========================================= */
+
+export default app;
