@@ -1,27 +1,42 @@
-import { getCart, saveCart } from './storage.js';
+import { getCart, saveCart } from "./storage.js";
 
-const container = document.querySelector('#cart-list');
-const totalEl = document.querySelector('#cart-total');
+const container = document.getElementById("cart-list");
+const totalEl = document.getElementById("cart-total");
 
-const render = () => {
+function render() {
   const cart = getCart();
-  if (!container) return;
+
   if (!cart.length) {
-    container.innerHTML = '<p>Your cart is empty.</p>';
-    totalEl.textContent = '0';
+    container.innerHTML = "<p>Your cart is empty</p>";
+    totalEl.textContent = "0";
     return;
   }
 
-  container.innerHTML = cart.map((item, idx) => `<div class="table-row"><span>${item.name} x ${item.quantity}</span><span>₹${item.price * item.quantity}</span><button class="btn ghost remove" data-idx="${idx}">Remove</button></div>`).join('');
-  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-  totalEl.textContent = String(total);
-};
+  let total = 0;
 
-container?.addEventListener('click', (e) => {
-  if (!e.target.classList.contains('remove')) return;
-  const cart = getCart();
-  cart.splice(Number(e.target.dataset.idx), 1);
-  saveCart(cart);
+  container.innerHTML = cart.map(item => {
+    total += item.price * item.quantity;
+
+    return `
+      <div class="table-row">
+        <span>${item.name}</span>
+        <span>₹${item.price}</span>
+        <span>Qty: ${item.quantity}</span>
+        <button class="remove" data-id="${item.id}">Remove</button>
+      </div>
+    `;
+  }).join("");
+
+  totalEl.textContent = total;
+}
+
+document.addEventListener("click", (e) => {
+  if (!e.target.classList.contains("remove")) return;
+
+  const id = e.target.dataset.id;
+  const updated = getCart().filter(i => i.id !== id);
+
+  saveCart(updated);
   render();
 });
 

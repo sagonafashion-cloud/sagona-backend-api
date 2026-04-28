@@ -1,334 +1,254 @@
-/* ================= GLOBAL ================= */
+/* =========================================
+   SAGONA – LUXURY UI SYSTEM
+   Inspired by premium ecommerce (Childrensalon)
+========================================= */
+
+/* RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
 body {
-    margin: 0;
-    font-family: 'Poppins', sans-serif;
-    background-color: #0d0d0d;
-    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    color: #111;
+    background: #fff;
+    line-height: 1.6;
 }
 
-a {
-    text-decoration: none;
-    color: inherit;
-}
-
-/* ================= HEADER ================= */
-
-.lux-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 25px 60px;
-    background: #000;
-    border-bottom: 1px solid #222;
-}
-
-.logo a {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px;
-    letter-spacing: 4px;
-    color: #C6A75E;
-}
-
-.lux-header nav a {
-    margin-left: 30px;
-    font-weight: 400;
-    color: #fff;
-    transition: 0.3s;
-}
-
-.lux-header nav a:hover {
-    color: #C6A75E;
-}
-
-/* ================= HERO ================= */
-
-.hero {
-    height: 90vh;
-    background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)),
-        url("https://images.unsplash.com/photo-1544441893-675973e31985") center/cover no-repeat;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+/* CONTAINER */
+.container {
+    max-width: 1200px;
+    margin: auto;
     padding: 0 20px;
 }
 
-.hero-content h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 58px;
-    margin-bottom: 20px;
+/* TOP STRIP */
+.top-strip {
+    background: #111;
+    color: #fff;
+    text-align: center;
+    font-size: 12px;
+    padding: 8px;
+    letter-spacing: 1px;
 }
 
-.hero-content p {
-    color: #ccc;
-    font-size: 18px;
-    margin-bottom: 30px;
-}
-
-.btn-gold,
-.lux-btn,
-#orderBtn {
-    padding: 14px 35px;
-    background: #C6A75E;
-    color: #000;
-    border: none;
-    font-weight: 500;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.btn-gold:hover,
-.lux-btn:hover,
-#orderBtn:hover {
+/* HEADER */
+.header {
+    border-bottom: 1px solid #eee;
     background: #fff;
 }
 
-/* ================= FEATURED PRODUCTS ================= */
-
-.featured {
-    padding: 80px 60px;
-    text-align: center;
-}
-
-.featured h2 {
-    font-family: 'Playfair Display', serif;
-    font-size: 40px;
-    margin-bottom: 50px;
-}
-
-.product-grid {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    flex-wrap: wrap;
-}
-
-.product-card {
-    background: #111;
-    padding: 20px;
-    width: 300px;
-    transition: 0.3s ease;
-}
-
-.product-card img {
-    width: 100%;
-}
-
-.product-card h3 {
-    margin: 15px 0 5px;
-    font-weight: 500;
-}
-
-.product-card p {
-    color: #C6A75E;
-    font-weight: 600;
-}
-
-.product-card button {
-    margin-top: 10px;
-    padding: 10px;
-    width: 100%;
-    background: #C6A75E;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-.product-card:hover {
-    transform: translateY(-6px);
-}
-
-/* ================= FOOTER ================= */
-
-.footer {
-    padding: 30px;
-    text-align: center;
-    background: #000;
-    color: #aaa;
-}
-
-.footer a {
-    color: #C6A75E;
-    margin: 0 10px;
-}
-
-/* ================= WISHLIST ================= */
-
-.wishlist-item {
-    padding: 15px;
-    margin: 10px 0;
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 8px;
+.nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 15px 0;
 }
 
-.wishlist-item h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+.brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    letter-spacing: 2px;
+    text-decoration: none;
+    color: #111;
 }
 
-.wishlist-item .price,
-.wishlist-price {
-    color: #C6A75E;
-    font-weight: 700;
+.nav-links a {
+    margin-left: 20px;
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
 }
 
-.wishlist-item button {
-    margin-left: 10px;
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
+.nav-links a:hover {
+    color: #b58a42;
 }
 
-.wishlist-item .removeWishlist {
-    background-color: #333;
-    color: #fff;
+/* CATEGORY NAV */
+.category-nav {
+    display: flex;
+    gap: 20px;
+    padding-bottom: 10px;
 }
 
-.wishlist-item .moveToCart {
-    background-color: #C6A75E;
-    color: #000;
+.category-nav a {
+    text-decoration: none;
+    font-size: 13px;
+    color: #666;
 }
 
-/* ================= PRODUCT PAGE ================= */
-
-.product-page {
-    padding: 80px 20px;
+.category-nav a:hover {
+    color: #b58a42;
 }
 
-.product-container {
-    max-width: 1100px;
-    margin: auto;
+/* HERO */
+.hero {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 60px;
+    gap: 40px;
+    align-items: center;
+    margin: 40px 0;
 }
 
-.product-image img {
+.hero img {
     width: 100%;
     border-radius: 12px;
 }
 
-.product-title {
+.eyebrow {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #888;
+}
+
+.page-title {
     font-family: 'Playfair Display', serif;
-    font-size: 32px;
-    margin-bottom: 10px;
+    font-size: 34px;
+    margin: 10px 0;
 }
 
-.luxury-gold {
-    font-size: 26px;
-    font-weight: bold;
-    color: #C6A75E;
+/* BUTTONS */
+.btn {
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
 }
 
-.product-desc {
-    margin: 20px 0;
-    color: #ccc;
-    line-height: 1.6;
+.btn.gold {
+    background: #b58a42;
+    color: #fff;
 }
 
-.product-actions {
-    margin-top: 25px;
-    display: flex;
-    gap: 15px;
+.btn.gold:hover {
+    background: #9c7436;
 }
 
-.product-trust {
-    margin-top: 30px;
-    list-style: none;
-    padding: 0;
-    color: #aaa;
+.btn.ghost {
+    background: transparent;
+    border: 1px solid #ccc;
 }
 
-.product-trust li {
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 25px;
+}
+
+/* CARD */
+.card {
+    border: 1px solid #eee;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.card img {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+.card-body h3 {
+    font-size: 14px;
     margin-bottom: 6px;
 }
 
-/* ================= MOBILE ================= */
+.price {
+    color: #b58a42;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
 
+.card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* PANEL */
+.panel {
+    border: 1px solid #eee;
+    padding: 20px;
+    border-radius: 10px;
+    background: #fff;
+}
+
+/* FORM */
+.field {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 12px;
+    border-radius: 6px;
+}
+
+/* TABLE ROW (Cart / Wishlist) */
+.table-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+/* LAYOUT */
+.layout-2 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+}
+
+/* FOOTER */
+.footer {
+    margin-top: 50px;
+    padding: 20px;
+    border-top: 1px solid #eee;
+    text-align: center;
+    font-size: 13px;
+    color: #777;
+}
+
+/* BADGES */
+.badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.badge.delivered {
+    background: #e6f7ec;
+    color: #2e7d32;
+}
+
+.badge.pending {
+    background: #fff4e5;
+    color: #a66b00;
+}
+
+/* RESPONSIVE */
 @media (max-width: 768px) {
-
-    .lux-header {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .product-container {
+    .hero {
         grid-template-columns: 1fr;
     }
 
-    .hero-content h1 {
-        font-size: 36px;
+    .layout-2 {
+        grid-template-columns: 1fr;
     }
 
-    .featured {
-        padding: 60px 20px;
+    .nav-links {
+        display: none;
     }
-}
-
-/* ================= LUXURY ANIMATIONS ================= */
-
-/* Smooth global transitions */
-* {
-    transition: all 0.3s ease;
-}
-
-/* Fade-in animation */
-.fade-in {
-    opacity: 0;
-    transform: translateY(40px);
-    transition: all 0.8s ease;
-}
-
-.fade-in.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Product image zoom effect */
-.product-card img {
-    transition: transform 0.6s ease;
-}
-
-.product-card:hover img {
-    transform: scale(1.05);
-}
-
-/* Gold glow hover */
-.product-card:hover {
-    box-shadow: 0 0 25px rgba(198, 167, 94, 0.4);
-}
-
-/* Button premium hover */
-.btn-gold,
-.lux-btn,
-#orderBtn {
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-gold::after,
-.lux-btn::after,
-#orderBtn::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    transition: all 0.6s;
-}
-
-.btn-gold:hover::after,
-.lux-btn:hover::after,
-#orderBtn:hover::after {
-    left: 100%;
 }

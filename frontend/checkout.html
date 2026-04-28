@@ -1,116 +1,79 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Checkout | SAGONA</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="style.css" />
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  </head>
-  <body>
-    <header class="header">
-      <div class="container nav">
-        <a class="brand" href="index.html">SAGONA</a>
-      </div>
-    </header>
 
-    <main class="container">
-      <h1 class="page-title">Checkout</h1>
-      <div class="layout-2">
-        <form id="checkout-form" class="panel">
-          <label for="customerName">Name</label>
-          <input id="customerName" class="field" disabled />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout | SAGONA</title>
 
-          <label for="phone">Phone</label>
-          <input id="phone" class="field" required />
+  <link rel="stylesheet" href="styles.css" />
 
-          <label for="address">Address</label>
-          <textarea id="address" class="field" required></textarea>
+  <!-- Razorpay -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" href="/favicon.ico">
+<!-- Favicon Setup -->
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+</head>
 
-          <label for="birthday">Birthday (for 10% discount on birthday)</label>
-          <input id="birthday" type="date" class="field" />
+<body>
+  <header class="header">
+    <div class="container nav">
+      <a class="brand" href="index.html">SAGONA</a>
+    </div>
+  </header>
 
-          <label for="paymentMethod">Payment method</label>
-          <select id="paymentMethod" class="field">
-            <option value="COD">Cash on Delivery</option>
-            <option value="ONLINE">Online payment (Razorpay)</option>
-          </select>
+  <main class="container">
+    <h1 class="page-title">Checkout</h1>
 
-          <button class="btn gold" type="submit">Place Order</button>
-        </form>
+    <div class="layout-2">
 
-        <aside class="panel">
-          <p>Loyalty points available: <strong id="loyalty-points">0</strong></p>
-          <p>Birthday discount: ₹<strong id="birthday-discount">0</strong></p>
-          <h3>Order total: ₹<span id="checkout-total">0</span></h3>
-        </aside>
-      </div>
-    </main>
+      <!-- FORM -->
+      <form id="checkout-form" class="panel">
 
-    <script type="module">
-        const moduleCandidates = ["./js/checkout.js", "./frontend/js/checkout.js"];
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        let loaded = false;
-        for (const modulePath of moduleCandidates) {
-            try {
-                await import(modulePath);
-                loaded = true;
-                break;
-            } catch (_error) {
-                // Try next candidate path.
-            }
-        }
-        if (!loaded) {
-            console.error("Unable to load frontend module for checkout.js");
-        }
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
+        <label>Name</label>
+        <input id="customerName" class="field" disabled />
 
-        const loadModule = async () => {
-            for (const modulePath of moduleCandidates) {
-                try {
-                    await import(modulePath);
-                    return;
-                } catch (_error) {
-                    // Try next candidate path.
-                }
-            }
+        <label>Phone</label>
+        <input id="phone" class="field" required />
 
-            console.error("Unable to load frontend module for checkout.js");
-        };
+        <label>Address</label>
+        <textarea id="address" class="field" required></textarea>
 
-        loadModule();
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-    </script>
-  </body>
+        <label>Birthday</label>
+        <input id="birthday" type="date" class="field" />
+
+        <label>Payment</label>
+        <select id="paymentMethod" class="field">
+          <option value="COD">Cash on Delivery</option>
+          <option value="ONLINE">Online (Razorpay)</option>
+        </select>
+
+        <button class="btn gold" type="submit">
+          Place Order
+        </button>
+
+      </form>
+
+      <!-- SUMMARY -->
+      <aside class="panel">
+        <p>Loyalty Points: <strong id="loyalty-points">0</strong></p>
+        <p>Birthday Discount: ₹<strong id="birthday-discount">0</strong></p>
+        <h3>Total: ₹<span id="checkout-total">0</span></h3>
+      </aside>
+
+    </div>
+  </main>
+
+  <script type="module" src="./js/checkout.js"></script>
+</body>
+
 </html>

@@ -4,122 +4,43 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <title>Shop | SAGONA</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&display=swap"
-        rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="style.css" />
+
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="icon" href="/favicon.ico">
+    <!-- Favicon Setup -->
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
 </head>
 
 <body>
-    <div class="top-strip">CURATED DESIGNER EDIT FOR LITTLE ONES</div>
+
     <header class="header">
-        <div class="container">
-            <div class="nav utility-nav">
-                <a class="brand" href="index.html">SAGONA</a>
-                <nav class="nav-links">
-                    <a href="index.html">Home</a>
-                    <a href="wishlist.html">Wishlist</a>
-                    <a href="cart.html">Cart</a>
-                    <a href="login.html">Sign In</a>
-                </nav>
-            </div>
-            <nav class="category-nav">
-                <a href="#">New Arrivals</a>
-                <a href="#">Designers</a>
-                <a href="#">Clothing</a>
-                <a href="#">Shoes</a>
-                <a href="#">Accessories</a>
+        <div class="container nav">
+            <a class="brand" href="index.html">SAGONA</a>
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="cart.html">Cart</a>
             </nav>
         </div>
     </header>
 
     <main class="container">
-        <section class="shop-intro">
-            <p class="eyebrow">KIDS</p>
-            <h1 class="page-title">Shop the Latest Arrivals</h1>
-            <p>Season-ready pieces from refined labels, selected for comfort, quality, and timeless styling.</p>
-            <div class="chip-row">
-                <span class="chip">Girls</span>
-                <span class="chip">Boys</span>
-                <span class="chip">Baby</span>
-                <span class="chip">Occasion Wear</span>
-            </div>
-        </section>
+        <h1 class="page-title">Shop</h1>
         <div id="shop-grid" class="grid"></div>
     </main>
 
-    <footer class="footer">
-        <div class="container">© SAGONA</div>
-    </footer>
+    <script type="module" src="./js/shop.js"></script>
 
-    <script type="module">
-        const moduleCandidates = ["./js/shop.js", "./frontend/js/shop.js"];
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        let loaded = false;
-        for (const modulePath of moduleCandidates) {
-            try {
-                await import(modulePath);
-                loaded = true;
-                break;
-            } catch (_error) {
-                // Try next candidate path.
-            }
-        }
-        if (!loaded) {
-            console.error("Unable to load frontend module for shop.js");
-        }
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-
-        const loadModule = async () => {
-            for (const modulePath of moduleCandidates) {
-                try {
-                    await import(modulePath);
-                    return;
-                } catch (_error) {
-                    // Try next candidate path.
-                }
-            }
-
-            console.error("Unable to load frontend module for shop.js");
-        };
-
-        loadModule();
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-    </script>
 </body>
 
 </html>

@@ -2,119 +2,121 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <!-- SEO -->
-    <title>Returns & Exchange – SAGONA Luxury Kids Wear</title>
+    <title>Returns & Exchange | SAGONA</title>
     <meta name="description"
-        content="Request a return or exchange for your SAGONA luxury kids wear order. Easy returns within 7 days.">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+        content="Return or exchange your SAGONA order within 7 days. Fast and easy process for luxury kidswear." />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css">
-<<<<<<< ours
-<<<<<<< ours
-    <link rel="stylesheet" href="style.css">
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-
-    <!-- Favicon -->
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="styles.css" />
+      <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" href="/favicon.ico">
+<!-- Favicon Setup -->
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
 </head>
 
-<body data-page="returns">
+<body>
 
-    <!-- ================= HEADER ================= -->
-    <header class="lux-header">
-        <h1 class="brand">SAGONA</h1>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="shop.html">Shop</a>
-            <a href="cart.html">Cart</a>
-            <a href="wishlist.html">Wishlist</a>
-        </nav>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="container nav">
+            <a class="brand" href="index.html">SAGONA</a>
+
+            <nav class="nav-links">
+                <a href="shop.html">Shop</a>
+                <a href="cart.html">Cart</a>
+                <a href="wishlist.html">Wishlist</a>
+            </nav>
+        </div>
     </header>
 
-    <!-- ================= RETURNS ================= -->
-    <main class="returns-page">
+    <!-- MAIN -->
+    <main class="container" style="max-width: 700px; padding: 3rem 0;">
 
-        <h2>Returns & Exchange</h2>
+        <h1 class="page-title">Returns & Exchange</h1>
 
-        <p class="returns-note">
-            We accept returns or exchanges within <strong>7 days</strong> of delivery,
-            provided the product is unused and in original condition.
+        <p style="color: #6e665c; margin-bottom: 2rem;">
+            We accept returns or exchanges within <strong>7 days</strong> of delivery.
+            Items must be unused, unwashed, and in original packaging.
         </p>
 
-        <div class="returns-form">
+        <section class="panel">
 
-            <label for="orderId">
-                Order ID
-                <input type="text" id="orderId" placeholder="Enter your Order ID">
-            </label>
+            <form id="return-form">
 
-            <label for="reason">
-                Reason for Return / Exchange
-                <select id="reason">
-                    <option value="Size Issue">Size issue</option>
-                    <option value="Defective Item">Defective item</option>
-                    <option value="Wrong Product">Wrong product received</option>
+                <label>Order ID</label>
+                <input type="text" id="orderId" class="field" placeholder="Enter your Order ID" required />
+
+                <label>Reason</label>
+                <select id="reason" class="field">
+                    <option value="Size Issue">Size Issue</option>
+                    <option value="Defective Item">Defective Item</option>
+                    <option value="Wrong Product">Wrong Product</option>
                     <option value="Other">Other</option>
                 </select>
-            </label>
 
-            <button id="submitReturn" class="lux-btn">
-                Submit Request
-            </button>
+                <button type="submit" class="btn gold">
+                    Submit Request
+                </button>
 
-        </div>
+                <p id="status" style="margin-top: 10px;"></p>
 
-        <!-- Info -->
-        <div class="returns-info">
+            </form>
+
+        </section>
+
+        <!-- INFO -->
+        <div style="margin-top: 2rem; font-size: 14px; color: #6e665c;">
             <p>✔ Our team will contact you within 24–48 hours</p>
-            <p>✔ Refunds processed after quality check</p>
-            <p>✔ Exchange subject to stock availability</p>
+            <p>✔ Refund processed after quality check</p>
+            <p>✔ Exchange subject to availability</p>
         </div>
 
     </main>
 
-    <!-- ================= FOOTER ================= -->
+    <!-- FOOTER -->
     <footer class="footer">
-        <a href="returns.html">Returns & Exchange</a>
+        <div class="container">
+            © SAGONA · <a href="returns.html">Returns</a>
+        </div>
     </footer>
 
-    <!-- ================= SCRIPT ================= -->
-    <script src="js/returns.js"></script>
-    <style>
-        /* ================= RETURNS PAGE ================= */
+    <!-- SCRIPT -->
+    <script>
+        document.getElementById("return-form").addEventListener("submit", function (e) {
+            e.preventDefault();
 
-        .returns-page {
-            max-width: 600px;
-            margin: 60px auto;
-            padding: 20px;
-        }
+            const orderId = document.getElementById("orderId").value;
+            const reason = document.getElementById("reason").value;
+            const status = document.getElementById("status");
 
-        .returns-note {
-            margin-bottom: 25px;
-            color: #555;
-        }
+            if (!orderId) {
+                status.style.color = "red";
+                status.textContent = "Please enter Order ID";
+                return;
+            }
 
-        .returns-form label {
-            display: block;
-            margin-bottom: 15px;
-        }
+            // 🔹 For now (no backend yet)
+            console.log("Return Request:", { orderId, reason });
 
-        .returns-form input,
-        .returns-form select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 6px;
-        }
+            status.style.color = "green";
+            status.textContent = "Return request submitted successfully!";
 
-        .returns-info {
-            margin-top: 30px;
-            font-size: 14px;
-            color: #444;
-        }
-    </style>
+            this.reset();
+        });
+    </script>
+
+</body>
+
+</html>

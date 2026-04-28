@@ -1,125 +1,73 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SAGONA | Luxury Kidswear</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="top-strip">NEW SEASON FOR KIDS · FREE SHIPPING ABOVE ₹7,500</div>
-    <header class="header">
-      <div class="container">
-        <div class="nav utility-nav">
-          <a class="brand" href="index.html">SAGONA</a>
-          <nav class="nav-links">
-            <a href="shop.html">New Arrivals</a>
-            <a href="wishlist.html">Wishlist</a>
-            <a href="cart.html">Cart</a>
-            <a href="login.html">Sign In</a>
-          </nav>
-        </div>
-        <nav class="category-nav">
-          <a href="shop.html">Designers</a>
-          <a href="shop.html">Clothing</a>
-          <a href="shop.html">Shoes</a>
-          <a href="shop.html">Accessories</a>
-          <a href="returns.html">Returns</a>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SAGONA | Luxury Kidswear</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" href="/favicon.ico">
+  <!-- Favicon Setup -->
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+</head>
+
+<body>
+
+  <div class="top-strip">NEW SEASON · FREE SHIPPING ABOVE ₹7,500</div>
+
+  <header class="header">
+    <div class="container">
+      <div class="nav utility-nav">
+        <a class="brand" href="index.html">SAGONA</a>
+        <nav class="nav-links">
+          <a href="shop.html">Shop</a>
+          <a href="wishlist.html">Wishlist</a>
+          <a href="cart.html">Cart</a>
+          <a href="login.html">Sign In</a>
         </nav>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <main class="container">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">SPRING IN FULL SWING</p>
-          <h1 class="page-title">Luxury Kidswear, Crafted for Moments</h1>
-          <p>Premium silhouettes, timeless tones, and heritage-level craftsmanship for modern children.</p>
-          <a href="shop.html" class="btn gold">Shop Collection</a>
-        </div>
-        <img src="https://images.unsplash.com/photo-1522771930-78848d9293e8?auto=format&fit=crop&w=1200&q=80" alt="Luxury kidswear" />
-      </section>
+  <main class="container">
 
-      <section>
-        <div class="section-head">
-          <h2 class="page-title">Featured Collection</h2>
-          <a href="shop.html">See all</a>
-        </div>
-        <div id="featured-products" class="grid"></div>
-      </section>
-    </main>
+    <section class="hero">
+      <div>
+        <h1 class="page-title">Luxury Kidswear</h1>
+        <p>Timeless fashion crafted for elegance.</p>
+        <a href="shop.html" class="btn gold">Shop Now</a>
+      </div>
+      <img src="https://images.unsplash.com/photo-1522771930-78848d9293e8" />
+    </section>
 
-    <footer class="footer">
-      <div class="container">© SAGONA</div>
-    </footer>
+    <section>
+      <h2 class="page-title">Featured</h2>
+      <div id="featured-products" class="grid"></div>
+    </section>
 
-    <script type="module">
-        const moduleCandidates = ["./js/main.js", "./frontend/js/main.js"];
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        let loaded = false;
-        for (const modulePath of moduleCandidates) {
-            try {
-                await import(modulePath);
-                loaded = true;
-                break;
-            } catch (_error) {
-                // Try next candidate path.
-            }
-        }
-        if (!loaded) {
-            console.error("Unable to load frontend module for main.js");
-        }
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
+  </main>
 
-        const loadModule = async () => {
-            for (const modulePath of moduleCandidates) {
-                try {
-                    await import(modulePath);
-                    return;
-                } catch (_error) {
-                    // Try next candidate path.
-                }
-            }
+  <footer class="footer">
+    <div class="container">© SAGONA</div>
+  </footer>
 
-            console.error("Unable to load frontend module for main.js");
-        };
+  <script type="module" src="./js/main.js"></script>
 
-        loadModule();
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-    </script>
-  </body>
+</body>
+
 </html>

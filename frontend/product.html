@@ -1,89 +1,39 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Product | SAGONA</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <header class="header">
-      <div class="container nav">
-        <a class="brand" href="index.html">SAGONA</a>
-        <nav class="nav-links">
-          <a href="shop.html">Shop</a>
-          <a href="wishlist.html">Wishlist</a>
-          <a href="cart.html">Cart</a>
-        </nav>
-      </div>
-    </header>
 
-    <main class="container" id="product-view" style="padding: 2rem 0"></main>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <script type="module">
-        const moduleCandidates = ["./js/product.js", "./frontend/js/product.js"];
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        let loaded = false;
-        for (const modulePath of moduleCandidates) {
-            try {
-                await import(modulePath);
-                loaded = true;
-                break;
-            } catch (_error) {
-                // Try next candidate path.
-            }
-        }
-        if (!loaded) {
-            console.error("Unable to load frontend module for product.js");
-        }
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
+  <title>Product | SAGONA</title>
 
-        const loadModule = async () => {
-            for (const modulePath of moduleCandidates) {
-                try {
-                    await import(modulePath);
-                    return;
-                } catch (_error) {
-                    // Try next candidate path.
-                }
-            }
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" href="/favicon.ico">
+  <!-- Favicon Setup -->
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+</head>
 
-            console.error("Unable to load frontend module for product.js");
-        };
+<body>
 
-        loadModule();
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-    </script>
-  </body>
+  <header class="header">
+    <div class="container nav">
+      <a class="brand" href="index.html">SAGONA</a>
+    </div>
+  </header>
+
+  <main class="container" id="product-view"></main>
+
+  <script type="module" src="./js/product.js"></script>
+
+</body>
+
 </html>

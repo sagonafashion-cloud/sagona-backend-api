@@ -1,53 +1,39 @@
-import express from "express";
-import cors from "cors";
+/* =========================
+   SAGONA CORE APP
+========================= */
 
-import authRoutes from "./routes/authRoutes.js";
-import productRoutes from "./routes/productRoutes.js";
-import orderRoutes from "./routes/orderRoutes.js";
-import paymentRoutes from "./routes/paymentRoutes.js";
+(function () {
+  "use strict";
 
-const app = express();
+  window.SAGONA = {
+    version: "2.0.0",
+    API_URL: "https://sagona-backend-api.onrender.com/api"
+  };
 
-// CORS Configuration
-const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
-  : ['http://localhost:3000', 'http://localhost:5173', 'https://sagona.in', 'https://www.sagona.in'];
-
-const isSagonaDomain = (origin) => /^https?:\/\/([a-z0-9-]+\.)*sagona\.in$/i.test(origin);
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || isSagonaDomain(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+  /* STORAGE */
+  window.safeStorage = {
+    get(key, fallback = null) {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : fallback;
+      } catch {
+        return fallback;
+      }
+    },
+    set(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    },
+    remove(key) {
+      localStorage.removeItem(key);
     }
-  },
-  credentials: true,
-}));
+  };
 
-app.use(express.json());
+  /* UTILITIES */
+  window.utils = {
+    currency(n) {
+      return `₹${Number(n || 0).toLocaleString("en-IN")}`;
+    }
+  };
 
-app.get("/", (_req, res) => {
-  res.json({ name: "SAGONA API", status: "ok" });
-});
-
-app.get("/api", (_req, res) => {
-  res.json({ name: "SAGONA API", status: "ok" });
-});
-
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/payment", paymentRoutes);
-
-app.use((req, res) => {
-  res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
-});
-
-app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(err.status || 500).json({ message: err.message || "Internal server error" });
-});
-
-export default app;
+  console.log("SAGONA READY");
+})();

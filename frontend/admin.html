@@ -1,111 +1,71 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Admin | SAGONA</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <header class="header">
-      <div class="container nav">
-        <a class="brand" href="index.html">SAGONA ADMIN</a>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Admin | SAGONA</title>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" href="/favicon.ico">
+<!-- Favicon Setup -->
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+</head>
+
+<body>
+
+  <header class="header">
+    <div class="container nav">
+      <a class="brand">SAGONA ADMIN</a>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <h1 class="page-title">Dashboard</h1>
+
+    <div class="grid">
+      <div class="panel">
+        <h3>Total Orders</h3>
+        <p id="total-orders">0</p>
       </div>
-    </header>
 
-    <main class="container">
-      <h1 class="page-title">Dashboard</h1>
-
-      <div class="layout-2">
-        <div class="panel">
-          <h3>Total Orders: <span id="total-orders">0</span></h3>
-          <h3>Total Revenue: <span id="total-revenue">₹0</span></h3>
-        </div>
-
-        <form id="product-form" class="panel">
-          <h3>Add product</h3>
-          <input name="name" class="field" placeholder="Product name" required />
-          <input name="price" type="number" class="field" placeholder="Price" required />
-          <input name="image" class="field" placeholder="Image URL" required />
-          <textarea name="description" class="field" placeholder="Description" required></textarea>
-          <label><input type="checkbox" name="featured" /> Featured</label>
-          <br />
-          <br />
-          <button class="btn gold" type="submit">Add Product</button>
-        </form>
+      <div class="panel">
+        <h3>Total Revenue</h3>
+        <p id="total-revenue">₹0</p>
       </div>
+    </div>
 
-      <h2 class="page-title">Products</h2>
-      <div id="admin-products" class="panel"></div>
+    <form id="product-form" class="panel">
+      <h3>Add Product</h3>
 
-      <h2 class="page-title">Orders</h2>
-      <div id="admin-orders" class="grid"></div>
-    </main>
+      <input name="name" class="field" placeholder="Name" required />
+      <input name="price" type="number" class="field" placeholder="Price" required />
+      <input name="image" class="field" placeholder="Image URL" required />
+      <textarea name="description" class="field" required></textarea>
 
-    <script type="module">
-        const moduleCandidates = ["./js/admin.js", "./frontend/js/admin.js"];
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        let loaded = false;
-        for (const modulePath of moduleCandidates) {
-            try {
-                await import(modulePath);
-                loaded = true;
-                break;
-            } catch (_error) {
-                // Try next candidate path.
-            }
-        }
-        if (!loaded) {
-            console.error("Unable to load frontend module for admin.js");
-        }
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
+      <button class="btn gold">Add Product</button>
+    </form>
 
-        const loadModule = async () => {
-            for (const modulePath of moduleCandidates) {
-                try {
-                    await import(modulePath);
-                    return;
-                } catch (_error) {
-                    // Try next candidate path.
-                }
-            }
+    <h2 class="page-title">Products</h2>
+    <div id="admin-products"></div>
 
-            console.error("Unable to load frontend module for admin.js");
-        };
+    <h2 class="page-title">Orders</h2>
+    <div id="admin-orders" class="grid"></div>
 
-        loadModule();
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-    </script>
-  </body>
+  </main>
+
+  <script type="module" src="./js/admin.js"></script>
+
+</body>
+
 </html>

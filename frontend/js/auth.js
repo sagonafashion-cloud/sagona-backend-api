@@ -1,41 +1,61 @@
 import { request } from './api.js';
 import { saveAuth } from './storage.js';
 
-const showError = (form, message) => {
-  let errorBox = form.querySelector('.error-message');
-  if (!errorBox) {
-    errorBox = document.createElement('p');
-    errorBox.className = 'error-message';
-    errorBox.style.color = '#af2e2e';
-    form.appendChild(errorBox);
+const showError = (form, msg) => {
+  let el = form.querySelector('.error-message');
+
+  if (!el) {
+    el = document.createElement('p');
+    el.className = 'error-message';
+    el.style.color = 'red';
+    form.appendChild(el);
   }
-  errorBox.textContent = message;
+
+  el.textContent = msg;
 };
 
-document.querySelector('#register-form')?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
+/* REGISTER */
+document.querySelector('#register-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const form = e.currentTarget;
+  const data = Object.fromEntries(new FormData(form));
 
   try {
-    const payload = Object.fromEntries(new FormData(form).entries());
-    const data = await request('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
-    saveAuth(data);
+    const res = await request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+
+    saveAuth(res);
     location.href = 'shop.html';
-  } catch (error) {
-    showError(form, error.message);
+
+  } catch (err) {
+    showError(form, err.message);
   }
 });
 
-document.querySelector('#login-form')?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
+/* LOGIN */
+document.querySelector('#login-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const form = e.currentTarget;
+  const data = Object.fromEntries(new FormData(form));
 
   try {
-    const payload = Object.fromEntries(new FormData(form).entries());
-    const data = await request('/auth/login', { method: 'POST', body: JSON.stringify(payload) });
-    saveAuth(data);
-    location.href = data.user.role === 'admin' ? 'admin.html' : 'shop.html';
-  } catch (error) {
-    showError(form, error.message);
+    const res = await request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+
+    saveAuth(res);
+
+    location.href =
+      res.user.role === 'admin'
+        ? 'admin.html'
+        : 'index.html';
+
+  } catch (err) {
+    showError(form, err.message);
   }
 });

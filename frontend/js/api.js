@@ -1,17 +1,43 @@
-import { API_BASE } from './config.js';
-import { getAuth } from './storage.js';
+import { getCart, saveCart } from "./storage.js";
 
-const headers = () => {
-  const auth = getAuth();
-  return {
-    'Content-Type': 'application/json',
-    ...(auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}),
-  };
-};
+const container = document.getElementById("cart-list");
+const totalEl = document.getElementById("cart-total");
 
-export async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data;
+function renderCart() {
+  const cart = getCart();
+
+  if (!cart.length) {
+    container.innerHTML = "<p>Your cart is empty</p>";
+    totalEl.textContent = "0";
+    return;
+  }
+
+  let total = 0;
+
+  container.innerHTML = cart.map(item => {
+    total += item.price * item.quantity;
+
+    return `
+      <div class="table-row">
+        <span>${item.name}</span>
+        <span>₹${item.price}</span>
+        <span>Qty: ${item.quantity}</span>
+        <button class="remove" data-id="${item.id}">Remove</button>
+      </div>
+    `;
+  }).join("");
+
+  totalEl.textContent = total;
 }
+
+document.addEventListener("click", (e) => {
+  if (!e.target.classList.contains("remove")) return;
+
+  const id = e.target.dataset.id;
+  const updated = getCart().filter(i => i.id !== id);
+
+  saveCart(updated);
+  renderCart();
+});
+
+renderCart();

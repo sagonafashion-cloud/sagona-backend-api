@@ -2,54 +2,79 @@ import { getWishlist, saveWishlist, getCart, saveCart } from './storage.js';
 
 const list = document.querySelector('#wishlist-list');
 
-const render = () => {
-  const wishlist = getWishlist();
+/* =========================
+   RENDER WISHLIST
+========================= */
+function renderWishlist() {
   if (!list) return;
+
+  const wishlist = getWishlist();
 
   if (!wishlist.length) {
     list.innerHTML = '<p>Your wishlist is empty.</p>';
     return;
   }
 
-  list.innerHTML = wishlist
-    .map(
-      (item, idx) => `
-        <div class="table-row">
-          <span>${item.name}</span>
-          <span class="price">₹${item.price}</span>
-          <button class="btn gold move" data-idx="${idx}">Move to cart</button>
-          <button class="btn ghost remove" data-idx="${idx}">Remove</button>
-        </div>
-      `
-    )
-    .join('');
-};
+  list.innerHTML = wishlist.map((item, index) => `
+    <div class="table-row">
+      <span>${item.name}</span>
+      <span class="price">₹${item.price}</span>
 
-list?.addEventListener('click', (event) => {
-  const idx = Number(event.target.dataset.idx);
-  if (Number.isNaN(idx)) return;
+      <div style="display:flex; gap:8px;">
+        <button class="btn gold move" data-index="${index}">
+          Move to Cart
+        </button>
+
+        <button class="btn ghost remove" data-index="${index}">
+          Remove
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* =========================
+   EVENT HANDLER
+========================= */
+list?.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-index]');
+  if (!btn) return;
+
+  const index = Number(btn.dataset.index);
+  if (Number.isNaN(index)) return;
 
   const wishlist = getWishlist();
 
-  if (event.target.classList.contains('move')) {
+  if (btn.classList.contains('move')) {
+    const item = wishlist[index];
     const cart = getCart();
-    const item = wishlist[idx];
-    const existing = cart.find((c) => c.id === item.id);
 
-    if (existing) existing.quantity += 1;
-    else cart.push({ ...item, quantity: 1 });
+    const existing = cart.find(c => c.id === item.id);
 
-    wishlist.splice(idx, 1);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      cart.push({ ...item, quantity: 1 });
+    }
+
+    wishlist.splice(index, 1);
+
     saveCart(cart);
     saveWishlist(wishlist);
-    render();
+
+    alert('Moved to cart');
   }
 
-  if (event.target.classList.contains('remove')) {
-    wishlist.splice(idx, 1);
+  if (btn.classList.contains('remove')) {
+    wishlist.splice(index, 1);
     saveWishlist(wishlist);
-    render();
+    alert('Removed from wishlist');
   }
+
+  renderWishlist();
 });
 
-render();
+/* =========================
+   INIT
+========================= */
+renderWishlist();

@@ -1,15 +1,12 @@
-import mongoose from "mongoose";
+// config/db.js
+import mongoose from 'mongoose';
 
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
-    loyaltyPoints: { type: Number, default: 0 },
-    birthday: { type: String, default: null },
-  },
-  { timestamps: true }
-);
-
-export default mongoose.model("User", userSchema);
+export const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('MongoDB Connected');
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+};

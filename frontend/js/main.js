@@ -1,141 +1,100 @@
 import { request } from './api.js';
 import { getCart, saveCart, getWishlist, saveWishlist } from './storage.js';
 
-const featuredContainer = document.querySelector('#featured-products');
+const container = document.querySelector('#featured-products');
+let productsCache = [];
 
 /* =========================
-   STATE CACHE
+   ACTIONS
 ========================= */
-let allProducts = [];
-
-/* =========================
-   ADD TO CART
-========================= */
-function addToCart(product) {
+const addToCart = (product) => {
   const cart = getCart();
+  const item = cart.find(i => i.id === product._id);
 
-  const existing = cart.find(item => item.id === product._id);
-
-  if (existing) {
-    existing.quantity += 1;
-  } else {
+  if (item) item.quantity++;
+  else {
     cart.push({
       id: product._id,
       name: product.name,
       price: product.price,
-      image: product.image || "https://picsum.photos/400/500",
+      image: product.image,
       quantity: 1
     });
   }
 
   saveCart(cart);
-  alert("Added to cart");
-}
+};
 
-/* =========================
-   ADD TO WISHLIST
-========================= */
-function addToWishlist(product) {
+const addToWishlist = (product) => {
   const wishlist = getWishlist();
 
-  const exists = wishlist.some(item => item.id === product._id);
-
-  if (!exists) {
+  if (!wishlist.some(i => i.id === product._id)) {
     wishlist.push({
       id: product._id,
       name: product.name,
       price: product.price,
-      image: product.image || "https://picsum.photos/400/500"
+      image: product.image
     });
 
     saveWishlist(wishlist);
-    alert("Added to wishlist");
-  } else {
-    alert("Already in wishlist");
   }
-}
+};
 
 /* =========================
-   SELECT PRODUCTS TO DISPLAY
+   UI RENDER
 ========================= */
-function getDisplayProducts(products) {
+const getDisplayProducts = (products) => {
   const featured = products.filter(p => p.featured);
-  return featured.length ? featured.slice(0, 4) : products.slice(0, 4);
-}
+  return featured.length ? featured.slice(0, 6) : products.slice(0, 6);
+};
 
-/* =========================
-   RENDER PRODUCT CARDS
-========================= */
-function renderCards(products) {
-  return products.map(p => `
+const render = (products) =>
+  products.map(p => `
     <article class="card">
       <a href="product.html?id=${p._id}">
-        <img src="${p.image || 'https://picsum.photos/400/500'}" alt="${p.name}">
+        <img src="${p.image}" alt="${p.name}">
       </a>
-
       <div class="card-body">
         <h3>${p.name}</h3>
         <p class="price">₹${p.price}</p>
-
         <div class="card-actions">
-          <button class="btn gold add" data-id="${p._id}">
-            Add to Cart
-          </button>
-
-          <button class="btn ghost wish" data-id="${p._id}">
-            Wishlist
-          </button>
+          <button class="btn gold add" data-id="${p._id}">Add</button>
+          <button class="btn ghost wish" data-id="${p._id}">♡</button>
         </div>
       </div>
     </article>
-  `).join('');
-}
+  `).join("");
 
 /* =========================
-   GLOBAL CLICK HANDLER
+   EVENTS
 ========================= */
-document.addEventListener("click", (e) => {
-  const button = e.target.closest("button[data-id]");
-  if (!button) return;
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-id]');
+  if (!btn) return;
 
-  const id = button.dataset.id;
-  if (!id) return;
-
-  const product = allProducts.find(p => p._id === id);
+  const product = productsCache.find(p => p._id === btn.dataset.id);
   if (!product) return;
 
-  if (button.classList.contains("add")) {
-    addToCart(product);
-  }
-
-  if (button.classList.contains("wish")) {
-    addToWishlist(product);
-  }
+  if (btn.classList.contains('add')) addToCart(product);
+  if (btn.classList.contains('wish')) addToWishlist(product);
 });
-
-/* =========================
-   LOAD & RENDER PRODUCTS
-========================= */
-async function renderFeatured() {
-  if (!featuredContainer) return;
-
-  featuredContainer.innerHTML = "<p>Loading...</p>";
-
-  try {
-    const products = await request('/products');
-    allProducts = products;
-
-    const displayProducts = getDisplayProducts(products);
-
-    featuredContainer.innerHTML = renderCards(displayProducts);
-
-  } catch (error) {
-    console.error("Error loading products:", error);
-    featuredContainer.innerHTML = "<p>Unable to load products</p>";
-  }
-}
 
 /* =========================
    INIT
 ========================= */
-renderFeatured();
+(async function init() {
+  if (!container) return;
+
+  container.innerHTML = "<p>Loading...</p>";
+
+  try {
+    const products = await request('/products');
+    productsCache = products;
+
+    const display = getDisplayProducts(products);
+    container.innerHTML = render(display);
+
+  } catch {
+    container.innerHTML = "<p>Failed to load products</p>";
+  }
+})();

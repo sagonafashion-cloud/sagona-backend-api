@@ -1,13 +1,38 @@
-import dotenv from "dotenv";
-import connectDB from "./config/db.js";
-import app from "./app.js";
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+
+import { connectDB } from './config/db.js';
+
+import authRoutes from './routes/auth.routes.js';
+import productRoutes from './routes/product.routes.js';
+import orderRoutes from './routes/order.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 dotenv.config();
+connectDB();
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(helmet());
+app.use(morgan('dev'));
+
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100
+}));
+
+app.get('/', (req, res) => res.send('SAGONA API Running'));
+
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/payment', paymentRoutes);
 
 const PORT = process.env.PORT || 5000;
-
-await connectDB();
-
-app.listen(PORT, () => {
-  console.log(`SAGONA backend running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));

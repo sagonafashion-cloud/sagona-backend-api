@@ -1,88 +1,100 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Register | SAGONA</title>
+
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="icon" href="/favicon.ico">
+    <!-- Favicon Setup -->
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container nav">
+            <a class="brand" href="index.html">SAGONA</a>
+        </div>
+    </header>
+
     <main class="container" style="padding: 4rem 0">
-      <form id="register-form" class="panel" style="max-width: 480px; margin: auto">
-        <h1 class="page-title">Register</h1>
-        <input name="name" class="field" placeholder="Name" required />
-        <input name="email" type="email" class="field" placeholder="Email" required />
-        <input name="password" type="password" class="field" placeholder="Password" required />
-        <input name="birthday" type="date" class="field" />
-        <button class="btn gold" type="submit">Create account</button>
-        <p>Already have an account? <a href="login.html">Login</a></p>
-      </form>
+
+        <form id="register-form" class="panel" style="max-width: 420px; margin:auto">
+
+            <h1 class="page-title">Create Account</h1>
+
+            <input name="name" class="field" placeholder="Full Name" required />
+            <input name="email" type="email" class="field" placeholder="Email" required />
+            <input name="password" type="password" class="field" placeholder="Password" required />
+            <input name="birthday" type="date" class="field" />
+
+            <button class="btn gold" type="submit">Create Account</button>
+
+            <p style="margin-top:1rem;">
+                Already have an account? <a href="login.html">Login</a>
+            </p>
+
+            <p id="message"></p>
+
+        </form>
+
     </main>
 
     <script type="module">
-        const moduleCandidates = ["./js/auth.js", "./frontend/js/auth.js"];
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        let loaded = false;
-        for (const modulePath of moduleCandidates) {
+        import { request } from './js/api.js';
+
+        const form = document.getElementById('register-form');
+        const msg = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            msg.textContent = "";
+            const btn = form.querySelector("button");
+
+            btn.disabled = true;
+            btn.textContent = "Creating...";
+
             try {
-                await import(modulePath);
-                loaded = true;
-                break;
-            } catch (_error) {
-                // Try next candidate path.
+                await request('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: form.name.value,
+                        email: form.email.value,
+                        password: form.password.value,
+                        birthday: form.birthday.value
+                    })
+                });
+
+                msg.style.color = "green";
+                msg.textContent = "Account created! Redirecting...";
+
+                setTimeout(() => {
+                    location.href = "login.html";
+                }, 1200);
+
+            } catch (err) {
+                msg.style.color = "red";
+                msg.textContent = err.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Create Account";
             }
-        }
-        if (!loaded) {
-            console.error("Unable to load frontend module for auth.js");
-        }
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-
-        const loadModule = async () => {
-            for (const modulePath of moduleCandidates) {
-                try {
-                    await import(modulePath);
-                    return;
-                } catch (_error) {
-                    // Try next candidate path.
-                }
-            }
-
-            console.error("Unable to load frontend module for auth.js");
-        };
-
-        loadModule();
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
+        });
     </script>
-  </body>
+
+</body>
+
 </html>

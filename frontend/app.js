@@ -1,91 +1,90 @@
-/* =====================================================
-   SAGONA – APP BOOTSTRAP (Frontend)
-   Safe for Static Hosting + Backend Ready
-===================================================== */
+/* =========================================
+   SAGONA – GLOBAL APP BOOTSTRAP
+========================================= */
 
 (function () {
-    "use strict";
+  "use strict";
 
-    /* =========================
-       GLOBAL CONFIG
-    ========================= */
+  /* =========================
+     GLOBAL CONFIG
+  ========================= */
+  window.SAGONA = {
+    version: "2.0.0",
+    env: "production",
 
-    window.SAGONA = {
-        version: "1.0.0",
-        env: "production", // dev | staging | production
+    storageKeys: {
+      cart: "cart",
+      wishlist: "wishlist",
+      orders: "orders",
+      loyalty: "loyaltyPoints",
+      returns: "returnRequests"
+    }
+  };
 
-        storageKeys: {
-            cart: "cart",
-            wishlist: "wishlist",
-            orders: "previousOrders",
-            loyalty: "loyaltyPoints",
-            returns: "returnRequests"
-        }
-    };
+  /* =========================
+     SAFE LOCAL STORAGE
+  ========================= */
+  window.safeStorage = {
+    get(key, fallback = []) {
+      try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : fallback;
+      } catch {
+        console.warn("Storage read error:", key);
+        return fallback;
+      }
+    },
 
-    /* =========================
-       SAFE LOCAL STORAGE
-    ========================= */
+    set(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        console.warn("Storage write error:", key);
+      }
+    },
 
-    window.safeStorage = {
-        get(key, fallback = []) {
-            try {
-                return JSON.parse(localStorage.getItem(key)) || fallback;
-            } catch (e) {
-                console.warn("Storage read failed:", key);
-                return fallback;
-            }
-        },
+    remove(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        console.warn("Storage remove error:", key);
+      }
+    }
+  };
 
-        set(key, value) {
-            try {
-                localStorage.setItem(key, JSON.stringify(value));
-            } catch (e) {
-                console.warn("Storage write failed:", key);
-            }
-        },
+  /* =========================
+     UTILITIES
+  ========================= */
+  window.utils = {
+    currency(amount) {
+      return `₹${Number(amount || 0).toLocaleString("en-IN")}`;
+    },
 
-        remove(key) {
-            localStorage.removeItem(key);
-        }
-    };
+    uid(prefix = "ID") {
+      return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    },
 
-    /* =========================
-       BASIC UTILITIES
-    ========================= */
+    nowISO() {
+      return new Date().toISOString();
+    }
+  };
 
-    window.utils = {
-        formatCurrency(amount) {
-            return `₹${Number(amount).toLocaleString("en-IN")}`;
-        },
+  /* =========================
+     PAGE DETECTION
+  ========================= */
+  window.currentPage = document.body.dataset.page || "";
 
-        generateId(prefix = "ID") {
-            return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        },
+  /* =========================
+     GLOBAL INIT
+  ========================= */
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log(`SAGONA v${window.SAGONA.version} loaded`);
 
-        todayISO() {
-            return new Date().toISOString();
-        }
-    };
-
-    /* =========================
-       PAGE DETECTION
-    ========================= */
-
-    window.currentPage = document.body.dataset.page || "";
-
-    /* =========================
-       INIT HANDLER
-    ========================= */
-
-    document.addEventListener("DOMContentLoaded", () => {
-        console.log(`SAGONA App Loaded – v${SAGONA.version}`);
-
-        // Auto hooks for future modules
-        if (window.initCart) window.initCart();
-        if (window.initWishlist) window.initWishlist();
-        if (window.initCheckout) window.initCheckout();
-        if (window.initReturns) window.initReturns();
-    });
+    // Optional hooks (only run if defined)
+    window.initCart?.();
+    window.initWishlist?.();
+    window.initCheckout?.();
+    window.initReturns?.();
+  });
 
 })();

@@ -1,96 +1,65 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Cart | SAGONA</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <header class="header">
-      <div class="container nav">
-        <a class="brand" href="index.html">SAGONA</a>
-        <nav class="nav-links">
-          <a href="shop.html">Shop</a>
-          <a href="wishlist.html">Wishlist</a>
-          <a href="checkout.html">Checkout</a>
-        </nav>
-      </div>
-    </header>
 
-    <main class="container">
-      <h1 class="page-title">Your Cart</h1>
-      <section class="panel">
-        <div id="cart-list"></div>
-        <h3>Total: ₹<span id="cart-total">0</span></h3>
-        <a class="btn gold" href="checkout.html">Proceed to Checkout</a>
-      </section>
-    </main>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cart | SAGONA</title>
 
-    <script type="module">
-        const moduleCandidates = ["./js/cart.js", "./frontend/js/cart.js"];
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        let loaded = false;
-        for (const modulePath of moduleCandidates) {
-            try {
-                await import(modulePath);
-                loaded = true;
-                break;
-            } catch (_error) {
-                // Try next candidate path.
-            }
-        }
-        if (!loaded) {
-            console.error("Unable to load frontend module for cart.js");
-        }
-=======
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" href="/favicon.ico">
+  <!-- Favicon Setup -->
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+</head>
 
-        const loadModule = async () => {
-            for (const modulePath of moduleCandidates) {
-                try {
-                    await import(modulePath);
-                    return;
-                } catch (_error) {
-                    // Try next candidate path.
-                }
-            }
+<body>
+  <header class="header">
+    <div class="container nav">
+      <a class="brand" href="index.html">SAGONA</a>
+      <nav class="nav-links">
+        <a href="shop.html">Shop</a>
+        <a href="wishlist.html">Wishlist</a>
+      </nav>
+    </div>
+  </header>
 
-            console.error("Unable to load frontend module for cart.js");
-        };
+  <main class="container">
+    <h1 class="page-title">Your Cart</h1>
 
-        loadModule();
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
-    </script>
-  </body>
+    <section class="panel">
+      <div id="cart-list"></div>
+
+      <h3>Total: ₹<span id="cart-total">0</span></h3>
+
+      <button id="checkout-btn" class="btn gold">
+        Proceed to Checkout
+      </button>
+    </section>
+  </main>
+
+  <script type="module" src="./js/cart.js"></script>
+
+  <script>
+    document.getElementById("checkout-btn").addEventListener("click", () => {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+      if (!cart.length) {
+        alert("Your cart is empty");
+        return;
+      }
+
+      window.location.href = "checkout.html";
+    });
+  </script>
+</body>
+
 </html>
