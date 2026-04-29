@@ -7,10 +7,10 @@ import rateLimit from 'express-rate-limit';
 
 import { connectDB } from './config/db.js';
 
-import authRoutes from './routes/auth.routes.js';
-import productRoutes from './routes/product.routes.js';
-import orderRoutes from './routes/order.routes.js';
-import paymentRoutes from './routes/payment.routes.js';
+import authRoutes from "./routes/authRoutes.js";
+import productRoutes from './routes/productRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 dotenv.config();
 connectDB();
