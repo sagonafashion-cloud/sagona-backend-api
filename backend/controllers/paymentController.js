@@ -1,34 +1,58 @@
 import Razorpay from "razorpay";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
+/* =========================
+   CREATE ORDER
+========================= */
 export const createRazorpayOrder = async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount, currency = "INR", receipt } = req.body;
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ message: "Invalid amount" });
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({ message: "Valid amount is required" });
     }
 
-    const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100),
-      currency: "INR",
-      receipt: `sagona_${Date.now()}`
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    /* 🚨 SAFE CHECK */
+    if (!keyId || !keySecret) {
+      console.warn("⚠ Razorpay not configured");
+      return res.status(500).json({
+        message: "Payment service not configured"
+      });
+    }
+
+    /* ✅ INIT INSIDE FUNCTION */
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
     });
 
-    return res.json(order);
+    const order = await razorpay.orders.create({
+      amount: Math.round(Number(amount) * 100),
+      currency,
+      receipt: receipt || `sagona_${Date.now()}`,
+    });
+
+    res.json(order);
 
   } catch (error) {
-    console.error("Razorpay:", error);
-    return res.status(500).json({ message: "Payment failed" });
+    console.error("Razorpay error:", error);
+    res.status(500).json({ message: "Unable to create payment order" });
   }
 };
 
+/* =========================
+   GET PUBLIC KEY
+========================= */
 export const getRazorpayKey = (_req, res) => {
-  return res.json({
+  if (!process.env.RAZORPAY_KEY_ID) {
+    return res.status(500).json({
+      message: "Razorpay not configured"
+    });
+  }
+
+  res.json({
     keyId: process.env.RAZORPAY_KEY_ID
   });
 };
