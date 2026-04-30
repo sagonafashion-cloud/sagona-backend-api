@@ -2,8 +2,9 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 /* =========================
-   VERIFY TOKEN
+   PROTECT ROUTE (LOGIN REQUIRED)
 ========================= */
+
 export const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -14,10 +15,7 @@ export const protect = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "sagonaSecret"
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id).select("-password");
 
@@ -29,6 +27,7 @@ export const protect = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.error("AUTH ERROR:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -36,9 +35,11 @@ export const protect = async (req, res, next) => {
 /* =========================
    ADMIN CHECK
 ========================= */
-export const adminOnly = (req, res, next) => {
+
+export const admin = (req, res, next) => {
   if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ message: "Admin access required" });
   }
+
   next();
 };
