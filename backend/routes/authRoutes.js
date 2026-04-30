@@ -10,7 +10,7 @@ import { protect, admin } from "../middleware/auth.js";
 const router = express.Router();
 
 router.post("/", protect, createOrder);
-router.get("/", protect, adminOnly, getOrders);
-router.put("/:id", protect, adminOnly, updateOrder);
+router.get("/", protect, admin, getOrders);
+router.put("/:id", protect, admin, updateOrder);
 
 export default router;
