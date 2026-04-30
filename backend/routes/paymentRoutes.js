@@ -1,5 +1,5 @@
 import express from 'express';
-import { createRazorpayOrder, getKey } from '../controllers/paymentController.js';
+import { createRazorpayOrder, getRazorpayKey } from '../controllers/paymentController.js';
 
 const router = express.Router();
 
