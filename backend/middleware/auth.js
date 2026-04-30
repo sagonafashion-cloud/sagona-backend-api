@@ -29,7 +29,7 @@ export const protect = async (req, res, next) => {
 /* =========================
    ADMIN ONLY
 ========================= */
-export const adminOnly = (req, res, next) => {
+export const admin = (req, res, next) => {
   if (req.user && req.user.role === "admin") {
     next();
   } else {
