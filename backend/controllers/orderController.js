@@ -1,8 +1,9 @@
 import Order from "../models/Order.js";
 import User from "../models/User.js";
 
-const num = (v) => Number(v) || 0;
-
+/* =========================
+   CREATE ORDER
+========================= */
 export const createOrder = async (req, res) => {
   try {
     const {
@@ -10,57 +11,69 @@ export const createOrder = async (req, res) => {
       paymentMethod,
       address,
       customer,
-      birthday,
-      birthdayDiscount = 0
+      birthdayDiscount = 0,
+      loyaltyPointsUsed = 0
     } = req.body;
 
     if (!items.length) {
-      return res.status(400).json({ message: "Cart is empty" });
+      return res.status(400).json({ message: "Order items required" });
     }
 
     const subTotal = items.reduce(
-      (sum, i) => sum + num(i.price) * num(i.quantity || 1),
+      (sum, i) => sum + (Number(i.price) * Number(i.quantity || 1)),
       0
     );
 
-    const total = Math.max(subTotal - num(birthdayDiscount), 0);
+    const discount = Number(birthdayDiscount) || 0;
+    const total = Math.max(subTotal - discount, 0);
 
     const loyaltyEarned = Math.floor(total / 100);
 
     const order = await Order.create({
       userId: req.user._id,
+      customer,
       items,
+      subTotal,
+      birthdayDiscount: discount,
+      loyaltyPointsUsed: Number(loyaltyPointsUsed),
+      loyaltyPointsEarned: loyaltyEarned,
       total,
       paymentMethod,
       address,
-      customer,
-      birthday,
-      birthdayDiscount,
-      loyaltyPointsEarned: loyaltyEarned
+      status: "PENDING"
     });
 
+    // Update user loyalty
     await User.findByIdAndUpdate(req.user._id, {
-      $inc: { loyaltyPoints: loyaltyEarned }
+      $inc: {
+        loyaltyPoints: loyaltyEarned - Number(loyaltyPointsUsed)
+      }
     });
 
-    return res.status(201).json(order);
+    res.status(201).json(order);
 
-  } catch (error) {
-    console.error("createOrder:", error);
-    return res.status(500).json({ message: "Order failed" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Create order failed" });
   }
 };
 
-export const getAllOrders = async (_req, res) => {
+/* =========================
+   GET ALL ORDERS (ADMIN)
+========================= */
+export const getOrders = async (_req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
-    return res.json(orders);
+    res.json(orders);
   } catch {
-    return res.status(500).json({ message: "Unable to fetch orders" });
+    res.status(500).json({ message: "Fetch orders failed" });
   }
 };
 
-export const updateOrderStatus = async (req, res) => {
+/* =========================
+   UPDATE ORDER STATUS
+========================= */
+export const updateOrder = async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -74,10 +87,13 @@ export const updateOrderStatus = async (req, res) => {
       { new: true }
     );
 
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
 
-    return res.json(order);
+    res.json(order);
+
   } catch {
-    return res.status(400).json({ message: "Invalid order id" });
+    res.status(400).json({ message: "Update failed" });
   }
 };

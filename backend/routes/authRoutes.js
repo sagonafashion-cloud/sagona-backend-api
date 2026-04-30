@@ -1,8 +1,16 @@
-import express from 'express';
-import { registerUser, loginUser, getCurrentUser } from "../controllers/authController.js";
+import express from "express";
+import {
+    createOrder,
+    getOrders,
+    updateOrder
+} from "../controllers/orderController.js";
+
+import { protect, adminOnly } from "../middleware/auth.js";
 
 const router = express.Router();
-router.post('/register', register);
-router.post('/login', login);
+
+router.post("/", protect, createOrder);
+router.get("/", protect, adminOnly, getOrders);
+router.put("/:id", protect, adminOnly, updateOrder);
 
 export default router;
