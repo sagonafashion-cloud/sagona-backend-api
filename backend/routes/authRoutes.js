@@ -5,7 +5,7 @@ import {
     updateOrder
 } from "../controllers/orderController.js";
 
-import { protect, adminOnly } from "../middleware/auth.js";
+import { protect, admin } from "../middleware/auth.js";
 
 const router = express.Router();
 
