@@ -22,7 +22,14 @@
 </head>
 
 <body>
-
+    <header class="header">
+        <div class="logo">SAGONA</div>
+        <nav class="nav">
+            <a href="shop.html">Shop</a>
+            <a href="wishlist.html">Wishlist</a>
+            <a href="cart.html">Cart</a>
+        </nav>
+    </header>
     <header class="header">
         <div class="container nav">
             <a class="brand" href="index.html">SAGONA</a>
@@ -36,6 +43,23 @@
     <main class="container">
         <h1 class="page-title">Shop</h1>
         <div id="shop-grid" class="grid"></div>
+        <div class="container">
+
+            <!-- FILTERS -->
+            <aside class="filters">
+                <h3>Category</h3>
+                <label><input type="checkbox"> Boys</label>
+                <label><input type="checkbox"> Girls</label>
+
+                <h3>Price</h3>
+                <label><input type="checkbox"> Under ₹2000</label>
+                <label><input type="checkbox"> ₹2000 - ₹5000</label>
+            </aside>
+
+            <!-- PRODUCTS -->
+            <div id="shop-grid" class="grid"></div>
+
+        </div>
     </main>
 
     <script type="module" src="/nc_assets/js/main.js"></script>

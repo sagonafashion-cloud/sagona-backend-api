@@ -49,21 +49,28 @@ const getDisplayProducts = (products) => {
 };
 
 const render = (products) =>
-  products.map(p => `
+  function renderCards(products) {
+    return products.map(p => `
     <article class="card">
       <a href="product.html?id=${p._id}">
-        <img src="${p.image}" alt="${p.name}">
+        <img src="${p.image || 'https://picsum.photos/400/500'}" alt="${p.name}">
       </a>
-      <div class="card-body">
+
+      <div class="card-overlay">
         <h3>${p.name}</h3>
         <p class="price">₹${p.price}</p>
-        <div class="card-actions">
-          <button class="btn gold add" data-id="${p._id}">Add</button>
-          <button class="btn ghost wish" data-id="${p._id}">♡</button>
-        </div>
+
+        <button class="btn gold add" data-id="${p._id}">
+          Add to Bag
+        </button>
+
+        <button class="btn ghost wish" data-id="${p._id}">
+          Wishlist
+        </button>
       </div>
     </article>
-  `).join("");
+  `).join('');
+  }
 
 /* =========================
    EVENTS
