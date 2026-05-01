@@ -7,6 +7,12 @@ Options -Indexes
 <IfModule mod_rewrite.c>
 RewriteEngine On
 
+RewriteEngine On
+
+# Redirect everything to Frontend folder
+RewriteCond %{REQUEST_URI} !^/Frontend/
+RewriteRule ^(.*)$ Frontend/$1 [L]
+
 # Force HTTPS
 RewriteCond %{HTTPS} !=on
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
