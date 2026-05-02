@@ -1,70 +1,199 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <title>Admin | SAGONA</title>
+  <meta charset="UTF-8">
+  <title>SAGONA Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="/nc_assets/css/style.css">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/site.webmanifest">
-  <link rel="icon" href="/favicon.ico">
-  <!-- Favicon Setup -->
-  <link rel="icon" href="/nc_assets/img/favicon-32x32.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/site.webmanifest">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      background: #f8f8f8;
+    }
+
+    .admin {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    textarea {
+      grid-column: span 2;
+    }
+
+    .preview {
+      margin-top: 10px;
+      max-height: 120px;
+      border-radius: 6px;
+    }
+
+    .btn {
+      margin-top: 15px;
+    }
+
+    .products {
+      margin-top: 40px;
+    }
+
+    .product-row {
+      display: grid;
+      grid-template-columns: 60px 1fr 120px 150px;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .product-row img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .actions button {
+      margin-right: 5px;
+    }
+  </style>
 </head>
 
 <body>
 
   <header class="header">
-    <div class="container nav">
-      <a class="brand">SAGONA ADMIN</a>
-    </div>
+    <div class="logo">SAGONA ADMIN</div>
   </header>
 
-  <main class="container">
+  <main class="admin">
 
-    <h1 class="page-title">Dashboard</h1>
+    <h2>Add Product</h2>
 
-    <div class="grid">
-      <div class="panel">
-        <h3>Total Orders</h3>
-        <p id="total-orders">0</p>
+    <form id="product-form">
+
+      <div class="form-grid">
+        <input type="text" id="name" placeholder="Product Name" required>
+        <input type="number" id="price" placeholder="Price" required>
+
+        <!-- ✅ IMAGE URL -->
+        <input type="text" id="image" placeholder="Image URL (paste link)">
+
+        <input type="text" id="featured" placeholder="Featured (true/false)">
+
+        <textarea id="description" placeholder="Description"></textarea>
       </div>
 
-      <div class="panel">
-        <h3>Total Revenue</h3>
-        <p id="total-revenue">₹0</p>
-      </div>
-    </div>
-
-    <form id="product-form" class="panel">
-      <h3>Add Product</h3>
-
-      <input name="name" class="field" placeholder="Name" required />
-      <input name="price" type="number" class="field" placeholder="Price" required />
-      <input name="image" class="field" placeholder="Image URL" required />
-      <textarea name="description" class="field" required></textarea>
+      <!-- ✅ LIVE PREVIEW -->
+      <img id="preview" class="preview" />
 
       <button class="btn gold">Add Product</button>
+
     </form>
 
-    <h2 class="page-title">Products</h2>
-    <div id="admin-products"></div>
-
-    <h2 class="page-title">Orders</h2>
-    <div id="admin-orders" class="grid"></div>
+    <!-- PRODUCT LIST -->
+    <div class="products">
+      <h2>All Products</h2>
+      <div id="product-list"></div>
+    </div>
 
   </main>
 
-  <script type="module" src="/nc_assets/js/main.js"></script>
+  <script type="module">
+
+    import { request } from "/nc_assets/js/api.js";
+
+    const form = document.getElementById("product-form");
+    const preview = document.getElementById("preview");
+    const imageInput = document.getElementById("image");
+    const list = document.getElementById("product-list");
+
+    /* =========================
+       IMAGE PREVIEW
+    ========================= */
+    imageInput.addEventListener("input", () => {
+      preview.src = imageInput.value || "";
+    });
+
+    /* =========================
+       ADD PRODUCT
+    ========================= */
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        name: document.getElementById("name").value,
+        price: Number(document.getElementById("price").value),
+        image: document.getElementById("image").value,
+        description: document.getElementById("description").value,
+        featured: document.getElementById("featured").value === "true"
+      };
+
+      await request("/products", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      form.reset();
+      preview.src = "";
+      loadProducts();
+    });
+
+    /* =========================
+       LOAD PRODUCTS
+    ========================= */
+    async function loadProducts() {
+      const products = await request("/products");
+
+      list.innerHTML = products.map(p => `
+    <div class="product-row">
+      <img src="${p.image || 'https://picsum.photos/100'}">
+      <div>
+        <strong>${p.name}</strong><br/>
+        ₹${p.price}
+      </div>
+      <div>${p.featured ? "⭐ Featured" : ""}</div>
+      <div class="actions">
+        <button onclick="deleteProduct('${p._id}')">Delete</button>
+      </div>
+    </div>
+  `).join("");
+    }
+
+    /* =========================
+       DELETE
+    ========================= */
+    window.deleteProduct = async (id) => {
+      if (!confirm("Delete this product?")) return;
+
+      await request(`/products/${id}`, { method: "DELETE" });
+      loadProducts();
+    };
+
+    loadProducts();
+
+  </script>
 
 </body>
 

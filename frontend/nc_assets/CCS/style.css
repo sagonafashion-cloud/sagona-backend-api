@@ -67,6 +67,84 @@ body {
 /* =========================
    GRID LAYOUT
 ========================= */
+/* LAYOUT */
+.shop-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 40px;
+    padding: 40px;
+}
+
+/* SIDEBAR */
+.sidebar {
+    border-right: 1px solid #eee;
+    padding-right: 20px;
+}
+
+.sidebar h3 {
+    margin-bottom: 20px;
+}
+
+.filter-group {
+    margin-bottom: 25px;
+}
+
+.filter-group h4 {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+/* GRID */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+/* CARD */
+.card {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.card img {
+    width: 100%;
+    height: 380px;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+/* HOVER ZOOM */
+.card:hover img {
+    transform: scale(1.05);
+}
+
+/* QUICK ACTION OVERLAY */
+.card-overlay {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    transform: translateY(100%);
+    transition: 0.3s ease;
+}
+
+.card:hover .card-overlay {
+    transform: translateY(0);
+}
+
+/* TEXT */
+.card-body {
+    margin-top: 10px;
+}
+
+.price {
+    font-weight: 500;
+}
 
 .container {
     display: grid;
@@ -93,6 +171,23 @@ body {
     margin-bottom: 8px;
     font-size: 13px;
     color: var(--gray);
+}
+
+.filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.filters input,
+.filters select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+}
+
+.filters input {
+    flex: 1;
 }
 
 /* =========================

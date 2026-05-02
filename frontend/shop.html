@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Shop | SAGONA</title>
-
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/nc_assets/css/style.css">
     <link rel="apple-touch-icon" sizes="180x180" href="/nc_assets/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/nc_assets/img/favicon-32x32.png">
@@ -30,7 +32,40 @@
             <a href="cart.html">Cart</a>
         </nav>
     </header>
+    <main class="shop-layout">
 
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <h3>Filters</h3>
+
+            <input type="text" id="search" placeholder="Search">
+
+            <div class="filter-group">
+                <h4>Price</h4>
+                <label><input type="radio" name="price" value=""> All</label>
+                <label><input type="radio" name="price" value="0-2000"> Under ₹2000</label>
+                <label><input type="radio" name="price" value="2000-5000"> ₹2000–₹5000</label>
+                <label><input type="radio" name="price" value="5000+"> Above ₹5000</label>
+            </div>
+
+            <div class="filter-group">
+                <h4>Sort</h4>
+                <select id="sort">
+                    <option value="">Default</option>
+                    <option value="low">Price Low → High</option>
+                    <option value="high">Price High → Low</option>
+                </select>
+            </div>
+
+        </aside>
+
+        <!-- PRODUCTS -->
+        <section class="shop-content">
+            <div id="shop-grid" class="product-grid"></div>
+        </section>
+
+    </main>
     <main class="container">
         <h1 class="page-title">Shop</h1>
         <div id="shop-grid" class="grid"></div>
@@ -42,9 +77,28 @@
                 <label><input type="checkbox"> Boys</label>
                 <label><input type="checkbox"> Girls</label>
 
-                <h3>Price</h3>
-                <label><input type="checkbox"> Under ₹2000</label>
-                <label><input type="checkbox"> ₹2000 - ₹5000</label>
+                <section class="filters">
+
+                    <input type="text" id="search" placeholder="Search products...">
+
+                    <select id="sort">
+                        <option value="">Sort</option>
+                        <option value="low">Price: Low to High</option>
+                        <option value="high">Price: High to Low</option>
+                    </select>
+
+                    <select id="price">
+                        <option value="">Price Range</option>
+                        <option value="0-2000">Under ₹2000</option>
+                        <option value="2000-5000">₹2000 - ₹5000</option>
+                        <option value="5000-10000">₹5000 - ₹10000</option>
+                        <option value="10000+">Above ₹10000</option>
+                    </select>
+
+                </section>
+
+                <div id="shop-grid" class="grid"></div>
+
             </aside>
 
             <!-- PRODUCTS -->
