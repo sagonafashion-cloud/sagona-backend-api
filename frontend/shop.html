@@ -6,24 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Shop | SAGONA</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
-        rel="stylesheet">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Inter&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
     <link rel="stylesheet" href="/nc_assets/css/style.css">
-    <link rel="apple-touch-icon" sizes="180x180" href="/nc_assets/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/nc_assets/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/nc_assets/img/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
+
+    <!-- Favicon -->
     <link rel="icon" href="/nc_assets/img/favicon-32x32.png">
-    <!-- Favicon Setup -->
-    <link rel="icon" href="/nc_assets/img/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/nc_assets/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/nc_assets/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/nc_assets/img/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
 </head>
 
 <body>
+
     <header class="header">
         <div class="logo">SAGONA</div>
         <nav class="nav">
@@ -32,14 +27,14 @@
             <a href="cart.html">Cart</a>
         </nav>
     </header>
+
     <main class="shop-layout">
 
         <!-- SIDEBAR -->
         <aside class="sidebar">
-
             <h3>Filters</h3>
 
-            <input type="text" id="search" placeholder="Search">
+            <input type="text" id="search" placeholder="Search products">
 
             <div class="filter-group">
                 <h4>Price</h4>
@@ -57,61 +52,22 @@
                     <option value="high">Price High → Low</option>
                 </select>
             </div>
-
         </aside>
 
         <!-- PRODUCTS -->
-        <section class="shop-content">
+        <section>
             <div id="shop-grid" class="product-grid"></div>
         </section>
 
     </main>
-    <main class="container">
-        <h1 class="page-title">Shop</h1>
-        <div id="shop-grid" class="grid"></div>
-        <div class="container">
 
-            <!-- FILTERS -->
-            <aside class="filters">
-                <h3>Category</h3>
-                <label><input type="checkbox"> Boys</label>
-                <label><input type="checkbox"> Girls</label>
-
-                <section class="filters">
-
-                    <input type="text" id="search" placeholder="Search products...">
-
-                    <select id="sort">
-                        <option value="">Sort</option>
-                        <option value="low">Price: Low to High</option>
-                        <option value="high">Price: High to Low</option>
-                    </select>
-
-                    <select id="price">
-                        <option value="">Price Range</option>
-                        <option value="0-2000">Under ₹2000</option>
-                        <option value="2000-5000">₹2000 - ₹5000</option>
-                        <option value="5000-10000">₹5000 - ₹10000</option>
-                        <option value="10000+">Above ₹10000</option>
-                    </select>
-
-                </section>
-
-                <div id="shop-grid" class="grid"></div>
-
-            </aside>
-
-            <!-- PRODUCTS -->
-            <div id="shop-grid" class="grid"></div>
-
+    <!-- QUICK VIEW -->
+    <div id="quick-view" class="quick-view">
+        <div class="quick-content">
+            <span onclick="closeQuickView()" class="close">&times;</span>
+            <div id="quick-body"></div>
         </div>
-        <div id="quick-view" class="quick-view">
-            <div class="quick-content">
-                <span onclick="closeQuickView()" class="close">&times;</span>
-                <div id="quick-body"></div>
-            </div>
-        </div>
-    </main>
+    </div>
 
     <script type="module" src="/nc_assets/js/main.js"></script>
 

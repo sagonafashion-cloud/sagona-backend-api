@@ -7,12 +7,16 @@ const productForm = document.getElementById("product-form");
 const productsWrap = document.getElementById("admin-products");
 const ordersWrap = document.getElementById("admin-orders");
 
+let allProducts = [];
+
 async function loadDashboard() {
   try {
     const [products, orders] = await Promise.all([
       request("/products"),
       request("/orders")
     ]);
+
+    allProducts = products;
 
     /* METRICS */
     document.getElementById("total-orders").textContent = orders.length;
@@ -21,42 +25,20 @@ async function loadDashboard() {
     document.getElementById("total-revenue").textContent = `₹${revenue}`;
 
     /* PRODUCTS */
-    function render(products) {
-      grid.innerHTML = `
-  <div class="skeleton"></div>
-  <div class="skeleton"></div>
-  <div class="skeleton"></div>
-`;
-      grid.innerHTML = products.map((p, i) => `
-    <article class="card fade-in" style="animation-delay:${i * 0.05}s">
-
-      <div onclick="openQuickView('${p._id}')">
-
-        <img class="first" src="${p.image}" alt="${p.name}">
-        <img class="second" src="${p.image}" alt="${p.name}">
-
-      </div>
-
-      <div class="card-overlay">
-        <button class="btn gold add" data-id="${p._id}">Add</button>
-        <button class="btn ghost wish" data-id="${p._id}">♡</button>
-      </div>
-
-      <div class="card-body">
+    productsWrap.innerHTML = products.map((p) => `
+      <div class="admin-card">
+        <img src="${p.image}" />
         <h3>${p.name}</h3>
-        <p class="price">₹${p.price}</p>
+        <p>₹${p.price}</p>
+        <button class="btn ghost delete" data-id="${p._id}">Delete</button>
       </div>
-
-    </article>
-  `).join('');
-    }
+    `).join("");
 
     /* ORDERS */
     ordersWrap.innerHTML = orders.map(o => `
       <div class="panel">
         <strong>${o.customer?.name || "Guest"}</strong>
         <p>${o.customer?.email || ""}</p>
-
         <p>Total: ₹${o.total}</p>
         <p>Status: ${o.status}</p>
 
@@ -69,28 +51,6 @@ async function loadDashboard() {
   } catch (err) {
     console.error("Dashboard error:", err);
   }
-  window.openQuickView = (id) => {
-    const p = allProducts.find(p => p._id === id);
-    if (!p) return;
-
-    document.getElementById("quick-body").innerHTML = `
-    <div style="display:flex; gap:20px">
-      <img src="${p.image}" style="width:300px">
-      <div>
-        <h2>${p.name}</h2>
-        <p>₹${p.price}</p>
-        <p>${p.description}</p>
-        <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
-      </div>
-    </div>
-  `;
-
-    document.getElementById("quick-view").style.display = "block";
-  };
-
-  window.closeQuickView = () => {
-    document.getElementById("quick-view").style.display = "none";
-  };
 }
 
 /* ADD PRODUCT */

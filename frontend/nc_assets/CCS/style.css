@@ -1,78 +1,48 @@
-/* =========================
-   SAGONA – LUXURY UI SYSTEM
-========================= */
-
 :root {
     --gold: #c6a96b;
     --black: #111;
     --gray: #777;
-    --light: #f8f8f8;
+    --light: #f9f9f9;
     --white: #fff;
 }
 
 body {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    background: var(--white);
-    color: var(--black);
     margin: 0;
+    font-family: 'Inter', sans-serif;
+    color: var(--black);
+    background: var(--white);
 }
 
-/* =========================
-   HEADER
-========================= */
-
+/* HEADER */
 .header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     padding: 20px 60px;
     border-bottom: 1px solid #eee;
 }
 
 .logo {
-    font-size: 24px;
+    font-family: 'Playfair Display', serif;
     letter-spacing: 3px;
-    font-weight: 600;
+    font-size: 24px;
 }
 
 .nav a {
     margin-left: 25px;
     text-decoration: none;
     color: var(--black);
-    font-size: 14px;
 }
 
 .nav a:hover {
     color: var(--gold);
 }
 
-/* =========================
-   HERO
-========================= */
-
-.hero {
-    padding: 80px 60px;
-    text-align: center;
-}
-
-.hero h1 {
-    font-size: 42px;
-    font-weight: 300;
-}
-
-.hero p {
-    color: var(--gray);
-}
-
-/* =========================
-   GRID LAYOUT
-========================= */
-/* LAYOUT */
+/* SHOP LAYOUT */
 .shop-layout {
     display: grid;
     grid-template-columns: 260px 1fr;
     gap: 40px;
-    padding: 40px;
+    padding: 40px 60px;
 }
 
 /* SIDEBAR */
@@ -82,6 +52,7 @@ body {
 }
 
 .sidebar h3 {
+    font-size: 14px;
     margin-bottom: 20px;
 }
 
@@ -90,15 +61,23 @@ body {
 }
 
 .filter-group h4 {
+    font-size: 13px;
     margin-bottom: 10px;
-    font-size: 14px;
+}
+
+.sidebar input,
+.sidebar select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
 }
 
 /* GRID */
 .product-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+    gap: 40px;
 }
 
 /* CARD */
@@ -110,150 +89,47 @@ body {
 
 .card img {
     width: 100%;
-    height: 380px;
+    height: 420px;
     object-fit: cover;
     transition: transform 0.4s ease;
 }
 
-/* HOVER ZOOM */
 .card:hover img {
     transform: scale(1.05);
 }
 
-/* QUICK ACTION OVERLAY */
+/* OVERLAY */
 .card-overlay {
     position: absolute;
     bottom: 0;
     width: 100%;
+    padding: 12px;
     background: rgba(255, 255, 255, 0.95);
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
     transform: translateY(100%);
-    transition: 0.3s ease;
+    transition: 0.3s;
 }
 
 .card:hover .card-overlay {
     transform: translateY(0);
 }
 
-/* TEXT */
 .card-body {
     margin-top: 10px;
 }
 
-.price {
-    font-weight: 500;
-}
-
-.container {
-    display: grid;
-    grid-template-columns: 250px 1fr;
-    gap: 40px;
-    padding: 40px 60px;
-}
-
-/* =========================
-   FILTER SIDEBAR
-========================= */
-
-.filters {
-    border-right: 1px solid #eee;
-}
-
-.filters h3 {
-    font-size: 14px;
-    margin-bottom: 15px;
-}
-
-.filters label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 13px;
-    color: var(--gray);
-}
-
-.filters {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-}
-
-.filters input,
-.filters select {
-    padding: 10px;
-    border: 1px solid #ddd;
-    font-size: 14px;
-}
-
-.filters input {
-    flex: 1;
-}
-
-/* =========================
-   PRODUCT GRID
-========================= */
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 25px;
-}
-
-/* =========================
-   PRODUCT CARD
-========================= */
-
-.card {
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-}
-
-.card img {
-    width: 100%;
-    height: 320px;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-}
-
-.card:hover img {
-    transform: scale(1.08);
-}
-
-/* Hover overlay */
-.card-overlay {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    transform: translateY(100%);
-    transition: 0.4s ease;
-    padding: 15px;
-}
-
-.card:hover .card-overlay {
-    transform: translateY(0);
-}
-
-/* Text */
 .card h3 {
     font-size: 14px;
-    font-weight: 500;
 }
 
 .price {
     color: var(--gold);
-    font-size: 14px;
 }
 
-/* Buttons */
+/* BUTTONS */
 .btn {
-    border: none;
     padding: 10px;
-    margin-top: 10px;
+    border: none;
     cursor: pointer;
-    width: 100%;
     font-size: 13px;
 }
 
@@ -267,142 +143,26 @@ body {
     border: 1px solid #ddd;
 }
 
-/* TYPOGRAPHY */
-body {
-    font-family: 'Inter', sans-serif;
-    color: #111;
+/* ADMIN */
+.admin-card {
+    border: 1px solid #eee;
+    padding: 10px;
+    text-align: center;
 }
 
-h1,
-h2,
-h3 {
-    font-family: 'Playfair Display', serif;
-}
-
-/* GRID REFINEMENT */
-.product-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 40px;
-}
-
-/* CARD */
-.card {
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.3s ease;
-}
-
-.card img {
+.admin-card img {
     width: 100%;
-    height: 420px;
+    height: 150px;
     object-fit: cover;
-    transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-/* IMAGE HOVER SWAP */
-.card img.second {
-    position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0;
-}
-
-.card:hover img.first {
-    opacity: 0;
-}
-
-.card:hover img.second {
-    opacity: 1;
-}
-
-/* HOVER EFFECT */
-.card:hover {
-    transform: translateY(-4px);
-}
-
-/* OVERLAY BUTTON */
-.card-overlay {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.95);
-    display: flex;
-    justify-content: space-between;
-    transform: translateY(100%);
-    transition: 0.3s ease;
-}
-
-.card:hover .card-overlay {
-    transform: translateY(0);
-}
-
-/* FADE IN */
-.fade-in {
-    opacity: 0;
-    transform: translateY(10px);
-    animation: fadeIn 0.5s ease forwards;
-}
-
-@keyframes fadeIn {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* SKELETON LOADING */
-.skeleton {
-    height: 420px;
-    background: linear-gradient(90deg, #eee, #f5f5f5, #eee);
-    animation: shimmer 1.2s infinite;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: -200px 0;
-    }
-
-    100% {
-        background-position: 200px 0;
-    }
-}
-
-.quick-view {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: none;
-}
-
-.quick-content {
-    background: white;
-    width: 70%;
-    margin: 5% auto;
-    padding: 30px;
-    position: relative;
-}
-
-.close {
-    position: absolute;
-    right: 15px;
-    top: 10px;
-    cursor: pointer;
-}
-
-/* =========================
-   RESPONSIVE
-========================= */
-
+/* RESPONSIVE */
 @media (max-width: 900px) {
-    .container {
+    .shop-layout {
         grid-template-columns: 1fr;
     }
 
-    .grid {
+    .product-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
