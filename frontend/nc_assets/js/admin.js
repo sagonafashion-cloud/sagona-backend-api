@@ -21,12 +21,35 @@ async function loadDashboard() {
     document.getElementById("total-revenue").textContent = `₹${revenue}`;
 
     /* PRODUCTS */
-    productsWrap.innerHTML = products.map(p => `
-      <div class="table-row">
-        <span>${p.name} - ₹${p.price}</span>
-        <button data-id="${p._id}" class="btn ghost delete">Delete</button>
+    function render(products) {
+      grid.innerHTML = `
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+`;
+      grid.innerHTML = products.map((p, i) => `
+    <article class="card fade-in" style="animation-delay:${i * 0.05}s">
+
+      <div onclick="openQuickView('${p._id}')">
+
+        <img class="first" src="${p.image}" alt="${p.name}">
+        <img class="second" src="${p.image}" alt="${p.name}">
+
       </div>
-    `).join("");
+
+      <div class="card-overlay">
+        <button class="btn gold add" data-id="${p._id}">Add</button>
+        <button class="btn ghost wish" data-id="${p._id}">♡</button>
+      </div>
+
+      <div class="card-body">
+        <h3>${p.name}</h3>
+        <p class="price">₹${p.price}</p>
+      </div>
+
+    </article>
+  `).join('');
+    }
 
     /* ORDERS */
     ordersWrap.innerHTML = orders.map(o => `
@@ -46,6 +69,28 @@ async function loadDashboard() {
   } catch (err) {
     console.error("Dashboard error:", err);
   }
+  window.openQuickView = (id) => {
+    const p = allProducts.find(p => p._id === id);
+    if (!p) return;
+
+    document.getElementById("quick-body").innerHTML = `
+    <div style="display:flex; gap:20px">
+      <img src="${p.image}" style="width:300px">
+      <div>
+        <h2>${p.name}</h2>
+        <p>₹${p.price}</p>
+        <p>${p.description}</p>
+        <button class="btn gold add" data-id="${p._id}">Add to Cart</button>
+      </div>
+    </div>
+  `;
+
+    document.getElementById("quick-view").style.display = "block";
+  };
+
+  window.closeQuickView = () => {
+    document.getElementById("quick-view").style.display = "none";
+  };
 }
 
 /* ADD PRODUCT */
