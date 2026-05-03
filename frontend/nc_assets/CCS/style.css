@@ -1,3 +1,7 @@
+/* =========================
+   SAGONA ULTRA PREMIUM UI
+========================= */
+
 :root {
     --gold: #c6a96b;
     --black: #111;
@@ -6,6 +10,7 @@
     --white: #fff;
 }
 
+/* BASE */
 body {
     margin: 0;
     font-family: 'Inter', sans-serif;
@@ -13,71 +18,127 @@ body {
     background: var(--white);
 }
 
+h1,
+h2,
+h3 {
+    font-family: 'Playfair Display', serif;
+}
+
+/* CONTAINER */
+.container {
+    max-width: 1300px;
+    margin: auto;
+    padding: 0 40px;
+}
+
+/* TOP STRIP */
+.top-strip {
+    text-align: center;
+    font-size: 12px;
+    padding: 8px;
+    background: var(--black);
+    color: white;
+    letter-spacing: 1px;
+}
+
 /* HEADER */
 .header {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px 60px;
     border-bottom: 1px solid #eee;
 }
 
-.logo {
-    font-family: 'Playfair Display', serif;
-    letter-spacing: 3px;
-    font-size: 24px;
+.nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
 }
 
-.nav a {
-    margin-left: 25px;
+.brand {
+    font-size: 26px;
+    letter-spacing: 4px;
     text-decoration: none;
     color: var(--black);
 }
 
-.nav a:hover {
-    color: var(--gold);
-}
-
-/* SHOP LAYOUT */
-.shop-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 40px;
-    padding: 40px 60px;
-}
-
-/* SIDEBAR */
-.sidebar {
-    border-right: 1px solid #eee;
-    padding-right: 20px;
-}
-
-.sidebar h3 {
+.nav-links a {
+    margin-left: 25px;
+    text-decoration: none;
     font-size: 14px;
-    margin-bottom: 20px;
+    color: var(--black);
+    position: relative;
 }
 
-.filter-group {
-    margin-bottom: 25px;
+/* HOVER UNDERLINE EFFECT */
+.nav-links a::after {
+    content: "";
+    width: 0;
+    height: 1px;
+    background: var(--gold);
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    transition: 0.3s;
 }
 
-.filter-group h4 {
-    font-size: 13px;
-    margin-bottom: 10px;
-}
-
-.sidebar input,
-.sidebar select {
+.nav-links a:hover::after {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
+}
+
+/* HERO */
+.hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 60px;
+    padding: 80px 0;
+}
+
+.hero h1 {
+    font-size: 52px;
+    font-weight: 500;
+}
+
+.hero p {
+    color: var(--gray);
+    margin: 20px 0;
+}
+
+.hero img {
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+}
+
+/* BUTTON */
+.btn {
+    display: inline-block;
+    padding: 12px 28px;
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.btn.gold {
+    background: var(--gold);
+    color: white;
+    transition: 0.3s;
+}
+
+.btn.gold:hover {
+    background: #b89655;
+}
+
+/* SECTION TITLE */
+.page-title {
+    font-size: 32px;
+    margin: 60px 0 20px;
 }
 
 /* GRID */
-.product-grid {
+.grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 40px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
 }
 
 /* CARD */
@@ -89,7 +150,7 @@ body {
 
 .card img {
     width: 100%;
-    height: 420px;
+    height: 380px;
     object-fit: cover;
     transition: transform 0.4s ease;
 }
@@ -107,6 +168,8 @@ body {
     background: rgba(255, 255, 255, 0.95);
     transform: translateY(100%);
     transition: 0.3s;
+    display: flex;
+    justify-content: space-between;
 }
 
 .card:hover .card-overlay {
@@ -117,52 +180,27 @@ body {
     margin-top: 10px;
 }
 
-.card h3 {
-    font-size: 14px;
-}
-
 .price {
     color: var(--gold);
 }
 
-/* BUTTONS */
-.btn {
-    padding: 10px;
-    border: none;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.btn.gold {
-    background: var(--gold);
-    color: white;
-}
-
-.btn.ghost {
-    background: transparent;
-    border: 1px solid #ddd;
-}
-
-/* ADMIN */
-.admin-card {
-    border: 1px solid #eee;
-    padding: 10px;
+/* FOOTER */
+.footer {
+    margin-top: 80px;
+    padding: 40px 0;
     text-align: center;
-}
-
-.admin-card img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
+    border-top: 1px solid #eee;
+    font-size: 13px;
+    color: var(--gray);
 }
 
 /* RESPONSIVE */
-@media (max-width: 900px) {
-    .shop-layout {
+@media(max-width: 900px) {
+    .hero {
         grid-template-columns: 1fr;
     }
 
-    .product-grid {
+    .grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }

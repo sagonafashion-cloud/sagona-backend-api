@@ -8,7 +8,9 @@
     <title>Shop | SAGONA</title>
 
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Inter&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
+        rel="stylesheet">
 
     <!-- CSS -->
     <link rel="stylesheet" href="/nc_assets/css/style.css">
@@ -19,45 +21,63 @@
 
 <body>
 
+    <!-- TOP STRIP -->
+    <div class="top-strip">NEW SEASON · FREE SHIPPING ABOVE ₹7,500</div>
+
+    <!-- HEADER -->
     <header class="header">
-        <div class="logo">SAGONA</div>
-        <nav class="nav">
-            <a href="shop.html">Shop</a>
-            <a href="wishlist.html">Wishlist</a>
-            <a href="cart.html">Cart</a>
-        </nav>
+        <div class="container">
+            <div class="nav">
+                <a class="brand" href="index.html">SAGONA</a>
+
+                <nav class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="shop.html">Shop</a>
+                    <a href="wishlist.html">Wishlist</a>
+                    <a href="cart.html">Cart</a>
+                    <a href="login.html">Sign In</a>
+                </nav>
+            </div>
+        </div>
     </header>
 
-    <main class="shop-layout">
+    <!-- MAIN -->
+    <main class="container">
 
-        <!-- SIDEBAR -->
-        <aside class="sidebar">
-            <h3>Filters</h3>
+        <h1 class="page-title">Shop</h1>
 
-            <input type="text" id="search" placeholder="Search products">
+        <div class="shop-layout">
 
-            <div class="filter-group">
-                <h4>Price</h4>
-                <label><input type="radio" name="price" value=""> All</label>
-                <label><input type="radio" name="price" value="0-2000"> Under ₹2000</label>
-                <label><input type="radio" name="price" value="2000-5000"> ₹2000–₹5000</label>
-                <label><input type="radio" name="price" value="5000+"> Above ₹5000</label>
-            </div>
+            <!-- SIDEBAR -->
+            <aside class="sidebar">
+                <h3>Filters</h3>
 
-            <div class="filter-group">
-                <h4>Sort</h4>
-                <select id="sort">
-                    <option value="">Default</option>
-                    <option value="low">Price Low → High</option>
-                    <option value="high">Price High → Low</option>
-                </select>
-            </div>
-        </aside>
+                <input type="text" id="search" placeholder="Search products">
 
-        <!-- PRODUCTS -->
-        <section>
-            <div id="shop-grid" class="product-grid"></div>
-        </section>
+                <div class="filter-group">
+                    <h4>Price</h4>
+                    <label><input type="radio" name="price" value=""> All</label>
+                    <label><input type="radio" name="price" value="0-2000"> Under ₹2000</label>
+                    <label><input type="radio" name="price" value="2000-5000"> ₹2000–₹5000</label>
+                    <label><input type="radio" name="price" value="5000+"> Above ₹5000</label>
+                </div>
+
+                <div class="filter-group">
+                    <h4>Sort</h4>
+                    <select id="sort">
+                        <option value="">Default</option>
+                        <option value="low">Price Low → High</option>
+                        <option value="high">Price High → Low</option>
+                    </select>
+                </div>
+            </aside>
+
+            <!-- PRODUCTS -->
+            <section class="shop-content">
+                <div id="shop-grid" class="product-grid"></div>
+            </section>
+
+        </div>
 
     </main>
 
@@ -69,6 +89,7 @@
         </div>
     </div>
 
+    <!-- JS -->
     <script type="module" src="/nc_assets/js/main.js"></script>
 
 </body>

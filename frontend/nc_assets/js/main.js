@@ -1,107 +1,143 @@
-import { request } from './api.js';
-import { getCart, saveCart, getWishlist, saveWishlist } from './storage.js';
+import { request } from "./api.js";
 
-const container = document.querySelector('#featured-products');
-let productsCache = [];
+let allProducts = [];
 
 /* =========================
-   ACTIONS
+   LOAD PRODUCTS
 ========================= */
-const addToCart = (product) => {
-  const cart = getCart();
-  const item = cart.find(i => i.id === product._id);
+async function loadProducts() {
+  try {
+    const products = await request("/products");
+    allProducts = products;
 
-  if (item) item.quantity++;
-  else {
-    cart.push({
-      id: product._id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: 1
-    });
+    renderFeatured(products);
+    renderShop(products);
+
+  } catch (err) {
+    console.error("Error loading products:", err);
   }
-
-  saveCart(cart);
-};
-
-const addToWishlist = (product) => {
-  const wishlist = getWishlist();
-
-  if (!wishlist.some(i => i.id === product._id)) {
-    wishlist.push({
-      id: product._id,
-      name: product.name,
-      price: product.price,
-      image: product.image
-    });
-
-    saveWishlist(wishlist);
-  }
-};
+}
 
 /* =========================
-   UI RENDER
+   FEATURED (HOME PAGE)
 ========================= */
-const getDisplayProducts = (products) => {
+function renderFeatured(products) {
+  const el = document.getElementById("featured-products");
+  if (!el) return;
+
   const featured = products.filter(p => p.featured);
-  return featured.length ? featured.slice(0, 6) : products.slice(0, 6);
-};
 
-const render = (products) =>
-  function renderCards(products) {
-    return products.map(p => `
-    <article class="card">
-      <a href="product.html?id=${p._id}">
-        <img src="${p.image || 'https://picsum.photos/400/500'}" alt="${p.name}">
-      </a>
+  el.innerHTML = featured.map(p => `
+    <div class="card">
+
+      <img src="${p.image}" alt="${p.name}">
 
       <div class="card-overlay">
+        <button class="btn gold add" data-id="${p._id}">Add</button>
+        <button class="btn ghost">♡</button>
+      </div>
+
+      <div class="card-body">
         <h3>${p.name}</h3>
         <p class="price">₹${p.price}</p>
-
-        <button class="btn gold add" data-id="${p._id}">
-          Add to Bag
-        </button>
-
-        <button class="btn ghost wish" data-id="${p._id}">
-          Wishlist
-        </button>
       </div>
-    </article>
-  `).join('');
-  }
+
+    </div>
+  `).join("");
+}
 
 /* =========================
-   EVENTS
+   SHOP PAGE
 ========================= */
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-id]');
-  if (!btn) return;
+function renderShop(products) {
+  const grid = document.getElementById("shop-grid");
+  if (!grid) return;
 
-  const product = productsCache.find(p => p._id === btn.dataset.id);
-  if (!product) return;
+  grid.innerHTML = products.map(p => `
+    <div class="card">
 
-  if (btn.classList.contains('add')) addToCart(product);
-  if (btn.classList.contains('wish')) addToWishlist(product);
+      <img src="${p.image}" alt="${p.name}">
+
+      <div class="card-overlay">
+        <button class="btn gold add" data-id="${p._id}">Add</button>
+        <button class="btn ghost">♡</button>
+      </div>
+
+      <div class="card-body">
+        <h3>${p.name}</h3>
+        <p class="price">₹${p.price}</p>
+      </div>
+
+    </div>
+  `).join("");
+}
+
+/* =========================
+   FILTERS (SHOP)
+========================= */
+function setupFilters() {
+  const search = document.getElementById("search");
+  const sort = document.getElementById("sort");
+  const priceRadios = document.querySelectorAll("input[name='price']");
+
+  function applyFilters() {
+    let filtered = [...allProducts];
+
+    /* SEARCH */
+    if (search?.value) {
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(search.value.toLowerCase())
+      );
+    }
+
+    /* PRICE FILTER */
+    const selectedPrice = [...priceRadios].find(r => r.checked)?.value;
+
+    if (selectedPrice) {
+      if (selectedPrice === "0-2000") {
+        filtered = filtered.filter(p => p.price < 2000);
+      } else if (selectedPrice === "2000-5000") {
+        filtered = filtered.filter(p => p.price >= 2000 && p.price <= 5000);
+      } else if (selectedPrice === "5000+") {
+        filtered = filtered.filter(p => p.price > 5000);
+      }
+    }
+
+    /* SORT */
+    if (sort?.value === "low") {
+      filtered.sort((a, b) => a.price - b.price);
+    }
+
+    if (sort?.value === "high") {
+      filtered.sort((a, b) => b.price - a.price);
+    }
+
+    renderShop(filtered);
+  }
+
+  search?.addEventListener("input", applyFilters);
+  sort?.addEventListener("change", applyFilters);
+  priceRadios.forEach(r => r.addEventListener("change", applyFilters));
+}
+
+/* =========================
+   ADD TO CART (BASIC)
+========================= */
+document.addEventListener("click", (e) => {
+  if (!e.target.classList.contains("add")) return;
+
+  const id = e.target.dataset.id;
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  cart.push(id);
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+
+  alert("Added to cart");
 });
 
 /* =========================
    INIT
 ========================= */
-(async function init() {
-  if (!container) return;
-
-  container.innerHTML = "<p>Loading...</p>";
-
-  try {
-    const products = await request('/products');
-    productsCache = products;
-
-    const display = getDisplayProducts(products);
-    container.innerHTML = render(display);
-
-  } catch {
-    container.innerHTML = "<p>Failed to load products</p>";
-  }
-})();
+loadProducts();
+setupFilters();

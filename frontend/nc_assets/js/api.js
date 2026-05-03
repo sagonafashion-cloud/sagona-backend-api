@@ -1,43 +1,37 @@
-import { getCart, saveCart } from "./storage.js";
+// api.js
 
-const container = document.getElementById("cart-list");
-const totalEl = document.getElementById("cart-total");
+const BASE_URL = "https://sagona-backend-api.onrender.com/api"; 
+// 🔥 CHANGE if your backend URL is different
 
-function renderCart() {
-  const cart = getCart();
+export async function request(path, options = {}) {
+  try {
+    const token = localStorage.getItem("token");
 
-  if (!cart.length) {
-    container.innerHTML = "<p>Your cart is empty</p>";
-    totalEl.textContent = "0";
-    return;
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: options.method || "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(options.headers || {})
+      },
+      body: options.body || undefined
+    });
+
+    // Handle non-JSON safely
+    const contentType = res.headers.get("content-type");
+    const data = contentType?.includes("application/json")
+      ? await res.json()
+      : await res.text();
+
+    if (!res.ok) {
+      console.error("API ERROR:", data);
+      throw new Error(data?.message || "Something went wrong");
+    }
+
+    return data;
+
+  } catch (err) {
+    console.error("REQUEST FAILED:", err.message);
+    throw err;
   }
-
-  let total = 0;
-
-  container.innerHTML = cart.map(item => {
-    total += item.price * item.quantity;
-
-    return `
-      <div class="table-row">
-        <span>${item.name}</span>
-        <span>₹${item.price}</span>
-        <span>Qty: ${item.quantity}</span>
-        <button class="remove" data-id="${item.id}">Remove</button>
-      </div>
-    `;
-  }).join("");
-
-  totalEl.textContent = total;
 }
-
-document.addEventListener("click", (e) => {
-  if (!e.target.classList.contains("remove")) return;
-
-  const id = e.target.dataset.id;
-  const updated = getCart().filter(i => i.id !== id);
-
-  saveCart(updated);
-  renderCart();
-});
-
-renderCart();

@@ -2,7 +2,7 @@ import { request } from './api.js';
 import { getCart, saveCart, getWishlist, saveWishlist } from './storage.js';
 
 const grid = document.querySelector('#shop-grid');
-
+  
 const searchInput = document.getElementById("search");
 const sortSelect = document.getElementById("sort");
 const priceSelect = document.getElementById("price");
