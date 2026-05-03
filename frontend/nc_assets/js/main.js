@@ -1,26 +1,19 @@
 import { request } from "./api.js";
+import { getCart, saveCart } from "./storage.js";
+import "./drawer.js";
 
 let allProducts = [];
 
-/* =========================
-   LOAD PRODUCTS
-========================= */
+/* LOAD */
 async function loadProducts() {
-  try {
-    const products = await request("/products");
-    allProducts = products;
+  const products = await request("/products");
+  allProducts = products;
 
-    renderFeatured(products);
-    renderShop(products);
-
-  } catch (err) {
-    console.error("Error loading products:", err);
-  }
+  renderFeatured(products);
+  renderShop(products);
 }
 
-/* =========================
-   FEATURED (HOME PAGE)
-========================= */
+/* FEATURED */
 function renderFeatured(products) {
   const el = document.getElementById("featured-products");
   if (!el) return;
@@ -28,13 +21,12 @@ function renderFeatured(products) {
   const featured = products.filter(p => p.featured);
 
   el.innerHTML = featured.map(p => `
-    <div class="card">
+    <a href="product.html?id=${p._id}" class="card">
 
-      <img src="${p.image}" alt="${p.name}">
+      <img src="${p.image}">
 
       <div class="card-overlay">
         <button class="btn gold add" data-id="${p._id}">Add</button>
-        <button class="btn ghost">♡</button>
       </div>
 
       <div class="card-body">
@@ -42,25 +34,22 @@ function renderFeatured(products) {
         <p class="price">₹${p.price}</p>
       </div>
 
-    </div>
+    </a>
   `).join("");
 }
 
-/* =========================
-   SHOP PAGE
-========================= */
+/* SHOP */
 function renderShop(products) {
   const grid = document.getElementById("shop-grid");
   if (!grid) return;
 
   grid.innerHTML = products.map(p => `
-    <div class="card">
+    <a href="product.html?id=${p._id}" class="card">
 
-      <img src="${p.image}" alt="${p.name}">
+      <img src="${p.image}">
 
       <div class="card-overlay">
         <button class="btn gold add" data-id="${p._id}">Add</button>
-        <button class="btn ghost">♡</button>
       </div>
 
       <div class="card-body">
@@ -68,76 +57,39 @@ function renderShop(products) {
         <p class="price">₹${p.price}</p>
       </div>
 
-    </div>
+    </a>
   `).join("");
 }
 
-/* =========================
-   FILTERS (SHOP)
-========================= */
-function setupFilters() {
-  const search = document.getElementById("search");
-  const sort = document.getElementById("sort");
-  const priceRadios = document.querySelectorAll("input[name='price']");
-
-  function applyFilters() {
-    let filtered = [...allProducts];
-
-    /* SEARCH */
-    if (search?.value) {
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(search.value.toLowerCase())
-      );
-    }
-
-    /* PRICE FILTER */
-    const selectedPrice = [...priceRadios].find(r => r.checked)?.value;
-
-    if (selectedPrice) {
-      if (selectedPrice === "0-2000") {
-        filtered = filtered.filter(p => p.price < 2000);
-      } else if (selectedPrice === "2000-5000") {
-        filtered = filtered.filter(p => p.price >= 2000 && p.price <= 5000);
-      } else if (selectedPrice === "5000+") {
-        filtered = filtered.filter(p => p.price > 5000);
-      }
-    }
-
-    /* SORT */
-    if (sort?.value === "low") {
-      filtered.sort((a, b) => a.price - b.price);
-    }
-
-    if (sort?.value === "high") {
-      filtered.sort((a, b) => b.price - a.price);
-    }
-
-    renderShop(filtered);
-  }
-
-  search?.addEventListener("input", applyFilters);
-  sort?.addEventListener("change", applyFilters);
-  priceRadios.forEach(r => r.addEventListener("change", applyFilters));
-}
-
-/* =========================
-   ADD TO CART (BASIC)
-========================= */
+/* ADD TO CART */
 document.addEventListener("click", (e) => {
   if (!e.target.classList.contains("add")) return;
 
+  e.preventDefault();
+
   const id = e.target.dataset.id;
+  const product = allProducts.find(p => p._id === id);
 
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
-  cart.push(id);
+  const cart = getCart();
+  const item = cart.find(i => i.id === id);
 
-  localStorage.setItem("cart", JSON.stringify(cart));
+  if (item) item.quantity++;
+  else cart.push({
+    id,
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    quantity: 1
+  });
 
-  alert("Added to cart");
+  saveCart(cart);
+
+  document.getElementById("cart-drawer")?.classList.add("active");
+
+  if (window.refreshCartDrawer) {
+    window.refreshCartDrawer();
+  }
 });
 
-/* =========================
-   INIT
-========================= */
+/* INIT */
 loadProducts();
-setupFilters();

@@ -4,44 +4,45 @@ import { getCart, saveCart } from './storage.js';
 const wrap = document.querySelector('#product-view');
 const id = new URLSearchParams(location.search).get('id');
 
-if (!wrap || !id) throw new Error("Invalid product page");
-
-const addToCart = (product) => {
+const addToCart = (p) => {
   const cart = getCart();
-  const item = cart.find(i => i.id === product._id);
+  const item = cart.find(i => i.id === p._id);
 
   if (item) item.quantity++;
   else cart.push({
-    id: product._id,
-    name: product.name,
-    price: product.price,
-    image: product.image,
+    id: p._id,
+    name: p.name,
+    price: p.price,
+    image: p.image,
     quantity: 1
   });
 
   saveCart(cart);
+  alert("Added to bag");
 };
 
 (async () => {
-  try {
-    const p = await request(`/products/${id}`);
+  const p = await request(`/products/${id}`);
 
-    wrap.innerHTML = `
-      <div class="layout-2">
-        <img src="${p.image}" alt="${p.name}" class="product-img"/>
-        <div>
-          <h1 class="page-title">${p.name}</h1>
-          <p class="price">₹${p.price}</p>
-          <p>${p.description}</p>
-          <button id="add-btn" class="btn gold">Add to Cart</button>
-        </div>
+  wrap.innerHTML = `
+    <div class="pdp">
+
+      <div class="pdp-gallery">
+        <img src="${p.image}" class="main-img">
       </div>
-    `;
 
-    document.getElementById('add-btn')
-      .addEventListener('click', () => addToCart(p));
+      <div class="pdp-info">
+        <h1>${p.name}</h1>
+        <p class="price">₹${p.price}</p>
+        <p class="desc">${p.description}</p>
 
-  } catch {
-    wrap.innerHTML = "<p>Product not found</p>";
-  }
+        <button id="add-btn" class="btn gold">Add to Bag</button>
+      </div>
+
+    </div>
+  `;
+
+  document.getElementById("add-btn")
+    .addEventListener("click", () => addToCart(p));
+
 })();

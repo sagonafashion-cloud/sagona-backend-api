@@ -1,0 +1,17 @@
+return `
+<div class="cart-item">
+    <img src="${item.image}">
+    <div>
+        <h4>${item.name}</h4>
+        <p>₹${item.price}</p>
+
+        <div class="qty">
+            <button class="qty-btn" data-id="${item.id}" data-type="minus">−</button>
+            <span>${item.quantity}</span>
+            <button class="qty-btn" data-id="${item.id}" data-type="plus">+</button>
+        </div>
+
+        <span class="remove-mini" data-id="${item.id}">Remove</span>
+    </div>
+</div>
+`;

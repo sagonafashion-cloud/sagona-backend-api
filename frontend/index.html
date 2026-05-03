@@ -21,32 +21,56 @@
 
 <body>
 
-  <div class="top-strip">THANK YOU FOR VISITING US..PRODUCTS WILL BE AVAILABLE SOON</div>
+  <!-- TOP STRIP -->
+  <div class="top-strip">NEW COLLECTION COMING SOON</div>
 
+  <!-- HEADER -->
   <header class="header">
-    <div class="container">
-      <div class="nav">
-        <a class="brand" href="index.html">SAGONA</a>
+    <div class="container nav">
+      <a class="brand" href="index.html">SAGONA</a>
 
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
-          <a href="shop.html">Shop</a>
-          <a href="wishlist.html">Wishlist</a>
-          <a href="cart.html">Cart</a>
-          <a href="login.html">Sign In</a>
-        </nav>
-      </div>
+      <nav class="nav-links">
+        <a href="shop.html">Shop</a>
+        <a href="wishlist.html">Wishlist</a>
+        <a href="#" id="open-cart">Cart</a>
+        <a href="login.html">Sign In</a>
+      </nav>
     </div>
   </header>
 
+  <!-- CART DRAWER (ONLY ONCE) -->
+  <div id="cart-drawer" class="cart-drawer">
+    <div class="cart-overlay" id="cart-overlay"></div>
+
+    <div class="cart-panel">
+      <div class="cart-header">
+        <h3>Your Bag</h3>
+        <span id="close-cart" class="close">&times;</span>
+      </div>
+
+      <div id="drawer-items" class="cart-items"></div>
+
+      <div class="cart-footer">
+        <div class="cart-total">
+          <span>Total</span>
+          <strong id="drawer-total">₹0</strong>
+        </div>
+
+        <a href="cart.html" class="btn ghost">View Cart</a>
+        <button class="btn gold">Checkout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
   <main class="container">
 
     <!-- HERO -->
     <section class="hero">
       <div>
         <h1>Luxury Kidswear</h1>
-        <p>Timeless fashion crafted for elegance.</p>
-        <a href="shop.html" class="btn gold">Shop Now</a>
+        <p>Refined elegance for modern childhood.</p>
+        <a href="shop.html" class="btn gold">Shop Collection</a>
       </div>
 
       <img src="https://images.unsplash.com/photo-1522771930-78848d9293e8">
@@ -61,7 +85,7 @@
   </main>
 
   <footer class="footer">
-    <div class="container">© 2026 SAGONA. All rights reserved.</div>
+    <div class="container">© 2026 SAGONA</div>
   </footer>
 
   <script type="module" src="/nc_assets/js/main.js"></script>
