@@ -14,16 +14,15 @@ async function loadProducts() {
 }
 
 /* FEATURED */
-function renderFeatured(products) {
-  const el = document.getElementById("featured-products");
-  if (!el) return;
+function renderShop(products) {
+  const grid = document.getElementById("shop-grid");
+  if (!grid) return;
 
-  const featured = products.filter(p => p.featured);
+  grid.innerHTML = products.map((p, i) => `
+    <a href="product.html?id=${p._id}" class="card fade-in" style="animation-delay:${i * 0.05}s">
 
-  el.innerHTML = featured.map(p => `
-    <a href="product.html?id=${p._id}" class="card">
-
-      <img src="${p.image}">
+      <img class="first" src="${p.image}">
+      <img class="second" src="${p.image}">
 
       <div class="card-overlay">
         <button class="btn gold add" data-id="${p._id}">Add</button>

@@ -18,19 +18,32 @@ const addToCart = (p) => {
   });
 
   saveCart(cart);
-  alert("Added to bag");
+
+  // auto open drawer
+  document.getElementById("cart-drawer")?.classList.add("active");
 };
 
 (async () => {
   const p = await request(`/products/${id}`);
 
+  // simulate multi images (you can upgrade backend later)
+  const images = [p.image, p.image, p.image];
+
   wrap.innerHTML = `
     <div class="pdp">
 
+      <!-- GALLERY -->
       <div class="pdp-gallery">
-        <img src="${p.image}" class="main-img">
+        <img src="${images[0]}" class="main-img" id="main-img">
+
+        <div class="pdp-thumbs">
+          ${images.map(img => `
+            <img src="${img}" onclick="changeImage('${img}')">
+          `).join("")}
+        </div>
       </div>
 
+      <!-- INFO -->
       <div class="pdp-info">
         <h1>${p.name}</h1>
         <p class="price">₹${p.price}</p>
@@ -46,3 +59,8 @@ const addToCart = (p) => {
     .addEventListener("click", () => addToCart(p));
 
 })();
+
+/* IMAGE SWITCH */
+window.changeImage = (src) => {
+  document.getElementById("main-img").src = src;
+};
