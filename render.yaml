@@ -6,7 +6,7 @@ services:
     branch: main
     root: backend
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server.js
     envVars:
       - key: MONGO_URI
       - key: JWT_SECRET
