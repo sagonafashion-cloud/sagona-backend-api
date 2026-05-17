@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sagona-backend
+    name: sagona-backend-api
     env: node
     region: oregon
     branch: main

@@ -46,13 +46,18 @@
   <!-- HEADER -->
   <header class="header">
     <div class="container nav">
-      <a class="brand" href="index.html">SAGONA</a>
       <nav class="nav-links">
-        <a href="shop.html">Shop</a>
-        <a href="wishlist.html">Wishlist</a>
-        <a href="#" id="open-cart">Bag</a>
-        <a href="login.html">Sign In</a>
+        <a href="shop.html?category=kids">Kids</a>
+        <a href="shop.html?category=women">Women</a>
+        <a href="shop.html?category=men">Men</a>
+        <a href="shop.html?category=accessories">Accessories</a>
       </nav>
+      <a class="brand" href="index.html">SAGONA</a>
+      <div class="nav-icons">
+        <a href="wishlist.html">Wishlist</a>
+        <a href="#" id="open-cart" style="position:relative;">Bag<span class="cart-count" id="cart-count"></span></a>
+        <a href="login.html">Account</a>
+      </div>
     </div>
   </header>
 
@@ -83,7 +88,7 @@
       <div class="hero-content">
         <p class="hero-eyebrow">New Collection · 2026</p>
         <h1>Luxury Kidswear<br>for Modern Families</h1>
-        <a href="shop.html" class="btn gold">Explore Collection</a>
+        <a href="shop.html" class="btn ghost-white">Explore Collection</a>
       </div>
     </div>
   </section>
@@ -95,15 +100,19 @@
     <section class="categories-section">
       <div class="category-grid">
         <a href="shop.html?category=kids" class="cat-card" style="background:#1a1a1a;">
+          <img src="https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800&q=80" alt="Kids Collection" loading="lazy">
           <div class="cat-label">Kids</div>
         </a>
         <a href="shop.html?category=women" class="cat-card" style="background:#2c2417;">
+          <img src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&q=80" alt="Women Collection" loading="lazy">
           <div class="cat-label">Women</div>
         </a>
         <a href="shop.html?category=men" class="cat-card" style="background:#17201c;">
+          <img src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=800&q=80" alt="Men Collection" loading="lazy">
           <div class="cat-label">Men</div>
         </a>
         <a href="shop.html?category=accessories" class="cat-card" style="background:#221b0f;">
+          <img src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&q=80" alt="Accessories Collection" loading="lazy">
           <div class="cat-label">Accessories</div>
         </a>
       </div>
