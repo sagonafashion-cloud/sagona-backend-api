@@ -41,11 +41,14 @@ import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 dotenv.config();
 
 // ── Sentry (init before everything else) ──────────────────
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  environment: process.env.NODE_ENV || 'production',
-  tracesSampleRate: 0.2,
-});
+const SENTRY_DSN = process.env.SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'production',
+    tracesSampleRate: 0.2,
+  });
+}
 
 connectDB();
 
@@ -82,7 +85,9 @@ app.post(
 );
 
 // ── Sentry request handler (before other middleware) ───────
-app.use(Sentry.Handlers.requestHandler());
+if (SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+}
 
 // ── CORS ───────────────────────────────────────────────────
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
@@ -175,7 +180,9 @@ app.post('/api/admin/chat',     adminProtect, adminChat);
 app.use('/', sitemapRoutes);
 
 // ── Sentry error handler (before custom error middleware) ──
-app.use(Sentry.Handlers.errorHandler());
+if (SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // ── Error handling ─────────────────────────────────────────
 app.use(notFound);
