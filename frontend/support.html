@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Help & Support | SAGONA</title>
+  <meta name="description" content="Sagona help centre — returns, delivery, size guide, payment issues and contact form.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://sagona.in/support.html">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
+  <style>
+    .support-page { max-width: 760px; margin: 0 auto; padding: 60px 24px 80px; }
+    .support-page h1 { font-family: 'Playfair Display', serif; font-size: 36px; margin-bottom: 40px; }
+    .support-page h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
+    .support-page p, .support-page li { font-size: 15px; line-height: 1.75; color: var(--gray); }
+    .support-page ul { padding-left: 20px; margin: 8px 0; }
+    .faq-item { border-bottom: 1px solid var(--border); padding: 16px 0; cursor: pointer; }
+    .faq-question { font-weight: 500; font-size: 15px; display: flex; justify-content: space-between; }
+    .faq-answer { display: none; padding-top: 12px; font-size: 14px; color: var(--gray); line-height: 1.7; }
+    .faq-item.open .faq-answer { display: block; }
+    .faq-item.open .faq-icon::after { content: '−'; }
+    .faq-icon::after { content: '+'; font-size: 20px; color: var(--gold); }
+    .contact-form { background: var(--light); border-radius: 8px; padding: 32px; margin-top: 40px; }
+    .contact-form input, .contact-form textarea, .contact-form select {
+      width: 100%; border: 1px solid var(--border); border-radius: 4px;
+      padding: 12px 14px; font-family: Inter, sans-serif; font-size: 14px;
+      margin-bottom: 16px; background: #fff;
+    }
+    .contact-form textarea { min-height: 120px; resize: vertical; }
+    .success-msg { display: none; color: green; font-weight: 500; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container nav">
+      <a class="brand" href="index.html">SAGONA</a>
+    </div>
+  </header>
+
+  <main class="support-page">
+    <h1>Help &amp; Support</h1>
+    <p>We're here 9 AM–6 PM IST, Monday–Saturday. Expected response time: <strong>within 24 hours</strong>.</p>
+
+    <h2>Frequently Asked Questions</h2>
+    <div id="faq">
+      <div class="faq-item">
+        <div class="faq-question">What is your return policy? <span class="faq-icon"></span></div>
+        <div class="faq-answer">We accept returns within 7 days of delivery. Items must be unused, unwashed, and in original packaging with tags intact. To initiate a return, email us with your order number. Refunds are processed within 5–7 business days after we receive the item.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">How long does delivery take? <span class="faq-icon"></span></div>
+        <div class="faq-answer">Standard delivery takes 3–7 business days depending on your pincode. You can check estimated delivery time on any product page by entering your pincode. We ship across India via our courier partners.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">How do I find the right size? <span class="faq-icon"></span></div>
+        <div class="faq-answer">Our sizes are based on the child's age: 0–3M, 3–6M, 6–12M, 1–2Y, 2–3Y, 3–4Y, 4–5Y, 5–6Y, 6–7Y, 7–8Y. Each product page shows a detailed size guide. When in doubt, size up — kids grow fast!</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">My payment failed. What do I do? <span class="faq-icon"></span></div>
+        <div class="faq-answer">If your payment was deducted but you didn't receive an order confirmation, wait 30 minutes and check your email (including spam). If the order still doesn't appear, contact us with your payment reference ID and we will resolve it within 24 hours. No double charge will occur.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Is Cash on Delivery available? <span class="faq-icon"></span></div>
+        <div class="faq-answer">Yes, COD is available at most pincodes in India. Check availability on the product page using the delivery checker. COD orders have a maximum order value of ₹5,000.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">How do I track my order? <span class="faq-icon"></span></div>
+        <div class="faq-answer">Once your order ships, you'll receive an email with tracking details. You can also view live order status by logging in to your account and going to My Orders.</div>
+      </div>
+    </div>
+
+    <div class="contact-form">
+      <h2 style="margin-top:0">Contact Us</h2>
+      <form id="support-form">
+        <input type="text" id="s-name" placeholder="Your name *" required>
+        <input type="email" id="s-email" placeholder="Email address *" required>
+        <input type="text" id="s-order" placeholder="Order number (if applicable)">
+        <select id="s-subject">
+          <option value="">Select topic</option>
+          <option>Order issue</option>
+          <option>Return / refund</option>
+          <option>Payment issue</option>
+          <option>Size / product query</option>
+          <option>Delivery issue</option>
+          <option>App support</option>
+          <option>Other</option>
+        </select>
+        <textarea id="s-message" placeholder="Describe your issue *" required></textarea>
+        <button type="submit" class="btn gold">Send Message</button>
+        <p class="success-msg" id="s-success">✓ Message received! We'll reply within 24 hours.</p>
+      </form>
+    </div>
+
+    <div style="margin-top:40px;text-align:center">
+      <p style="margin-bottom:16px;font-size:14px;color:var(--gray)">Prefer to chat? We're on WhatsApp:</p>
+      <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" target="_blank" rel="noopener noreferrer"
+         style="display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;padding:12px 24px;border-radius:4px;font-weight:500;text-decoration:none;">
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="white"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0z"/></svg>
+        Chat on WhatsApp
+      </a>
+    </div>
+  </main>
+
+  <footer class="footer" style="background:var(--black);color:var(--light-gray);text-align:center;padding:24px;">
+    <p style="font-size:13px;">© 2026 Sagona Retail Pvt. Ltd. · <a href="privacy.html" style="color:var(--gold)">Privacy</a> · <a href="support.html" style="color:var(--gold)">Support</a></p>
+  </footer>
+
+  <script type="module">
+    import { API_BASE } from '/nc_assets/js/config.js';
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-item').forEach((item) => {
+      item.querySelector('.faq-question').addEventListener('click', () => item.classList.toggle('open'));
+    });
+
+    // Contact form
+    document.getElementById('support-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        await fetch(`${API_BASE}/support/contact`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:    document.getElementById('s-name').value,
+            email:   document.getElementById('s-email').value,
+            orderNumber: document.getElementById('s-order').value,
+            subject: document.getElementById('s-subject').value,
+            message: document.getElementById('s-message').value,
+          })
+        });
+        document.getElementById('s-success').style.display = 'block';
+        e.target.reset();
+      } catch {
+        alert('Failed to send. Please email care@sagona.in directly.');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send Message';
+      }
+    });
+  </script>
+</body>
+</html>

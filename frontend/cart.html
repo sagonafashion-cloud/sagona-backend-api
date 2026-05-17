@@ -1,28 +1,15 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cart | SAGONA</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/nc_assets/css/style.css">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/site.webmanifest">
-  <link rel="icon" href="/favicon.ico">
-  <!-- Favicon Setup -->
+  <title>Bag | SAGONA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
   <link rel="icon" href="/nc_assets/img/favicon-32x32.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/site.webmanifest">
 </head>
-
 <body>
+
   <header class="header">
     <div class="container nav">
       <a class="brand" href="index.html">SAGONA</a>
@@ -33,34 +20,118 @@
     </div>
   </header>
 
-  <main class="container">
-    <h1 class="page-title">Your Cart</h1>
+  <main class="container cart-page">
+    <h1 class="page-title" style="margin-top:0">Your Bag</h1>
 
-    <section class="panel">
-      <div id="cart-list"></div>
-
-      <h3>Total: ₹<span id="cart-total">0</span></h3>
-
-      <button id="checkout-btn" class="btn gold">
-        Proceed to Checkout
-      </button>
-    </section>
+    <div id="cart-root"></div>
   </main>
 
-  <script type="module" src="/nc_assets/js/main.js"></script>
+  <footer class="footer">
+    <div class="container footer-bottom">
+      <span>© 2026 SAGONA</span>
+    </div>
+  </footer>
 
-  <script>
-    document.getElementById("checkout-btn").addEventListener("click", () => {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  <script type="module">
+    import { getCart, saveCart } from '/nc_assets/js/storage.js';
+
+    const INR      = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+    const GST_RATE = 0.05; // 5% display estimate (actual calculated server-side)
+    const FREE_SHIP_THRESHOLD = 999;
+    const SHIP_CHARGE = 99;
+
+    function render() {
+      const root = document.getElementById('cart-root');
+      const cart = getCart();
 
       if (!cart.length) {
-        alert("Your cart is empty");
+        root.innerHTML = `
+          <div class="cart-empty">
+            <h2 style="font-size:22px;margin-bottom:12px;">Your bag is empty</h2>
+            <p>Discover our latest collection and add items you love.</p>
+            <a href="shop.html" class="btn gold">Start Shopping</a>
+          </div>`;
         return;
       }
 
-      window.location.href = "checkout.html";
-    });
-  </script>
-</body>
+      const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      const shipping = subtotal >= FREE_SHIP_THRESHOLD ? 0 : SHIP_CHARGE;
+      const gstAmt   = Math.round(subtotal * GST_RATE);
+      const total    = subtotal + shipping + gstAmt;
 
+      root.innerHTML = `
+        <table class="cart-table" style="width:100%">
+          <thead>
+            <tr>
+              <th style="width:50%">Product</th>
+              <th>Size</th>
+              <th>Qty</th>
+              <th style="text-align:right">Price</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cart.map((item) => `
+            <tr data-id="${item.id}" data-key="${item.key || item.id}">
+              <td>
+                <div style="display:flex;align-items:center;gap:14px">
+                  <img src="${item.image || ''}" class="item-img" alt="${item.name}"
+                    onerror="this.style.display='none'">
+                  <div class="item-info">
+                    <h4>${item.name}</h4>
+                    ${item.colour ? `<p>${item.colour}</p>` : ''}
+                  </div>
+                </div>
+              </td>
+              <td><span style="font-size:13px">${item.size || '—'}</span></td>
+              <td>
+                <div class="cart-qty">
+                  <button class="qty-btn" data-key="${item.key || item.id}" data-type="minus">−</button>
+                  <span style="font-size:13px;min-width:20px;text-align:center">${item.quantity}</span>
+                  <button class="qty-btn" data-key="${item.key || item.id}" data-type="plus">+</button>
+                </div>
+              </td>
+              <td style="text-align:right;font-size:13px;color:var(--gold)">${INR(item.price * item.quantity)}</td>
+              <td style="text-align:right">
+                <button class="cart-remove" data-key="${item.key || item.id}">Remove</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+
+        <div class="cart-summary-box">
+          <h3>Order Summary</h3>
+          <div class="summary-row"><span>Subtotal</span><span>${INR(subtotal)}</span></div>
+          <div class="summary-row"><span>Shipping</span><span class="${shipping === 0 ? 'free' : ''}">${shipping === 0 ? 'Free' : INR(shipping)}</span></div>
+          <div class="summary-row"><span>GST (est. 5%)</span><span>${INR(gstAmt)}</span></div>
+          <div class="summary-row total"><span>Total</span><span style="color:var(--gold)">${INR(total)}</span></div>
+          <p class="gst-note">* Final GST calculated at checkout based on your state</p>
+          <a href="checkout.html" class="btn gold" style="display:block;text-align:center;margin-top:20px">Proceed to Checkout</a>
+          <a href="shop.html" class="btn ghost" style="display:block;text-align:center;margin-top:8px">Continue Shopping</a>
+        </div>`;
+
+      // qty / remove events
+      root.addEventListener('click', (e) => {
+        const key = e.target.dataset.key;
+        let cart = getCart();
+
+        if (e.target.dataset.type === 'plus') {
+          cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: i.quantity + 1 } : i);
+        }
+        if (e.target.dataset.type === 'minus') {
+          cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i);
+        }
+        if (e.target.classList.contains('cart-remove')) {
+          cart = cart.filter((i) => (i.key || i.id) !== key);
+        }
+
+        saveCart(cart);
+        render();
+      }, { once: true }); // re-attach on each render
+    }
+
+    render();
+  </script>
+
+</body>
 </html>

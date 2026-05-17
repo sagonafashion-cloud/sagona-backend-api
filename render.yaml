@@ -4,7 +4,7 @@ services:
     env: node
     region: oregon
     branch: main
-    root: Backend
+    root: backend
     buildCommand: npm install
     startCommand: npm start
     envVars:

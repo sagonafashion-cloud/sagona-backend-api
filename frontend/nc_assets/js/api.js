@@ -1,7 +1,7 @@
 // api.js
+import { API_BASE } from './config.js';
 
-const BASE_URL = "https://sagona-backend-api.onrender.com/api"; 
-// 🔥 CHANGE if your backend URL is different
+const BASE_URL = API_BASE;
 
 export async function request(path, options = {}) {
   try {

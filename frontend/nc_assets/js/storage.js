@@ -22,3 +22,15 @@ export const clearAuth = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 };
+
+export const saveAuth = ({ token, user }) => {
+  saveToken(token);
+  saveUser(user);
+};
+
+export const getAuth = () => {
+  const token = getToken();
+  const user = getUser();
+  if (!token) return null;
+  return { token, user };
+};

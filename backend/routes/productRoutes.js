@@ -1,11 +1,12 @@
 import express from 'express';
-import { getProducts, createProduct, deleteProduct } from '../controllers/productController.js';
-import { protect, admin } from "../middleware/auth.js";
+import { getProducts, getProductById, createProduct, deleteProduct } from '../controllers/productController.js';
+import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 
 const router = express.Router();
 
 router.get('/', getProducts);
-router.post('/', protect, admin, createProduct);
-router.delete('/:id', protect, admin, deleteProduct);
+router.get('/:id', getProductById);
+router.post('/', adminProtect, requireRole('super_admin', 'content_editor'), createProduct);
+router.delete('/:id', adminProtect, requireRole('super_admin'), deleteProduct);
 
 export default router;

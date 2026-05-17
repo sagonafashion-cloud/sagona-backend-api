@@ -1,97 +1,120 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <title>Shop | SAGONA</title>
-
-    <!-- Fonts -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
-        rel="stylesheet">
-
-    <!-- CSS -->
-    <link rel="stylesheet" href="/nc_assets/css/style.css">
-
-    <!-- Favicon -->
-    <link rel="icon" href="/nc_assets/img/favicon-32x32.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shop Kids Clothing | SAGONA</title>
+  <!-- SEO -->
+  <meta name="description" content="Shop premium Indian kidswear at Sagona. Boys, girls, newborn &amp; festive collections. Filter by size, colour and price. Free shipping above ₹999.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://sagona.in/shop.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Sagona">
+  <meta property="og:title" content="Shop Kids Clothing | SAGONA">
+  <meta property="og:description" content="Premium Indian kidswear — boys, girls, newborn &amp; festive. Free shipping above ₹999.">
+  <meta property="og:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://sagona.in/shop.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Shop Kids Clothing | SAGONA">
+  <meta name="twitter:description" content="Premium Indian kidswear — boys, girls, newborn &amp; festive. Free shipping above ₹999.">
+  <meta name="twitter:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
+    window._gtag = gtag;
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
+  <link rel="icon" href="/nc_assets/img/favicon-32x32.png">
 </head>
 
 <body>
 
-    <!-- TOP STRIP -->
-    <div class="top-strip">NEW SEASON · FREE SHIPPING ABOVE ₹7,500</div>
+  <div class="top-strip">Free shipping on orders above ₹999</div>
 
-    <!-- HEADER -->
-    <header class="header">
-        <div class="container">
-            <div class="nav">
-                <a class="brand" href="index.html">SAGONA</a>
-
-                <nav class="nav-links">
-                    <a href="index.html">Home</a>
-                    <a href="shop.html">Shop</a>
-                    <a href="wishlist.html">Wishlist</a>
-                    <a href="cart.html">Cart</a>
-                    <a href="login.html">Sign In</a>
-                </nav>
-            </div>
-        </div>
-    </header>
-
-    <!-- MAIN -->
-    <main class="container">
-
-        <h1 class="page-title">Shop</h1>
-
-        <div class="shop-layout">
-
-            <!-- SIDEBAR -->
-            <aside class="sidebar">
-                <h3>Filters</h3>
-
-                <input type="text" id="search" placeholder="Search products">
-
-                <div class="filter-group">
-                    <h4>Price</h4>
-                    <label><input type="radio" name="price" value=""> All</label>
-                    <label><input type="radio" name="price" value="0-2000"> Under ₹2000</label>
-                    <label><input type="radio" name="price" value="2000-5000"> ₹2000–₹5000</label>
-                    <label><input type="radio" name="price" value="5000+"> Above ₹5000</label>
-                </div>
-
-                <div class="filter-group">
-                    <h4>Sort</h4>
-                    <select id="sort">
-                        <option value="">Default</option>
-                        <option value="low">Price Low → High</option>
-                        <option value="high">Price High → Low</option>
-                    </select>
-                </div>
-            </aside>
-
-            <!-- PRODUCTS -->
-            <section class="shop-content">
-                <div id="shop-grid" class="product-grid"></div>
-            </section>
-
-        </div>
-
-    </main>
-
-    <!-- QUICK VIEW -->
-    <div id="quick-view" class="quick-view">
-        <div class="quick-content">
-            <span onclick="closeQuickView()" class="close">&times;</span>
-            <div id="quick-body"></div>
-        </div>
+  <header class="header">
+    <div class="container nav">
+      <a class="brand" href="index.html">SAGONA</a>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="wishlist.html">Wishlist</a>
+        <a href="cart.html">Bag</a>
+        <a href="login.html">Sign In</a>
+      </nav>
     </div>
+  </header>
 
-    <!-- JS -->
-    <script type="module" src="/nc_assets/js/main.js"></script>
+  <main class="container">
+    <h1 class="page-title">Shop</h1>
 
+    <div class="shop-layout">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h3>Filters</h3>
+
+        <input type="text" id="search" placeholder="Search…" autocomplete="off">
+
+        <div class="filter-group">
+          <h4>Category</h4>
+          <label><input type="radio" name="category" value=""> All</label>
+          <label><input type="radio" name="category" value="kids"> Kids</label>
+          <label><input type="radio" name="category" value="women"> Women</label>
+          <label><input type="radio" name="category" value="men"> Men</label>
+          <label><input type="radio" name="category" value="accessories"> Accessories</label>
+        </div>
+
+        <div class="filter-group">
+          <h4>Price</h4>
+          <label><input type="radio" name="price" value=""> All</label>
+          <label><input type="radio" name="price" value="0-999"> Under ₹999</label>
+          <label><input type="radio" name="price" value="999-2999"> ₹999 – ₹2,999</label>
+          <label><input type="radio" name="price" value="2999-9999"> ₹2,999 – ₹9,999</label>
+          <label><input type="radio" name="price" value="9999+"> Above ₹9,999</label>
+        </div>
+
+        <div class="filter-group">
+          <h4>Sort By</h4>
+          <select id="sort">
+            <option value="">Featured</option>
+            <option value="low">Price: Low → High</option>
+            <option value="high">Price: High → Low</option>
+            <option value="new">Newest First</option>
+          </select>
+        </div>
+      </aside>
+
+      <!-- PRODUCTS -->
+      <section class="shop-content">
+        <p class="shop-count" id="shop-count"></p>
+        <div id="shop-grid" class="product-grid"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-bottom">
+      <span>© 2026 SAGONA</span>
+      <a href="index.html" style="color:var(--gold)">sagona.in</a>
+    </div>
+  </footer>
+
+  <div id="toast-container"></div>
+
+  <script type="module" src="/nc_assets/js/shop.js"></script>
+  <script type="module" src="/nc_assets/js/chatbot.js"></script>
+
+  <!-- WhatsApp FAB -->
+  <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.14 22.085c-.34.957-1.99 1.826-2.742 1.94-.703.108-1.59.153-2.563-.16-.59-.192-1.347-.449-2.31-.88-4.065-1.76-6.717-5.847-6.918-6.12-.2-.275-1.63-2.17-1.63-4.135 0-1.965 1.032-2.93 1.397-3.33.365-.4.795-.5 1.06-.5.266 0 .531.003.764.013.245.01.574-.093.9.686.34.8 1.153 2.764 1.254 2.963.1.2.167.435.033.7-.133.266-.2.43-.399.663-.2.234-.42.523-.6.703-.2.2-.408.416-.175.815.233.4 1.036 1.71 2.224 2.77 1.528 1.362 2.815 1.784 3.215 1.984.4.2.633.167.866-.1.233-.266.997-1.165 1.264-1.564.266-.4.532-.333.897-.2.366.133 2.33 1.098 2.73 1.298.4.2.665.3.764.467.1.165.1.954-.24 1.91z"/></svg>
+  </a>
 </body>
-
 </html>

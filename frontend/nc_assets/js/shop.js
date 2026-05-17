@@ -1,134 +1,159 @@
-import { request } from './api.js';
+import { request }  from './api.js';
 import { getCart, saveCart, getWishlist, saveWishlist } from './storage.js';
 
-const grid = document.querySelector('#shop-grid');
-  
-const searchInput = document.getElementById("search");
-const sortSelect = document.getElementById("sort");
-const priceSelect = document.getElementById("price");
+/* ── toast helper ── */
+function toast(msg, type = '') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const el = document.createElement('div');
+  el.className = `toast${type ? ' ' + type : ''}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+/* ── elements ── */
+const grid       = document.querySelector('#shop-grid');
+const countEl    = document.querySelector('#shop-count');
+const searchInput = document.getElementById('search');
+const sortSelect  = document.getElementById('sort');
 
 let allProducts = [];
 
-/* =========================
-   ADD TO CART
-========================= */
+/* ── add to cart ── */
 const addToCart = (product) => {
-  const cart = getCart();
+  const cart  = getCart();
   const found = cart.find((i) => i.id === product._id);
-
   if (found) found.quantity += 1;
-  else cart.push({ id: product._id, name: product.name, price: product.price, image: product.image, quantity: 1 });
-
+  else cart.push({ id: product._id, name: product.name, price: product.price, image: product.image || product.images?.[0], quantity: 1 });
   saveCart(cart);
-  alert('Added to cart');
+  toast(`${product.name} added to bag`, 'success');
 };
 
-/* =========================
-   ADD TO WISHLIST
-========================= */
+/* ── add to wishlist ── */
 const addToWishlist = (product) => {
   const wishlist = getWishlist();
-
   if (!wishlist.some((item) => item.id === product._id)) {
-    wishlist.push({ id: product._id, name: product.name, price: product.price, image: product.image });
+    wishlist.push({ id: product._id, name: product.name, price: product.price, image: product.image || product.images?.[0] });
     saveWishlist(wishlist);
+    toast('Saved to wishlist');
+  } else {
+    toast('Already in wishlist');
   }
-
-  alert('Added to wishlist');
 };
 
-/* =========================
-   FILTER LOGIC
-========================= */
+/* ── filter + sort ── */
 function applyFilters() {
   let products = [...allProducts];
 
-  const search = searchInput.value.toLowerCase();
-  const sort = sortSelect.value;
-  const price = priceSelect.value;
+  const search   = (searchInput?.value || '').toLowerCase().trim();
+  const sort     = sortSelect?.value || '';
+  const price    = document.querySelector('[name="price"]:checked')?.value || '';
+  const category = document.querySelector('[name="category"]:checked')?.value || '';
 
-  // 🔍 SEARCH
   if (search) {
-    products = products.filter(p =>
-      p.name.toLowerCase().includes(search)
+    products = products.filter((p) =>
+      p.name.toLowerCase().includes(search) ||
+      (p.description || '').toLowerCase().includes(search) ||
+      (p.tags || []).some((t) => t.toLowerCase().includes(search))
     );
   }
 
-  // 💰 PRICE FILTER
+  if (category) {
+    products = products.filter((p) => p.category === category);
+  }
+
   if (price) {
-    if (price === "10000+") {
-      products = products.filter(p => p.price >= 10000);
+    if (price.endsWith('+')) {
+      const min = Number(price.slice(0, -1));
+      products = products.filter((p) => p.price >= min);
     } else {
-      const [min, max] = price.split("-").map(Number);
-      products = products.filter(p => p.price >= min && p.price <= max);
+      const [min, max] = price.split('-').map(Number);
+      products = products.filter((p) => p.price >= min && p.price <= max);
     }
   }
 
-  // 🔃 SORT
-  if (sort === "low") {
-    products.sort((a, b) => a.price - b.price);
-  }
-
-  if (sort === "high") {
-    products.sort((a, b) => b.price - a.price);
-  }
+  if (sort === 'low')  products.sort((a, b) => a.price - b.price);
+  if (sort === 'high') products.sort((a, b) => b.price - a.price);
+  if (sort === 'new')  products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   render(products);
 }
 
-/* =========================
-   RENDER
-========================= */
+/* ── render ── */
+const INR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+
 function render(products) {
-  grid.innerHTML = products.map(p => `
+  if (countEl) countEl.textContent = `${products.length} product${products.length !== 1 ? 's' : ''}`;
+
+  if (!products.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:60px 0;text-align:center;color:var(--gray)">No products found.</div>`;
+    return;
+  }
+
+  grid.innerHTML = products.map((p) => {
+    const img  = p.images?.[0] || p.image || '';
+    const img2 = p.images?.[1] || img;
+    const mrp  = p.mrp && p.mrp > p.price ? `<span class="price-mrp">${INR(p.mrp)}</span>` : '';
+    const isNew = (Date.now() - new Date(p.createdAt)) < 15 * 24 * 3600 * 1000;
+    const isSale = p.mrp && p.mrp > p.price;
+    const badge = isSale
+      ? `<span class="badge badge-sale">Sale</span>`
+      : isNew ? `<span class="badge badge-new">New</span>` : '';
+
+    return `
     <article class="card">
-
+      ${badge}
       <a href="product.html?id=${p._id}">
-        <img src="${p.image}" alt="${p.name}">
+        <img class="first"  src="${img}"  alt="${p.name}" loading="lazy">
+        <img class="second" src="${img2}" alt="${p.name}" loading="lazy">
       </a>
-
-      <!-- HOVER ACTION -->
       <div class="card-overlay">
-        <button class="btn gold add" data-id="${p._id}">Add</button>
-        <button class="btn ghost wish" data-id="${p._id}">♡</button>
+        <button class="btn gold add" data-id="${p._id}" style="flex:1;padding:10px 8px;">Add to Bag</button>
+        <button class="btn ghost wish" data-id="${p._id}" style="padding:10px 12px;">♡</button>
       </div>
-
       <div class="card-body">
-        <h3>${p.name}</h3>
-        <p class="price">₹${p.price}</p>
+        <h3><a href="product.html?id=${p._id}">${p.name}</a></h3>
+        <p>${INR(p.price)} ${mrp}</p>
       </div>
-
-    </article>
-  `).join('');
+    </article>`;
+  }).join('');
 }
 
-/* =========================
-   EVENTS
-========================= */
-document.addEventListener("input", applyFilters);
-document.addEventListener("change", applyFilters);
+/* ── events ── */
+document.addEventListener('input',  applyFilters);
+document.addEventListener('change', applyFilters);
 
-document.addEventListener("click", (event) => {
-  const target = event.target.closest('button[data-id]');
+document.addEventListener('click', (e) => {
+  const target = e.target.closest('button[data-id]');
   if (!target) return;
-
-  const product = allProducts.find(p => p._id === target.dataset.id);
+  const product = allProducts.find((p) => p._id === target.dataset.id);
   if (!product) return;
-
-  if (target.classList.contains('add')) addToCart(product);
+  if (target.classList.contains('add'))  addToCart(product);
   if (target.classList.contains('wish')) addToWishlist(product);
 });
 
-/* =========================
-   LOAD PRODUCTS
-========================= */
+/* ── init (respects ?category= URL param) ── */
 async function init() {
   try {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:60px 0;text-align:center;color:var(--gray);">Loading…</div>`;
     const products = await request('/products');
     allProducts = products;
-    render(products);
+
+    // Pre-select category from URL param
+    const urlCategory = new URLSearchParams(location.search).get('category');
+    if (urlCategory) {
+      const radio = document.querySelector(`[name="category"][value="${urlCategory}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    applyFilters();
   } catch {
-    grid.innerHTML = "<p>Error loading products</p>";
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:60px 0;text-align:center;color:var(--gray);">Failed to load products.</div>`;
   }
 }
 

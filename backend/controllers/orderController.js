@@ -1,99 +1,273 @@
-import Order from "../models/Order.js";
-import User from "../models/User.js";
+import Order from '../models/Order.js';
+import Product from '../models/Product.js';
+import User from '../models/User.js';
+import { calculateTax } from '../utils/taxCalculator.js';
+import { generateInvoiceForOrder } from './paymentController.js';
+import { sendOrderConfirmation, sendStatusUpdate } from '../utils/emailService.js';
 
-/* =========================
-   CREATE ORDER
-========================= */
+/* ═══════════════════════════════════
+   CREATE ORDER (customer)
+═══════════════════════════════════ */
 export const createOrder = async (req, res) => {
   try {
     const {
       items = [],
-      paymentMethod,
-      address,
-      customer,
-      birthdayDiscount = 0,
-      loyaltyPointsUsed = 0
+      shippingAddress,
+      payment,
+      couponCode,
+      notes
     } = req.body;
 
     if (!items.length) {
-      return res.status(400).json({ message: "Order items required" });
+      return res.status(400).json({ success: false, message: 'Order items required' });
     }
 
-    const subTotal = items.reduce(
-      (sum, i) => sum + (Number(i.price) * Number(i.quantity || 1)),
-      0
-    );
+    let subtotal = 0;
+    const enrichedItems = [];
 
-    const discount = Number(birthdayDiscount) || 0;
-    const total = Math.max(subTotal - discount, 0);
-
-    const loyaltyEarned = Math.floor(total / 100);
-
-    const order = await Order.create({
-      userId: req.user._id,
-      customer,
-      items,
-      subTotal,
-      birthdayDiscount: discount,
-      loyaltyPointsUsed: Number(loyaltyPointsUsed),
-      loyaltyPointsEarned: loyaltyEarned,
-      total,
-      paymentMethod,
-      address,
-      status: "PENDING"
-    });
-
-    // Update user loyalty
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: {
-        loyaltyPoints: loyaltyEarned - Number(loyaltyPointsUsed)
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+      if (!product) {
+        return res.status(400).json({ success: false, message: `Product ${item.productId} not found` });
       }
+
+      const unitPrice = product.price;
+      const qty = Number(item.qty || item.quantity || 1);
+      subtotal += unitPrice * qty;
+
+      enrichedItems.push({
+        productId: product._id,
+        name: product.name,
+        sku: item.sku || product.sku,
+        colour: item.colour,
+        size: item.size,
+        qty,
+        unitPrice,
+        mrp: product.mrp || unitPrice,
+        gstSlab: product.gstSlab || 0,
+        hsnCode: product.hsnCode,
+        storeId: item.storeId
+      });
+    }
+
+    const shippingCharge = subtotal >= (Number(process.env.FREE_SHIPPING_THRESHOLD) || 999) ? 0 : 99;
+
+    // GST calculation
+    const storeState    = enrichedItems[0]?.storeState || '';
+    const customerState = shippingAddress?.state || '';
+    const tax = calculateTax(enrichedItems, storeState, customerState);
+
+    const billing = {
+      subtotal:      tax.subtotal,
+      shippingCharge,
+      taxableAmount: tax.taxableAmount,
+      cgst:          tax.cgst,
+      sgst:          tax.sgst,
+      igst:          tax.igst,
+      grandTotal:    tax.grandTotal + shippingCharge
+    };
+
+    const paymentMethod = payment?.method || 'COD';
+    const order = await Order.create({
+      customer: {
+        userId: req.user._id,
+        name:   req.user.name,
+        email:  req.user.email,
+        phone:  req.user.phone
+      },
+      items: enrichedItems,
+      shippingAddress,
+      billing,
+      taxType: tax.taxType,
+      payment: payment || { method: 'COD', status: 'pending' },
+      couponCode,
+      notes
     });
 
-    res.status(201).json(order);
+    // Loyalty: 1 point per ₹100
+    const loyaltyEarned = Math.floor(billing.grandTotal / 100);
+    await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: loyaltyEarned } });
 
+    // COD: generate invoice + send confirmation (non-blocking)
+    if (paymentMethod === 'COD') {
+      generateInvoiceForOrder(order)
+        .then((invoiceUrl) => {
+          const orderWithInvoice = { ...order.toObject(), invoiceUrl };
+          sendOrderConfirmation(orderWithInvoice).catch((err) =>
+            console.error('sendOrderConfirmation failed:', err.message)
+          );
+        })
+        .catch((err) => console.error('COD invoice generation failed:', err.message));
+    }
+
+    res.status(201).json({ success: true, data: order });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Create order failed" });
+    console.error('createOrder:', err);
+    res.status(500).json({ success: false, message: 'Create order failed' });
   }
 };
 
-/* =========================
-   GET ALL ORDERS (ADMIN)
-========================= */
-export const getOrders = async (_req, res) => {
+/* ═══════════════════════════════════
+   GET MY ORDERS (customer)
+═══════════════════════════════════ */
+export const getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
-  } catch {
-    res.status(500).json({ message: "Fetch orders failed" });
+    const page  = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 10);
+    const skip  = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      Order.find({ 'customer.userId': req.user._id })
+        .sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Order.countDocuments({ 'customer.userId': req.user._id })
+    ]);
+
+    res.json({ success: true, data, total, page, limit });
+  } catch (err) {
+    console.error('getMyOrders:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch orders' });
   }
 };
 
-/* =========================
-   UPDATE ORDER STATUS
-========================= */
+/* ═══════════════════════════════════
+   GET SINGLE ORDER
+═══════════════════════════════════ */
+export const getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('items.productId', 'name images image')
+      .populate('items.storeId', 'name city')
+      .populate('shipments.storeId', 'name city');
+
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    // Customers can only see their own orders
+    if (req.user && order.customer.userId?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    res.json({ success: true, data: order });
+  } catch {
+    res.status(400).json({ success: false, message: 'Invalid order id' });
+  }
+};
+
+/* ═══════════════════════════════════
+   ADMIN — GET ALL ORDERS
+═══════════════════════════════════ */
+export const getOrders = async (req, res) => {
+  try {
+    const page  = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 20);
+    const skip  = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status)  filter.status = req.query.status;
+    if (req.query.storeId) filter['items.storeId'] = req.query.storeId;
+    if (req.query.search) {
+      filter.$or = [
+        { orderNumber: { $regex: req.query.search, $options: 'i' } },
+        { 'customer.name': { $regex: req.query.search, $options: 'i' } },
+        { 'customer.email': { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+    if (req.query.from || req.query.to) {
+      filter.createdAt = {};
+      if (req.query.from) filter.createdAt.$gte = new Date(req.query.from);
+      if (req.query.to)   filter.createdAt.$lte = new Date(req.query.to);
+    }
+
+    const [data, total] = await Promise.all([
+      Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Order.countDocuments(filter)
+    ]);
+
+    res.json({ success: true, data, total, page, limit });
+  } catch (err) {
+    console.error('getOrders:', err);
+    res.status(500).json({ success: false, message: 'Fetch orders failed' });
+  }
+};
+
+/* ═══════════════════════════════════
+   ADMIN — UPDATE ORDER STATUS
+═══════════════════════════════════ */
 export const updateOrder = async (req, res) => {
   try {
     const { status } = req.body;
 
-    if (!["PENDING", "DELIVERED"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status" });
+    const validStatuses = ['placed', 'confirmed', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'];
+    // Legacy statuses for backward compatibility
+    const legacyMap = { PENDING: 'placed', DELIVERED: 'delivered' };
+    const normalised = legacyMap[status] || status;
+
+    if (!validStatuses.includes(normalised)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
     }
+
+    const order = await Order.findByIdAndUpdate(req.params.id, { status: normalised }, { new: true });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    sendStatusUpdate(order).catch((err) => console.error('sendStatusUpdate failed:', err.message));
+
+    res.json({ success: true, data: order });
+  } catch {
+    res.status(400).json({ success: false, message: 'Update failed' });
+  }
+};
+
+/* ═══════════════════════════════════
+   ADMIN — CREATE MANUAL ORDER
+═══════════════════════════════════ */
+export const createManualOrder = async (req, res) => {
+  try {
+    const { customer, items, shippingAddress, billing, payment, notes } = req.body;
+
+    if (!customer || !items?.length) {
+      return res.status(400).json({ success: false, message: 'customer and items required' });
+    }
+
+    const order = await Order.create({
+      customer,
+      items,
+      shippingAddress,
+      billing,
+      payment: payment || { method: 'MANUAL', status: 'paid', paidAt: new Date() },
+      notes,
+      status: 'confirmed'
+    });
+
+    res.status(201).json({ success: true, data: order });
+  } catch (err) {
+    console.error('createManualOrder:', err);
+    res.status(500).json({ success: false, message: 'Failed to create manual order' });
+  }
+};
+
+/* ═══════════════════════════════════
+   ADMIN — INITIATE RETURN
+═══════════════════════════════════ */
+export const initiateReturn = async (req, res) => {
+  try {
+    const { reason, items } = req.body;
+    if (!reason) return res.status(400).json({ success: false, message: 'Reason required' });
+
+    const existing = await Order.findById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const newNotes = `Return initiated: ${reason}${existing.notes ? ` | ${existing.notes}` : ''}`;
 
     const order = await Order.findByIdAndUpdate(
       req.params.id,
-      { status },
+      { status: 'returned', notes: newNotes },
       { new: true }
     );
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
+    // TODO Phase 4: send return confirmation email
 
-    res.json(order);
-
-  } catch {
-    res.status(400).json({ message: "Update failed" });
+    res.json({ success: true, data: order });
+  } catch (err) {
+    console.error('initiateReturn:', err);
+    res.status(500).json({ success: false, message: 'Return initiation failed' });
   }
 };

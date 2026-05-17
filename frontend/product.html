@@ -6,11 +6,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <title>Product | SAGONA</title>
-
+  <!-- SEO — title/description overwritten by product.js after product loads -->
+  <meta name="description" content="Premium kidswear from Sagona — crafted in India.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://sagona.in/product.html">
+  <meta property="og:type" content="product">
+  <meta property="og:site_name" content="Sagona">
+  <meta property="og:title" content="Product | SAGONA">
+  <meta property="og:description" content="Premium kidswear from Sagona — crafted in India.">
+  <meta property="og:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://sagona.in/product.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Product | SAGONA">
+  <meta name="twitter:description" content="Premium kidswear from Sagona — crafted in India.">
+  <meta name="twitter:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
+    window._gtag = gtag;
+  </script>
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/nc_assets/css/style.css">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
 </head>
 
 <body>
@@ -24,7 +48,12 @@
   <main class="container" id="product-view"></main>
 
   <script type="module" src="/nc_assets/js/product.js"></script>
+  <script type="module" src="/nc_assets/js/chatbot.js"></script>
 
+  <!-- WhatsApp FAB -->
+  <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.14 22.085c-.34.957-1.99 1.826-2.742 1.94-.703.108-1.59.153-2.563-.16-.59-.192-1.347-.449-2.31-.88-4.065-1.76-6.717-5.847-6.918-6.12-.2-.275-1.63-2.17-1.63-4.135 0-1.965 1.032-2.93 1.397-3.33.365-.4.795-.5 1.06-.5.266 0 .531.003.764.013.245.01.574-.093.9.686.34.8 1.153 2.764 1.254 2.963.1.2.167.435.033.7-.133.266-.2.43-.399.663-.2.234-.42.523-.6.703-.2.2-.408.416-.175.815.233.4 1.036 1.71 2.224 2.77 1.528 1.362 2.815 1.784 3.215 1.984.4.2.633.167.866-.1.233-.266.997-1.165 1.264-1.564.266-.4.532-.333.897-.2.366.133 2.33 1.098 2.73 1.298.4.2.665.3.764.467.1.165.1.954-.24 1.91z"/></svg>
+  </a>
 </body>
 
 </html>

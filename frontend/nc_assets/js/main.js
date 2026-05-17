@@ -13,12 +13,15 @@ async function loadProducts() {
   renderShop(products);
 }
 
-/* FEATURED */
-function renderShop(products) {
-  const grid = document.getElementById("shop-grid");
+/* FEATURED — renders to #featured-products on index.html */
+function renderFeatured(products) {
+  const grid = document.getElementById("featured-products");
   if (!grid) return;
 
-  grid.innerHTML = products.map((p, i) => `
+  grid.innerHTML = products
+    .filter(p => p.featured)
+    .slice(0, 4)
+    .map((p, i) => `
     <a href="product.html?id=${p._id}" class="card fade-in" style="animation-delay:${i * 0.05}s">
 
       <img class="first" src="${p.image}">
@@ -37,7 +40,7 @@ function renderShop(products) {
   `).join("");
 }
 
-/* SHOP */
+/* SHOP — renders to #shop-grid (used by pages that include both) */
 function renderShop(products) {
   const grid = document.getElementById("shop-grid");
   if (!grid) return;
