@@ -13,3 +13,5 @@ export const API_BASE =
         : useSameOriginApi
             ? `${window.location.protocol}//${window.location.host}/api`
             : 'https://sagona-backend-api.onrender.com/api');
+
+export const RAZORPAY_KEY_ID = 'rzp_live_SnTOdSqnhxjlWr';
