@@ -510,6 +510,11 @@ window.editProduct = async (id) => {
   try {
     const data = await api(`/products/${id}`);
     const p    = data.data || data;
+
+    // Pre-populate _uploadedUrls with the product's existing images
+    // so saveProduct() sends them back even if the user doesn't change anything
+    _uploadedUrls = p.images?.length ? [...p.images] : (p.image ? [p.image] : []);
+
     openModal(`
       <h2 style="font-size:18px;margin-bottom:20px">Edit Product</h2>
       <div class="form-2col">
@@ -539,10 +544,9 @@ window.editProduct = async (id) => {
       </div>
       <label>Description</label>
       <textarea id="mp-desc" rows="3">${p.description || ''}</textarea>
-      <label>Replace Image</label>
-      <input type="file" id="mp-image" accept="image/*">
-      ${p.images?.[0] || p.image ? `<img src="${p.images?.[0] || p.image}" class="img-preview" style="display:block">` : ''}
-      <img id="mp-preview" class="img-preview">
+      <label>Images (up to 5) — add new or remove existing</label>
+      <input type="file" id="mp-image" accept="image/*" multiple>
+      <div id="mp-img-preview" class="image-preview-grid" style="margin-top:8px"></div>
       <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
         <input type="checkbox" id="mp-featured" ${p.featured ? 'checked' : ''}><label for="mp-featured" style="margin:0;font-size:12px;letter-spacing:0">Featured</label>
       </div>
@@ -551,13 +555,25 @@ window.editProduct = async (id) => {
         <button class="btn ghost" onclick="closeModal()">Cancel</button>
       </div>
     `);
-    document.getElementById('mp-image')?.addEventListener('change', (e) => {
-      const prev = document.getElementById('mp-preview');
-      prev.src = URL.createObjectURL(e.target.files[0]);
-      prev.style.display = 'block';
+
+    // Render existing images into the preview grid with remove buttons
+    const preview = document.getElementById('mp-img-preview');
+    _uploadedUrls.forEach((url) => {
+      const ph = document.createElement('div');
+      ph.className = 'img-placeholder';
+      ph.innerHTML = `
+        <img src="${url}" alt="Product image">
+        <button type="button" class="img-remove-btn" data-url="${url}">&times;</button>`;
+      preview.appendChild(ph);
     });
+
+    // New files → upload immediately via handleImageSelect (same as Add Product)
+    document.getElementById('mp-image').addEventListener('change', (e) => {
+      handleImageSelect(e.target.files);
+    });
+
     document.getElementById('mp-save').addEventListener('click', () => saveProduct(id));
-  } catch { toast('Failed to load product', 'error'); }
+  } catch (err) { toast(err.message || 'Failed to load product', 'error'); }
 };
 
 window.archiveProduct = async (id, name) => {
