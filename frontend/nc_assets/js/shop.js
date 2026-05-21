@@ -96,29 +96,31 @@ function render(products) {
   }
 
   grid.innerHTML = products.map((p) => {
-    const img  = p.images?.[0] || p.image || '';
-    const img2 = p.images?.[1] || img;
-    const mrp  = p.mrp && p.mrp > p.price ? `<span class="price-mrp">${INR(p.mrp)}</span>` : '';
-    const isNew = (Date.now() - new Date(p.createdAt)) < 15 * 24 * 3600 * 1000;
+    const img   = p.images?.[0] || p.image || '';
+    const img2  = p.images?.[1] || img;
+    const mrp   = p.mrp && p.mrp > p.price ? `<span class="price-mrp">${INR(p.mrp)}</span>` : '';
+    const isNew  = (Date.now() - new Date(p.createdAt)) < 15 * 24 * 3600 * 1000;
     const isSale = p.mrp && p.mrp > p.price;
-    const badge = isSale
+    const badge  = isSale
       ? `<span class="badge badge-sale">Sale</span>`
       : isNew ? `<span class="badge badge-new">New</span>` : '';
 
     return `
-    <article class="card">
+    <article class="product-card">
       ${badge}
-      <a href="product.html?id=${p._id}">
-        <img class="first"  src="${img}"  alt="${p.name}" loading="lazy">
-        <img class="second" src="${img2}" alt="${p.name}" loading="lazy">
-      </a>
-      <div class="card-overlay">
-        <button class="btn gold add" data-id="${p._id}" style="flex:1;padding:10px 8px;">Add to Bag</button>
-        <button class="btn ghost wish" data-id="${p._id}" style="padding:10px 12px;">♡</button>
+      <div class="product-card-media">
+        <a href="product.html?id=${p._id}" tabindex="-1" aria-hidden="true">
+          <img class="img-main"  src="${img}"  alt="${p.name}" loading="lazy">
+          <img class="img-hover" src="${img2}" alt="${p.name}" loading="lazy">
+        </a>
+        <div class="product-card-actions">
+          <button class="btn-quick add" data-id="${p._id}">Add to Bag</button>
+          <button class="btn-wish  wish" data-id="${p._id}">♡</button>
+        </div>
       </div>
-      <div class="card-body">
-        <h3><a href="product.html?id=${p._id}">${p.name}</a></h3>
-        <p>${INR(p.price)} ${mrp}</p>
+      <div class="product-card-info">
+        <a href="product.html?id=${p._id}" class="product-name">${p.name}</a>
+        <div class="product-price-row">${INR(p.price)} ${mrp}</div>
       </div>
     </article>`;
   }).join('');

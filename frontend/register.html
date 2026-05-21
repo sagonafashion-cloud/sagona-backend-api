@@ -1,118 +1,145 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Create Account | SAGONA</title>
-    <!-- SEO -->
-    <meta name="description" content="Create a free Sagona account. Earn loyalty points, save addresses and get exclusive early access to new collections.">
-    <meta name="robots" content="noindex, nofollow">
-    <link rel="canonical" href="https://sagona.in/register.html">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Sagona">
-    <meta property="og:title" content="Create Account | SAGONA">
-    <meta property="og:description" content="Join Sagona and earn loyalty points on every purchase.">
-    <meta property="og:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
-    <meta property="og:url" content="https://sagona.in/register.html">
-    <!-- GA4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
-      window._gtag = gtag;
-    </script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="/nc_assets/CCS/style.css">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
-    <link rel="manifest" href="/favicon/site.webmanifest">
-    <link rel="icon" href="/favicon/favicon.ico">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Account | SAGONA</title>
+  <!-- SEO -->
+  <meta name="description" content="Create a free Sagona account. Earn loyalty points, save addresses and get exclusive early access to new collections.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://sagona.in/register.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Sagona">
+  <meta property="og:title" content="Create Account | SAGONA">
+  <meta property="og:description" content="Join Sagona and earn loyalty points on every purchase.">
+  <meta property="og:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
+  <meta property="og:url" content="https://sagona.in/register.html">
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
+    window._gtag = gtag;
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/favicon/site.webmanifest">
+  <link rel="icon" href="/favicon/favicon.ico">
 </head>
 
 <body>
 
-    <header class="header">
-        <div class="container nav">
-            <a class="brand" href="index.html">SAGONA</a>
+  <div class="auth-split">
+
+    <!-- ═══ LEFT: FORM PANEL ═══ -->
+    <div class="auth-panel">
+
+      <a href="index.html" class="auth-logo">SAGONA</a>
+
+      <h1>Create Account</h1>
+      <p class="auth-sub">Join us for exclusive access &amp; rewards</p>
+
+      <form id="register-form" autocomplete="on">
+
+        <div class="float-field">
+          <input name="name" type="text" id="f-name" placeholder=" " required autocomplete="name">
+          <label for="f-name">Full Name</label>
         </div>
-    </header>
 
-    <main class="container" style="padding: 4rem 0">
+        <div class="float-field">
+          <input name="email" type="email" id="f-email" placeholder=" " required autocomplete="email">
+          <label for="f-email">Email Address</label>
+        </div>
 
-        <form id="register-form" class="panel" style="max-width: 420px; margin:auto">
+        <div class="float-field">
+          <input name="password" type="password" id="f-password" placeholder=" " required autocomplete="new-password" minlength="6">
+          <label for="f-password">Password</label>
+        </div>
 
-            <h1 class="page-title">Create Account</h1>
+        <div class="float-field">
+          <input name="birthday" type="date" id="f-birthday" placeholder=" " autocomplete="bday">
+          <label for="f-birthday" style="top:2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);">Birthday (optional)</label>
+        </div>
 
-            <input name="name" class="field" placeholder="Full Name" required />
-            <input name="email" type="email" class="field" placeholder="Email" required />
-            <input name="password" type="password" class="field" placeholder="Password" required />
-            <input name="birthday" type="date" class="field" />
+        <button class="auth-submit" type="submit" id="reg-btn">Create Account</button>
 
-            <button class="btn gold" type="submit">Create Account</button>
+        <p id="reg-message" class="auth-error"></p>
+        <p id="reg-success" class="auth-success"></p>
 
-            <p style="margin-top:1rem;">
-                Already have an account? <a href="login.html">Login</a>
-            </p>
+        <p class="auth-switch">
+          Already have an account? <a href="login.html">Sign in</a>
+        </p>
 
-            <p id="message"></p>
+      </form>
 
-        </form>
+    </div>
 
-    </main>
+    <!-- ═══ RIGHT: IMAGE PANEL ═══ -->
+    <div class="auth-image">
+      <img
+        src="https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=1200&q=80"
+        alt="SAGONA Kidswear"
+        loading="lazy"
+      >
+      <div class="auth-image-overlay">
+        <p>Premium Indian Kidswear</p>
+        <h2>Style begins<br>at birth</h2>
+      </div>
+    </div>
 
-    <script type="module">
-        import { request } from '/nc_assets/js/api.js';
-
-        const form = document.getElementById('register-form');
-        const msg = document.getElementById('message');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            msg.textContent = "";
-            const btn = form.querySelector("button");
-
-            btn.disabled = true;
-            btn.textContent = "Creating...";
-
-            try {
-                await request('/auth/register', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        name: form.name.value,
-                        email: form.email.value,
-                        password: form.password.value,
-                        birthday: form.birthday.value
-                    })
-                });
-
-                msg.style.color = "green";
-                msg.textContent = "Account created! Redirecting...";
-
-                setTimeout(() => {
-                    location.href = "login.html";
-                }, 1200);
-
-            } catch (err) {
-                msg.style.color = "red";
-                msg.textContent = err.message;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = "Create Account";
-            }
-        });
-    </script>
+  </div>
 
   <!-- WhatsApp FAB -->
   <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
     <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.14 22.085c-.34.957-1.99 1.826-2.742 1.94-.703.108-1.59.153-2.563-.16-.59-.192-1.347-.449-2.31-.88-4.065-1.76-6.717-5.847-6.918-6.12-.2-.275-1.63-2.17-1.63-4.135 0-1.965 1.032-2.93 1.397-3.33.365-.4.795-.5 1.06-.5.266 0 .531.003.764.013.245.01.574-.093.9.686.34.8 1.153 2.764 1.254 2.963.1.2.167.435.033.7-.133.266-.2.43-.399.663-.2.234-.42.523-.6.703-.2.2-.408.416-.175.815.233.4 1.036 1.71 2.224 2.77 1.528 1.362 2.815 1.784 3.215 1.984.4.2.633.167.866-.1.233-.266.997-1.165 1.264-1.564.266-.4.532-.333.897-.2.366.133 2.33 1.098 2.73 1.298.4.2.665.3.764.467.1.165.1.954-.24 1.91z"/></svg>
   </a>
-</body>
 
+  <script type="module">
+    import { request } from '/nc_assets/js/api.js';
+
+    const form    = document.getElementById('register-form');
+    const errEl   = document.getElementById('reg-message');
+    const succEl  = document.getElementById('reg-success');
+    const btn     = document.getElementById('reg-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      errEl.style.display  = 'none';
+      succEl.style.display = 'none';
+      btn.disabled    = true;
+      btn.textContent = 'Creating…';
+
+      try {
+        await request('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            name:     form.name.value,
+            email:    form.email.value,
+            password: form.password.value,
+            birthday: form.birthday.value
+          })
+        });
+
+        succEl.textContent   = 'Account created! Redirecting…';
+        succEl.style.display = 'block';
+
+        setTimeout(() => { location.href = 'login.html'; }, 1200);
+
+      } catch (err) {
+        errEl.textContent   = err.message || 'Registration failed. Please try again.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+
+</body>
 </html>

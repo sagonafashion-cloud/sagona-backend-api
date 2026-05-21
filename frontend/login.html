@@ -1,114 +1,131 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sign In | SAGONA</title>
-    <!-- SEO -->
-    <meta name="description" content="Sign in to your Sagona account to track orders, manage your wishlist and earn loyalty points.">
-    <meta name="robots" content="noindex, nofollow">
-    <link rel="canonical" href="https://sagona.in/login.html">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Sagona">
-    <meta property="og:title" content="Sign In | SAGONA">
-    <meta property="og:description" content="Sign in to your Sagona account.">
-    <meta property="og:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
-    <meta property="og:url" content="https://sagona.in/login.html">
-    <!-- GA4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
-      window._gtag = gtag;
-    </script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="/nc_assets/CCS/style.css">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
-    <link rel="manifest" href="/favicon/site.webmanifest">
-    <link rel="icon" href="/favicon/favicon.ico">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign In | SAGONA</title>
+  <!-- SEO -->
+  <meta name="description" content="Sign in to your Sagona account to track orders, manage your wishlist and earn loyalty points.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://sagona.in/login.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Sagona">
+  <meta property="og:title" content="Sign In | SAGONA">
+  <meta property="og:description" content="Sign in to your Sagona account.">
+  <meta property="og:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
+  <meta property="og:url" content="https://sagona.in/login.html">
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
+    window._gtag = gtag;
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/favicon/site.webmanifest">
+  <link rel="icon" href="/favicon/favicon.ico">
 </head>
 
 <body>
 
-    <header class="header">
-        <div class="container nav">
-            <a class="brand" href="index.html">SAGONA</a>
+  <div class="auth-split">
+
+    <!-- ═══ LEFT: FORM PANEL ═══ -->
+    <div class="auth-panel">
+
+      <a href="index.html" class="auth-logo">SAGONA</a>
+
+      <h1>Welcome Back</h1>
+      <p class="auth-sub">Sign in to continue shopping</p>
+
+      <form id="login-form" autocomplete="on">
+
+        <div class="float-field">
+          <input name="email" type="email" id="f-email" placeholder=" " required autocomplete="email">
+          <label for="f-email">Email Address</label>
         </div>
-    </header>
 
-    <main class="container" style="padding: 4rem 0">
+        <div class="float-field">
+          <input name="password" type="password" id="f-password" placeholder=" " required autocomplete="current-password">
+          <label for="f-password">Password</label>
+        </div>
 
-        <form id="login-form" class="panel" style="max-width: 420px; margin:auto">
+        <button class="auth-submit" type="submit" id="login-btn">Sign In</button>
 
-            <h1 class="page-title">Welcome Back</h1>
-            <p style="color:#6e665c;">Login to continue shopping</p>
+        <p id="error-msg" class="auth-error"></p>
 
-            <input name="email" type="email" class="field" placeholder="Email" required />
-            <input name="password" type="password" class="field" placeholder="Password" required />
+        <p class="auth-switch">
+          New here? <a href="register.html">Create account</a>
+        </p>
 
-            <button class="btn gold" type="submit">Login</button>
+      </form>
 
-            <p style="margin-top:1rem;">
-                New here? <a href="register.html">Create account</a>
-            </p>
+    </div>
 
-            <p id="error-msg" style="color:red; display:none;"></p>
+    <!-- ═══ RIGHT: IMAGE PANEL ═══ -->
+    <div class="auth-image">
+      <img
+        src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=80"
+        alt="SAGONA Fashion"
+        loading="lazy"
+      >
+      <div class="auth-image-overlay">
+        <p>Premium Indian Kidswear</p>
+        <h2>Dress them<br>with love</h2>
+      </div>
+    </div>
 
-        </form>
-
-    </main>
-
-    <script type="module">
-        import { request } from '/nc_assets/js/api.js';
-        import { saveToken, saveUser } from '/nc_assets/js/storage.js';
-
-        const form = document.getElementById('login-form');
-        const errorMsg = document.getElementById('error-msg');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            errorMsg.style.display = "none";
-
-            const btn = form.querySelector("button");
-            btn.disabled = true;
-            btn.textContent = "Logging in...";
-
-            try {
-                const data = await request('/auth/login', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        email: form.email.value,
-                        password: form.password.value
-                    })
-                });
-
-                saveToken(data.token);
-                saveUser(data);
-
-                window.location.href = "index.html";
-
-            } catch (err) {
-                errorMsg.textContent = err.message || "Login failed";
-                errorMsg.style.display = "block";
-            } finally {
-                btn.disabled = false;
-                btn.textContent = "Login";
-            }
-        });
-    </script>
+  </div>
 
   <!-- WhatsApp FAB -->
   <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
     <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.14 22.085c-.34.957-1.99 1.826-2.742 1.94-.703.108-1.59.153-2.563-.16-.59-.192-1.347-.449-2.31-.88-4.065-1.76-6.717-5.847-6.918-6.12-.2-.275-1.63-2.17-1.63-4.135 0-1.965 1.032-2.93 1.397-3.33.365-.4.795-.5 1.06-.5.266 0 .531.003.764.013.245.01.574-.093.9.686.34.8 1.153 2.764 1.254 2.963.1.2.167.435.033.7-.133.266-.2.43-.399.663-.2.234-.42.523-.6.703-.2.2-.408.416-.175.815.233.4 1.036 1.71 2.224 2.77 1.528 1.362 2.815 1.784 3.215 1.984.4.2.633.167.866-.1.233-.266.997-1.165 1.264-1.564.266-.4.532-.333.897-.2.366.133 2.33 1.098 2.73 1.298.4.2.665.3.764.467.1.165.1.954-.24 1.91z"/></svg>
   </a>
-</body>
 
+  <script type="module">
+    import { request } from '/nc_assets/js/api.js';
+    import { saveToken, saveUser } from '/nc_assets/js/storage.js';
+
+    const form     = document.getElementById('login-form');
+    const errorMsg = document.getElementById('error-msg');
+    const btn      = document.getElementById('login-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      errorMsg.style.display = 'none';
+      btn.disabled    = true;
+      btn.textContent = 'Signing in…';
+
+      try {
+        const data = await request('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email:    form.email.value,
+            password: form.password.value
+          })
+        });
+
+        saveToken(data.token);
+        saveUser(data);
+
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        errorMsg.textContent    = err.message || 'Login failed. Please try again.';
+        errorMsg.style.display  = 'block';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+
+</body>
 </html>
