@@ -88,8 +88,8 @@ export const createProduct = async (req, res) => {
   try {
     const { name, price, image, description, featured } = req.body;
 
-    if (!name || !price || !description) {
-      return res.status(400).json({ success: false, message: 'name, price, description required' });
+    if (!name || !price) {
+      return res.status(400).json({ success: false, message: 'name and price required' });
     }
 
     const product = await Product.create({ name, price, image, description, featured: !!featured });
@@ -123,8 +123,8 @@ export const adminCreateProduct = async (req, res) => {
       status, publishAt, variants, stores
     } = req.body;
 
-    if (!name || !price || !description) {
-      return res.status(400).json({ success: false, message: 'name, price, description required' });
+    if (!name || !price) {
+      return res.status(400).json({ success: false, message: 'name and price required' });
     }
 
     const product = await Product.create({

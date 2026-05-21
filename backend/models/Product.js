@@ -18,7 +18,7 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     image: { type: String },          // legacy single-image field
-    description: { type: String, required: true },
+    description: { type: String, default: '' },
     featured: { type: Boolean, default: false },
 
     /* ── identity ── */
