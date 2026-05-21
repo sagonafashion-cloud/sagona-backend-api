@@ -141,8 +141,9 @@ document.addEventListener('click', (e) => {
 async function init() {
   try {
     grid.innerHTML = `<div style="grid-column:1/-1;padding:60px 0;text-align:center;color:var(--gray);">Loading…</div>`;
-    const products = await request('/products');
-    allProducts = products;
+    const result = await request('/products');
+    // API returns { success, data: [...], total } — extract the array
+    allProducts = Array.isArray(result) ? result : (result.data || []);
 
     // Pre-select category from URL param
     const urlCategory = new URLSearchParams(location.search).get('category');

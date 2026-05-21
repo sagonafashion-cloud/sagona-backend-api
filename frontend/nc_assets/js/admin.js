@@ -1,5 +1,8 @@
 import { API_BASE } from './config.js';
 
+// Tracks Cloudinary URLs uploaded in the current product modal
+let _uploadedUrls = [];
+
 /* ══════════════════════════════════════
    UTILITIES
 ══════════════════════════════════════ */
@@ -399,6 +402,7 @@ document.getElementById('product-status-filter')?.addEventListener('change', loa
 
 /* ── add product ── */
 document.getElementById('add-product-btn')?.addEventListener('click', () => {
+  _uploadedUrls = []; // reset for each new product
   openModal(`
     <h2 style="font-size:18px;margin-bottom:20px">Add Product</h2>
     <div class="form-2col">
@@ -418,8 +422,8 @@ document.getElementById('add-product-btn')?.addEventListener('click', () => {
         <label>Age Group</label>
         <select id="mp-age">
           <option value="">— Select —</option>
-          <option value="0-2y">0–2 Years</option><option value="2-5y">2–5 Years</option>
-          <option value="5-8y">5–8 Years</option><option value="8-12y">8–12 Years</option>
+          <option value="0-2">0–2 Years</option><option value="2-5">2–5 Years</option>
+          <option value="5-10">5–10 Years</option><option value="10-14">10–14 Years</option>
           <option value="adult">Adult</option>
         </select>
       </div>
@@ -440,9 +444,9 @@ document.getElementById('add-product-btn')?.addEventListener('click', () => {
     </div>
     <label>Description</label>
     <textarea id="mp-desc" rows="3" placeholder="Product description…"></textarea>
-    <label>Image</label>
-    <input type="file" id="mp-image" accept="image/*">
-    <img id="mp-preview" class="img-preview">
+    <label>Images (up to 5)</label>
+    <input type="file" id="mp-image" accept="image/*" multiple>
+    <div id="mp-img-preview" class="image-preview-grid" style="margin-top:8px"></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
       <input type="checkbox" id="mp-featured">
       <label for="mp-featured" style="margin:0;font-size:12px;letter-spacing:0">Featured on homepage</label>
@@ -453,13 +457,8 @@ document.getElementById('add-product-btn')?.addEventListener('click', () => {
     </div>
   `);
 
-  // image preview
   document.getElementById('mp-image').addEventListener('change', (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const prev = document.getElementById('mp-preview');
-    prev.src = URL.createObjectURL(f);
-    prev.style.display = 'block';
+    handleImageSelect(e.target.files);
   });
 
   document.getElementById('mp-save').addEventListener('click', saveProduct);
@@ -475,15 +474,7 @@ async function saveProduct(editId = null) {
   saveBtn.textContent = 'Saving…';
 
   try {
-    let imageUrl = null;
-    const fileInput = document.getElementById('mp-image');
-    if (fileInput?.files?.[0]) {
-      const fd = new FormData();
-      fd.append('image', fileInput.files[0]);
-      const upRes = await api('/admin/upload', { method: 'POST', body: fd });
-      imageUrl = upRes.data?.url || upRes.url;
-    }
-
+    // Images were already uploaded to Cloudinary via handleImageSelect()
     const payload = {
       name,
       price,
@@ -492,10 +483,10 @@ async function saveProduct(editId = null) {
       category:   document.getElementById('mp-category')?.value || undefined,
       ageGroup:   document.getElementById('mp-age')?.value || undefined,
       gstSlab:    Number(document.getElementById('mp-gst')?.value) || 5,
-      description:document.getElementById('mp-desc')?.value.trim() || undefined,
+      description:document.getElementById('mp-desc')?.value.trim() || '',
       featured:   document.getElementById('mp-featured')?.checked || false,
       status:     document.getElementById('mp-status')?.value || 'active',
-      ...(imageUrl ? { images: [imageUrl], image: imageUrl } : {})
+      ...(_uploadedUrls.length ? { images: _uploadedUrls, image: _uploadedUrls[0] } : {})
     };
 
     if (editId) {
@@ -543,7 +534,7 @@ window.editProduct = async (id) => {
           <select id="mp-gst">${[0,5,12,18,28].map((g) => `<option value="${g}" ${p.gstSlab === g ? 'selected':''}>${g}%</option>`).join('')}</select>
         </div>
         <div><label>Age Group</label>
-          <select id="mp-age"><option value="">—</option>${['0-2y','2-5y','5-8y','8-12y','adult'].map((a) => `<option value="${a}" ${p.ageGroup === a ? 'selected':''}>${a}</option>`).join('')}</select>
+          <select id="mp-age"><option value="">—</option>${['0-2','2-5','5-10','10-14','adult'].map((a) => `<option value="${a}" ${p.ageGroup === a ? 'selected':''}>${a}</option>`).join('')}</select>
         </div>
       </div>
       <label>Description</label>
@@ -857,6 +848,49 @@ document.getElementById('setup-2fa-btn')?.addEventListener('click', async () => 
       } catch (err) { toast(err.message || 'Invalid code', 'error'); }
     });
   } catch (err) { toast(err.message || '2FA setup failed', 'error'); }
+});
+
+/* ══════════════════════════════════════
+   IMAGE UPLOAD (multi-file)
+══════════════════════════════════════ */
+async function handleImageSelect(files) {
+  const preview = document.getElementById('mp-img-preview');
+  if (!preview) return;
+  const fileArr = Array.from(files).slice(0, 5 - _uploadedUrls.length); // max 5 total
+
+  for (const file of fileArr) {
+    // Show uploading placeholder immediately
+    const ph = document.createElement('div');
+    ph.className = 'img-placeholder loading';
+    ph.textContent = 'Uploading…';
+    preview.appendChild(ph);
+
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      // POST /api/admin/upload/image
+      const up  = await api('/admin/upload/image', { method: 'POST', body: fd });
+      const url = up.data?.url || up.url;
+      _uploadedUrls.push(url);
+
+      ph.innerHTML = `
+        <img src="${url}" alt="Product image">
+        <button type="button" class="img-remove-btn" data-url="${url}">&times;</button>`;
+      ph.classList.remove('loading');
+    } catch (err) {
+      toast('Upload failed: ' + (err.message || 'unknown error'), 'error');
+      ph.remove();
+    }
+  }
+}
+
+// Delegated remove handler — works for any dynamically added remove button
+document.getElementById('modal-body').addEventListener('click', (e) => {
+  if (!e.target.classList.contains('img-remove-btn')) return;
+  const url = e.target.dataset.url;
+  const idx = _uploadedUrls.indexOf(url);
+  if (idx > -1) _uploadedUrls.splice(idx, 1);
+  e.target.closest('.img-placeholder').remove();
 });
 
 /* ══════════════════════════════════════

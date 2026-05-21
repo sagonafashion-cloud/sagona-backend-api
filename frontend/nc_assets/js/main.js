@@ -6,7 +6,9 @@ let allProducts = [];
 
 /* LOAD */
 async function loadProducts() {
-  const products = await request("/products");
+  const result = await request("/products");
+  // API returns { success, data: [...], total } — extract the array
+  const products = Array.isArray(result) ? result : (result.data || []);
   allProducts = products;
 
   renderFeatured(products);
