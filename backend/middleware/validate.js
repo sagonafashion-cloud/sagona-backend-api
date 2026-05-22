@@ -44,10 +44,10 @@ export const createOrderRules = [
 
 // ── Admin products ────────────────────────────────────────
 export const createProductRules = [
-  body('name').trim().isLength({ min: 2, max: 200 }).withMessage('Product name required'),
-  body('sku').trim().notEmpty().withMessage('SKU required'),
-  body('basePrice').isFloat({ min: 0 }).withMessage('Base price must be non-negative'),
-  body('gstSlab').isIn([0, 5, 12, 18, 28]).withMessage('GST slab must be 0, 5, 12, 18, or 28'),
+  body('name').trim().isLength({ min: 2, max: 200 }).withMessage('Product name required (2–200 chars)'),
+  body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('sku').optional({ nullable: true, checkFalsy: true }).trim(),
+  body('gstSlab').optional().isIn([0, 5, 12, 18, 28]).withMessage('GST slab must be 0, 5, 12, 18, or 28'),
 ];
 
 // ── Delivery ──────────────────────────────────────────────
