@@ -162,7 +162,7 @@ export const getOrders = async (req, res) => {
     const skip  = (page - 1) * limit;
 
     const filter = {};
-    if (req.query.status)  filter.status = req.query.status;
+    if (req.query.status)  filter.status = { $regex: new RegExp(`^${req.query.status}$`, 'i') };
     if (req.query.storeId) filter['items.storeId'] = req.query.storeId;
     if (req.query.search) {
       filter.$or = [

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getStores, getStoreById, createStore, updateStore, deleteStore } from '../controllers/storeController.js';
+import { getStores, getStoreById, createStore, updateStore, toggleStore, deleteStore } from '../controllers/storeController.js';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 
 const router = express.Router();
@@ -11,6 +11,7 @@ router.get('/:id', getStoreById);
 // Admin (super_admin only)
 router.post('/', adminProtect, requireRole('super_admin'), createStore);
 router.put('/:id', adminProtect, requireRole('super_admin'), updateStore);
+router.patch('/:id/toggle', adminProtect, requireRole('super_admin'), toggleStore);
 router.delete('/:id', adminProtect, requireRole('super_admin'), deleteStore);
 
 export default router;
