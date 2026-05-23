@@ -6,20 +6,21 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
-    "assetBundlePatterns": ["**/*"],
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "in.sagona.app",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Used to upload product photos",
-        "NSPhotoLibraryUsageDescription": "Used to select profile photo",
-        "NSFaceIDUsageDescription": "Used for secure biometric login"
+        "NSCameraUsageDescription": "Sagona uses your camera to upload product photos",
+        "NSPhotoLibraryUsageDescription": "Sagona accesses your photos to upload product images",
+        "NSFaceIDUsageDescription": "Sagona uses Face ID for secure, fast login"
       }
     },
     "android": {
@@ -29,11 +30,14 @@
       },
       "package": "in.sagona.app",
       "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
       ]
     },
     "web": {
@@ -50,8 +54,17 @@
           "color": "#C9A84C",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Sagona to access your photos."
+        }
       ]
     ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "eas": {
         "projectId": "ce0ee708-7c30-4909-bbba-27ea7b001a39"

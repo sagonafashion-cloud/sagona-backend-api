@@ -31,6 +31,8 @@ if (!cart.length) {
 
 /* ── init ── */
 customerNameEl.value = auth.user?.name || '';
+customerNameEl.removeAttribute('readonly');
+customerNameEl.removeAttribute('disabled');
 if (pointsEl) pointsEl.textContent = auth.user?.loyaltyPoints || 0;
 
 // render mini item list in summary
@@ -82,7 +84,7 @@ function buildPayload() {
   }));
 
   const shippingAddress = {
-    name:    auth.user?.name,
+    name:    document.querySelector('#customerName')?.value?.trim() || auth.user?.name,
     phone:   document.querySelector('#phone')?.value?.trim(),
     line1:   document.querySelector('#address')?.value?.trim(),
     line2:   document.querySelector('#address2')?.value?.trim() || undefined,

@@ -1550,3 +1550,45 @@ body.home-page .top-strip { display: none; }
   .arrivals-grid { grid-template-columns: repeat(2, 1fr); }
   .auth-panel { padding: 44px 20px; }
 }
+
+/* ─── Admin image upload overlay ─── */
+.img-upload-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #555;
+  background: rgba(255,255,255,0.6);
+  pointer-events: none;
+}
+
+/* ─── Admin store action buttons ─── */
+.btn-toggle-store {
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid #EF9F27;
+  color: #EF9F27;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: inherit;
+}
+.btn-toggle-store:hover { background: rgba(239,159,39,0.08); }
+
+.btn-delete-store {
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid #E24B4A;
+  color: #E24B4A;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: inherit;
+}
+.btn-delete-store:hover { background: rgba(226,75,74,0.08); }

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1047753169665",
+    "project_id": "influu-12a11",
+    "storage_bucket": "influu-12a11.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1047753169665:android:04dbc8422d8b7ec8695900",
+        "android_client_info": {
+          "package_name": "com.influu.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKKlEnITT2TzKX48AT9VLC1xO3gSPL_KE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1047753169665:android:9c62bf9886e84d4a695900",
+        "android_client_info": {
+          "package_name": "in.sagona.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKKlEnITT2TzKX48AT9VLC1xO3gSPL_KE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

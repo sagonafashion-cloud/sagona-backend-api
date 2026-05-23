@@ -590,7 +590,7 @@ window.archiveProduct = async (id, name) => {
 ══════════════════════════════════════ */
 async function loadStores() {
   try {
-    const data   = await api('/stores');
+    const data   = await api('/admin/stores?includeInactive=true');
     const stores = Array.isArray(data) ? data : (data.data || []);
     const tbody  = document.getElementById('stores-body');
 
@@ -605,7 +605,13 @@ async function loadStores() {
         <td>${s.state || '—'}</td>
         <td>${s.pincode || '—'}</td>
         <td style="font-size:11px">${s.gstin || '—'}</td>
-        <td><span class="pill ${s.isActive !== false ? 'pill-delivered' : 'pill-cancelled'}">${s.isActive !== false ? 'Yes' : 'No'}</span></td>
+        <td>
+          <span class="pill ${s.isActive !== false ? 'pill-delivered' : 'pill-cancelled'}"
+                style="cursor:pointer" title="Click to toggle active status"
+                onclick="toggleStoreActive('${s._id}', ${s.isActive !== false})">
+            ${s.isActive !== false ? 'ACTIVE' : 'INACTIVE'}
+          </span>
+        </td>
         <td><button class="btn ghost" style="padding:5px 10px;font-size:10px" onclick="editStore('${s._id}')">Edit</button></td>
       </tr>`).join('');
   } catch { document.getElementById('stores-body').innerHTML = `<tr><td colspan="7" class="loading">Failed to load.</td></tr>`; }
@@ -634,6 +640,13 @@ function showStoreModal(s = null) {
     </div>
     <div class="form-actions">
       <button class="btn gold" id="st-save">${s ? 'Update' : 'Create'} Store</button>
+      ${s ? `
+      <button type="button" class="btn-toggle-store" onclick="toggleStoreActive('${s._id}', ${s.isActive !== false})">
+        ${s.isActive !== false ? 'DEACTIVATE' : 'ACTIVATE'}
+      </button>
+      <button type="button" class="btn-delete-store" onclick="confirmDeleteStore('${s._id}', '${s.name.replace(/'/g, "\\'")}')">
+        DELETE
+      </button>` : ''}
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
     </div>
   `);
@@ -668,6 +681,27 @@ window.editStore = async (id) => {
     const data = await api(`/stores/${id}`);
     showStoreModal(data.data || data);
   } catch { toast('Failed to load store', 'error'); }
+};
+
+window.toggleStoreActive = async (storeId, currentlyActive) => {
+  const action = currentlyActive ? 'deactivate' : 'activate';
+  if (!confirm(`Are you sure you want to ${action} this store?`)) return;
+  try {
+    const res = await api(`/admin/stores/${storeId}/toggle`, { method: 'PATCH' });
+    toast(`Store ${res.data.isActive ? 'activated' : 'deactivated'}`, 'success');
+    closeModal();
+    loadStores();
+  } catch (err) { toast('Failed: ' + err.message, 'error'); }
+};
+
+window.confirmDeleteStore = async (storeId, storeName) => {
+  if (!confirm(`Delete store "${storeName}"? This cannot be undone.`)) return;
+  try {
+    await api(`/admin/stores/${storeId}`, { method: 'DELETE' });
+    toast('Store deleted', 'success');
+    closeModal();
+    loadStores();
+  } catch (err) { toast('Failed: ' + err.message, 'error'); }
 };
 
 /* ══════════════════════════════════════
@@ -875,27 +909,31 @@ async function handleImageSelect(files) {
   const fileArr = Array.from(files).slice(0, 5 - _uploadedUrls.length); // max 5 total
 
   for (const file of fileArr) {
-    // Show uploading placeholder immediately
+    // Show local preview immediately so user has instant feedback
+    const localUrl = URL.createObjectURL(file);
     const ph = document.createElement('div');
     ph.className = 'img-placeholder loading';
-    ph.textContent = 'Uploading…';
+    ph.innerHTML = `
+      <img src="${localUrl}" alt="preview" style="opacity:0.45">
+      <div class="img-upload-overlay">Uploading…</div>`;
     preview.appendChild(ph);
 
     try {
       const fd = new FormData();
       fd.append('image', file);
-      // POST /api/admin/upload/image
       const up  = await api('/admin/upload/image', { method: 'POST', body: fd });
       const url = up.data?.url || up.url;
+      if (!url) throw new Error('No URL returned from upload');
       _uploadedUrls.push(url);
 
+      ph.classList.remove('loading');
       ph.innerHTML = `
         <img src="${url}" alt="Product image">
         <button type="button" class="img-remove-btn" data-url="${url}">&times;</button>`;
-      ph.classList.remove('loading');
     } catch (err) {
-      toast('Upload failed: ' + (err.message || 'unknown error'), 'error');
+      toast('Image upload failed: ' + (err.message || 'unknown error'), 'error');
       ph.remove();
+      URL.revokeObjectURL(localUrl);
     }
   }
 }
