@@ -1,143 +1,280 @@
-import { request } from "./api.js";
-import { getCart, saveCart, getWishlist, saveWishlist } from "./storage.js";
-import "./drawer.js";
+import { API_BASE } from './config.js';
+import { getCart, getToken, getUser } from './storage.js';
 
-/* toast helper */
-function toast(msg, type = '') {
-  let c = document.getElementById('toast-container');
-  if (!c) { c = document.createElement('div'); c.id = 'toast-container'; document.body.appendChild(c); }
-  const el = document.createElement('div');
-  el.className = `toast${type ? ' ' + type : ''}`;
-  el.textContent = msg;
-  c.appendChild(el);
-  setTimeout(() => el.remove(), 2600);
-}
-
-let allProducts = [];
-
-/* LOAD */
-async function loadProducts() {
-  const result = await request("/products");
-  // API returns { success, data: [...], total } — extract the array
-  const products = Array.isArray(result) ? result : (result.data || []);
-  allProducts = products;
-
-  renderFeatured(products);
-  renderShop(products);
-}
-
-/* FEATURED — renders to #featured-products on index.html */
-const INR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-
-function renderFeatured(products) {
-  const grid = document.getElementById("featured-products");
-  if (!grid) return;
-
-  // Show featured first, fall back to newest 4 if none marked featured
-  let items = products.filter(p => p.featured);
-  if (!items.length) items = [...products].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  items = items.slice(0, 4);
-
-  grid.innerHTML = items.map((p) => {
-    const img   = p.images?.[0] || p.image || '';
-    const img2  = p.images?.[1] || img;
-    const mrp   = p.mrp && p.mrp > p.price ? `<span class="price-mrp">${INR(p.mrp)}</span>` : '';
-    const isNew  = (Date.now() - new Date(p.createdAt)) < 15 * 24 * 3600 * 1000;
-    const isSale = p.mrp && p.mrp > p.price;
-    const badge  = isSale
-      ? `<span class="badge badge-sale">Sale</span>`
-      : isNew ? `<span class="badge badge-new">New</span>` : '';
-
-    return `
-    <article class="product-card">
-      ${badge}
-      <div class="product-card-media">
-        <a href="product.html?id=${p._id}" tabindex="-1" aria-hidden="true">
-          <img class="img-main"  src="${img}"  alt="${p.name}" loading="lazy">
-          <img class="img-hover" src="${img2}" alt="${p.name}" loading="lazy">
-        </a>
-        <div class="product-card-actions">
-          <button class="btn-quick add" data-id="${p._id}">Add to Bag</button>
-          <button class="btn-wish  wish" data-id="${p._id}">♡</button>
-        </div>
-      </div>
-      <div class="product-card-info">
-        <a href="product.html?id=${p._id}" class="product-name">${p.name}</a>
-        <div class="product-price-row">${INR(p.price)} ${mrp}</div>
-      </div>
-    </article>`;
-  }).join('');
-}
-
-/* SHOP — renders to #shop-grid (used by pages that include both) */
-function renderShop(products) {
-  const grid = document.getElementById("shop-grid");
-  if (!grid) return;
-
-  grid.innerHTML = products.map(p => `
-    <a href="product.html?id=${p._id}" class="card">
-
-      <img src="${p.image}">
-
-      <div class="card-overlay">
-        <button class="btn gold add" data-id="${p._id}">Add</button>
-      </div>
-
-      <div class="card-body">
-        <h3>${p.name}</h3>
-        <p class="price">₹${p.price}</p>
-      </div>
-
-    </a>
-  `).join("");
-}
-
-/* ADD TO CART / WISHLIST */
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest('button[data-id]');
-  if (!btn) return;
-
-  e.preventDefault();
-
-  const id      = btn.dataset.id;
-  const product = allProducts.find(p => p._id === id);
-  if (!product) return;
-
-  /* wishlist */
-  if (btn.classList.contains('wish')) {
-    const wl = getWishlist();
-    if (!wl.some(i => i.id === id)) {
-      wl.push({ id, name: product.name, price: product.price, image: product.images?.[0] || product.image || '' });
-      saveWishlist(wl);
-      toast('Saved to wishlist');
-    } else {
-      toast('Already in wishlist');
-    }
-    return;
-  }
-
-  if (!btn.classList.contains('add')) return;
-
-  const cart = getCart();
-  const item = cart.find(i => i.id === id);
-
-  if (item) item.quantity++;
-  else cart.push({
-    id,
-    name: product.name,
-    price: product.price,
-    image: product.images?.[0] || product.image || '',
-    quantity: 1
-  });
-
-  saveCart(cart);
-
-  document.getElementById("cart-drawer")?.classList.add("active");
-
-  if (window.refreshCartDrawer) {
-    window.refreshCartDrawer();
-  }
+// ── INIT ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  initNav();
+  initMenu();
+  initCartDrawerTrigger();
+  updateCartBadge();
+  updateAuthNav();
+  await loadHomepageSections();
+  initScrollAnimations();
+  initVideoIntersection();
 });
 
-/* INIT */
-loadProducts();
+// ── FLOATING NAV colour shift on scroll ────────────────────
+function initNav() {
+  const nav = document.getElementById('s-nav');
+  if (!nav) return;
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > window.innerHeight * 0.85);
+  }, { passive: true });
+}
+
+// ── HAMBURGER MENU ──────────────────────────────────────────
+function initMenu() {
+  const drawer  = document.getElementById('s-menu-drawer');
+  const overlay = document.getElementById('s-menu-overlay');
+  const openBtn = document.getElementById('s-open-menu');
+  const closeBtn = document.getElementById('s-close-menu');
+  if (!drawer) return;
+
+  function open()  { drawer.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function close() { drawer.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+
+  openBtn?.addEventListener('click', open);
+  closeBtn?.addEventListener('click', close);
+  overlay?.addEventListener('click', close);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+}
+
+// ── CART BADGE ──────────────────────────────────────────────
+function updateCartBadge() {
+  const badge = document.getElementById('s-cart-count');
+  if (!badge) return;
+  const count = getCart().reduce((n, i) => n + (i.quantity || 1), 0);
+  badge.textContent = count;
+  badge.style.display = count ? 'inline-flex' : 'none';
+}
+
+function initCartDrawerTrigger() {
+  document.getElementById('s-open-cart')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('cart-drawer')?.classList.add('active');
+    if (window.refreshCartDrawer) window.refreshCartDrawer();
+  });
+}
+
+// ── AUTH NAV ─────────────────────────────────────────────────
+function updateAuthNav() {
+  const link = document.getElementById('s-auth-link');
+  if (!link) return;
+  if (getToken()) {
+    link.textContent = 'ACCOUNT';
+    link.href = 'account.html';
+  }
+}
+
+// ── LOAD HOMEPAGE SECTIONS FROM API ────────────────────────
+async function loadHomepageSections() {
+  const page = document.getElementById('s-page');
+  if (!page) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/homepage/sections`);
+    const json = await res.json();
+    const data = json.data;
+
+    page.innerHTML = '';
+
+    if (!data || !data.length) {
+      page.innerHTML = buildDefaultHero();
+      return;
+    }
+
+    data.forEach(section => {
+      const el = buildSection(section);
+      if (el) page.appendChild(el);
+    });
+
+  } catch (err) {
+    console.error('Homepage sections error:', err);
+    const page = document.getElementById('s-page');
+    if (page) page.innerHTML = buildDefaultHero();
+  }
+}
+
+// ── BUILD SECTION ────────────────────────────────────────────
+function buildSection(s) {
+  const div = document.createElement('section');
+  div.className = 's-section';
+  div.dataset.type = s.type;
+  div.dataset.pos  = s.textPosition || 'bottom-left';
+  div.dataset.id   = s._id;
+
+  switch (s.type) {
+    case 'hero':
+    case 'editorial':
+    case 'feature':
+      div.innerHTML = buildMediaSection(s);
+      break;
+    case 'strip':
+      div.innerHTML = `<div class="s-strip-text">${s.text || 'SAGONA — NEW COLLECTION'}</div>`;
+      break;
+    case 'split':
+      div.innerHTML = buildSplitSection(s);
+      break;
+    case 'products':
+      div.innerHTML = buildProductsSection(s);
+      fetchAndRenderProducts(div, s);
+      break;
+    default:
+      return null;
+  }
+
+  return div;
+}
+
+// ── MEDIA SECTION (hero / editorial / feature) ───────────────
+function buildMediaSection(s) {
+  const overlayClass = s.overlay || 'default';
+  return `
+    <div class="s-media-wrap">${buildMedia(s)}</div>
+    <div class="s-overlay ${overlayClass}"></div>
+    ${buildContent(s)}
+  `;
+}
+
+// ── SPLIT SECTION ─────────────────────────────────────────────
+function buildSplitSection(s) {
+  return `
+    <div class="s-split-col">
+      <div class="s-media-wrap split-col">${buildMediaItem(s.leftMedia)}</div>
+      ${s.leftMedia?.text ? `<div class="s-content">
+        <div class="s-content-label">${s.leftMedia.label || ''}</div>
+        <div class="s-content-title">${s.leftMedia.text}</div>
+        ${s.leftMedia.cta ? `<a href="${s.leftMedia.ctaLink || 'shop.html'}" class="s-cta">${s.leftMedia.cta}</a>` : ''}
+      </div>` : ''}
+    </div>
+    <div class="s-split-col">
+      <div class="s-media-wrap split-col">${buildMediaItem(s.rightMedia)}</div>
+      ${s.rightMedia?.text ? `<div class="s-content">
+        <div class="s-content-label">${s.rightMedia.label || ''}</div>
+        <div class="s-content-title">${s.rightMedia.text}</div>
+        ${s.rightMedia.cta ? `<a href="${s.rightMedia.ctaLink || 'shop.html'}" class="s-cta">${s.rightMedia.cta}</a>` : ''}
+      </div>` : ''}
+    </div>
+  `;
+}
+
+// ── PRODUCTS SECTION ─────────────────────────────────────────
+function buildProductsSection(s) {
+  return `
+    <div class="s-products-header">
+      <div class="s-products-title">${s.title || 'NEW ARRIVALS'}</div>
+      <a href="${s.viewAllLink || 'shop.html'}" class="s-products-viewall">VIEW ALL &#8594;</a>
+    </div>
+    <div class="s-products-grid" id="pgrid-${s._id}">
+      ${Array(4).fill('<div class="s-product-card"><div class="s-product-img" style="background:#F0EDE8"></div></div>').join('')}
+    </div>
+  `;
+}
+
+async function fetchAndRenderProducts(container, s) {
+  try {
+    const params = new URLSearchParams({ status: 'active', limit: s.limit || 8 });
+    if (s.category) params.set('category', s.category);
+    if (s.featured)  params.set('featured', 'true');
+    const res  = await fetch(`${API_BASE}/products?${params}`);
+    const json = await res.json();
+    const grid = container.querySelector(`#pgrid-${s._id}`);
+    if (!grid || !json.data?.length) return;
+    grid.innerHTML = json.data.map(p => buildProductCard(p)).join('');
+  } catch (err) {
+    console.error('Products fetch error:', err);
+  }
+}
+
+function buildProductCard(p) {
+  const img1 = p.images?.[0] || p.image || '';
+  const img2 = p.images?.[1] || img1;
+  const hasDiscount = p.mrp && p.mrp > p.price;
+  return `
+    <div class="s-product-card" onclick="location.href='product.html?id=${p._id}'">
+      <div class="s-product-img">
+        ${img1 ? `<img class="img-primary" src="${img1}" alt="${p.name}" loading="lazy">` : ''}
+        ${img2 && img2 !== img1 ? `<img class="img-hover" src="${img2}" alt="${p.name}" loading="lazy">` : ''}
+      </div>
+      <div class="s-product-info">
+        <div class="s-product-name">${p.name}</div>
+        <div class="s-product-price">
+          &#8377;${Number(p.price).toLocaleString('en-IN')}
+          ${hasDiscount ? `<span class="s-product-mrp">&#8377;${Number(p.mrp).toLocaleString('en-IN')}</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── MEDIA HELPERS ─────────────────────────────────────────────
+function buildMedia(s) {
+  if (s.mediaType === 'video' && s.mediaUrl) {
+    return `<video src="${s.mediaUrl}" autoplay muted loop playsinline preload="metadata" poster="${s.posterUrl || ''}"></video>`;
+  }
+  if (s.mediaUrl) {
+    return `<img src="${s.mediaUrl}" alt="${s.title || 'Sagona'}" loading="${s.type === 'hero' ? 'eager' : 'lazy'}">`;
+  }
+  return '<div style="width:100%;height:100%;background:#0A0A0A"></div>';
+}
+
+function buildMediaItem(m) {
+  if (!m) return '<div style="width:100%;height:100%;background:#F8F6F3"></div>';
+  if (m.type === 'video' && m.url) {
+    return `<video src="${m.url}" autoplay muted loop playsinline preload="metadata" poster="${m.poster || ''}"></video>`;
+  }
+  if (m.url) return `<img src="${m.url}" alt="${m.text || ''}" loading="lazy">`;
+  return '<div style="width:100%;height:100%;background:#F8F6F3"></div>';
+}
+
+function buildContent(s) {
+  if (!s.title && !s.subtitle && !s.cta) return '';
+  const textClass = s.textColor === 'dark' ? 'dark-text' : '';
+  const ctaClass  = s.textColor === 'dark' ? 'dark' : '';
+  return `
+    <div class="s-content ${textClass}">
+      ${s.label    ? `<div class="s-content-label">${s.label}</div>` : ''}
+      ${s.title    ? `<div class="s-content-title">${s.title}</div>` : ''}
+      ${s.subtitle ? `<div class="s-content-sub">${s.subtitle}</div>` : ''}
+      ${s.cta      ? `<a href="${s.ctaLink || 'shop.html'}" class="s-cta ${ctaClass}">${s.cta}</a>` : ''}
+    </div>
+  `;
+}
+
+// ── FALLBACK HERO ────────────────────────────────────────────
+function buildDefaultHero() {
+  return `
+    <section class="s-section visible" data-type="hero" data-pos="bottom-left">
+      <div class="s-media-wrap">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#0A0A0A 0%,#1a1a1a 100%)"></div>
+      </div>
+      <div class="s-overlay default"></div>
+      <div class="s-content">
+        <div class="s-content-label">NEW COLLECTION · 2026</div>
+        <div class="s-content-title">Luxury Kidswear<br>for Modern Families</div>
+        <a href="shop.html" class="s-cta">EXPLORE COLLECTION</a>
+      </div>
+    </section>
+  `;
+}
+
+// ── SCROLL ANIMATIONS ────────────────────────────────────────
+function initScrollAnimations() {
+  const sections = document.querySelectorAll('.s-section');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  sections.forEach(s => observer.observe(s));
+}
+
+// ── VIDEO: play when in view, pause when out ─────────────────
+function initVideoIntersection() {
+  const videos = document.querySelectorAll('.s-section video');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      e.isIntersecting ? e.target.play().catch(() => {}) : e.target.pause();
+    });
+  }, { threshold: 0.3 });
+  videos.forEach(v => observer.observe(v));
+}

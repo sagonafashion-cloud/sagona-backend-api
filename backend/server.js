@@ -31,6 +31,7 @@ import uploadRoutes       from './routes/uploadRoutes.js';
 import gstRoutes          from './routes/gstRoutes.js';
 import { adminChat }      from './controllers/chatController.js';
 import { adminProtect }  from './middleware/adminAuth.js';
+import homepageRoutes    from './routes/homepageRoutes.js';
 
 // ── Controllers (needed for raw-body webhook) ──────────────
 import { razorpayWebhook } from './controllers/paymentController.js';
@@ -172,6 +173,7 @@ app.use('/api/admin/analytics', analyticsRoutes);
 app.use('/api/admin/upload',    uploadRoutes);
 app.use('/api/admin/gst',       gstRoutes);
 app.use('/api/admin/stores',    storeRoutes);
+app.use('/api',                 homepageRoutes);
 app.post('/api/admin/chat',     adminProtect, adminChat);
 
 // ── Sitemap (public, no auth) ──────────────────────────────

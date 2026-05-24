@@ -144,7 +144,7 @@ async function startApp() {
 /* ══════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════ */
-const SECTIONS = ['dashboard','orders','products','stores','analytics','gst','users'];
+const SECTIONS = ['dashboard','orders','products','stores','homepage','analytics','gst','users'];
 
 function initNav() {
   document.getElementById('admin-nav').addEventListener('click', (e) => {
@@ -167,6 +167,7 @@ function showSection(name) {
     orders:    loadOrders,
     products:  loadProducts,
     stores:    loadStores,
+    homepage:  loadHomepageManager,
     analytics: loadAnalytics,
     gst:       () => {},          // loaded on demand
     users:     loadAdminUsers
@@ -956,6 +957,518 @@ function debounce(fn, delay) {
 }
 
 window.closeModal = closeModal;
+
+/* ══════════════════════════════════════
+   HOMEPAGE SECTION MANAGER
+══════════════════════════════════════ */
+let _hpCurrentMedia = null; // tracks uploaded media for the open form
+
+async function loadHomepageManager() {
+  const root = document.getElementById('hp-manager-root');
+  root.innerHTML = `
+    <div class="admin-page-header">
+      <h2>Homepage Sections</h2>
+      <button class="btn-primary" onclick="window.hpOpenAdd()">+ ADD SECTION</button>
+    </div>
+    <p style="color:var(--muted,#999);font-size:13px;margin-bottom:20px">
+      Drag rows to reorder. Sections appear in order on sagona.in.
+    </p>
+    <div id="hp-list" class="hp-sections-list">
+      <div style="text-align:center;padding:40px;color:#999">Loading…</div>
+    </div>
+    <div id="hp-modal" class="modal-overlay" style="display:none">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3 id="hp-modal-title">Add Section</h3>
+          <button onclick="window.hpCloseModal()" style="background:none;border:none;font-size:22px;cursor:pointer;line-height:1">&#215;</button>
+        </div>
+        <div id="hp-modal-body"></div>
+      </div>
+    </div>
+  `;
+  await hpRenderList();
+}
+
+async function hpRenderList() {
+  const list = document.getElementById('hp-list');
+  if (!list) return;
+  try {
+    const res = await api('/admin/homepage/sections');
+    const sections = res.data || [];
+    if (!sections.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:#999">No sections yet. Click + ADD SECTION to start.</div>';
+      return;
+    }
+    list.innerHTML = sections.map((s, i) => hpSectionRow(s, i)).join('');
+    hpInitDrag();
+  } catch (err) {
+    list.innerHTML = `<div style="color:red;padding:20px">${err.message}</div>`;
+  }
+}
+
+function hpSectionRow(s, i) {
+  const labels = { hero:'Hero', editorial:'Editorial', feature:'Feature', split:'Split', strip:'Strip', products:'Products' };
+  const preview = s.mediaUrl
+    ? (s.mediaType === 'video'
+        ? `<video src="${s.mediaUrl}" style="width:80px;height:50px;object-fit:cover;border-radius:3px" muted></video>`
+        : `<img src="${s.mediaUrl}" style="width:80px;height:50px;object-fit:cover;border-radius:3px" alt="">`)
+    : `<div style="width:80px;height:50px;background:#F0EDE8;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999">${labels[s.type]||s.type}</div>`;
+  return `
+    <div class="hp-section-row" data-id="${s._id}" data-order="${s.order ?? i}">
+      <div class="hp-drag-handle" title="Drag to reorder">&#8942;&#8942;</div>
+      ${preview}
+      <div class="hp-section-info">
+        <div class="hp-section-type">${labels[s.type] || s.type}</div>
+        <div class="hp-section-title">${s.title || s.text || s.label || '(no title)'}</div>
+        ${s.category ? `<div class="hp-section-cat">Category: ${s.category}</div>` : ''}
+      </div>
+      <div class="hp-section-status">
+        <span class="status-badge ${s.isActive ? 'active' : 'inactive'}">${s.isActive ? 'LIVE' : 'HIDDEN'}</span>
+      </div>
+      <div class="hp-section-actions">
+        <button class="btn-icon" title="Edit" onclick="window.hpOpenEdit('${s._id}')">&#9998;</button>
+        <button class="btn-icon" title="${s.isActive ? 'Hide' : 'Show'}" onclick="window.hpToggle('${s._id}',${s.isActive})">
+          ${s.isActive ? '&#128065;' : '&#128683;'}
+        </button>
+        <button class="btn-icon danger" title="Delete" onclick="window.hpDelete('${s._id}')">&#128465;</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── DRAG-AND-DROP REORDER ────────────────────────────────────
+function hpInitDrag() {
+  const list = document.getElementById('hp-list');
+  if (!list) return;
+  let dragging = null;
+
+  list.querySelectorAll('.hp-section-row').forEach(row => {
+    row.setAttribute('draggable', 'true');
+    row.addEventListener('dragstart', () => { dragging = row; row.classList.add('dragging'); });
+    row.addEventListener('dragend',   () => { row.classList.remove('dragging'); dragging = null; hpSaveOrder(); });
+    row.addEventListener('dragover',  e => {
+      e.preventDefault();
+      if (!dragging || dragging === row) return;
+      const rows  = [...list.querySelectorAll('.hp-section-row')];
+      const idx   = rows.indexOf(row);
+      const didx  = rows.indexOf(dragging);
+      list.insertBefore(dragging, didx < idx ? row.nextSibling : row);
+    });
+  });
+}
+
+async function hpSaveOrder() {
+  const rows = [...document.querySelectorAll('#hp-list .hp-section-row')];
+  const order = rows.map((r, i) => ({ id: r.dataset.id, order: i }));
+  try {
+    await api('/admin/homepage/reorder', { method: 'PUT', body: JSON.stringify({ order }) });
+  } catch (err) {
+    toast('Failed to save order: ' + err.message, 'error');
+  }
+}
+
+// ── OPEN / CLOSE MODAL ───────────────────────────────────────
+window.hpOpenAdd = function() {
+  _hpCurrentMedia = null;
+  document.getElementById('hp-modal-title').textContent = 'Add Section';
+  document.getElementById('hp-modal-body').innerHTML = hpBuildForm(null);
+  document.getElementById('hp-modal').style.display = 'flex';
+};
+
+window.hpOpenEdit = async function(id) {
+  _hpCurrentMedia = null;
+  try {
+    const res = await api('/admin/homepage/sections');
+    const s   = (res.data || []).find(x => x._id === id);
+    if (!s) return;
+    document.getElementById('hp-modal-title').textContent = 'Edit Section';
+    document.getElementById('hp-modal-body').innerHTML = hpBuildForm(s);
+    document.getElementById('hp-modal').style.display = 'flex';
+    // Pre-populate media state from existing section
+    if (s.mediaUrl) {
+      _hpCurrentMedia = { url: s.mediaUrl, type: s.mediaType || 'image', publicId: s.mediaPublicId, posterUrl: s.posterUrl };
+    }
+  } catch (err) {
+    toast('Failed to load section: ' + err.message, 'error');
+  }
+};
+
+window.hpCloseModal = function() {
+  const modal = document.getElementById('hp-modal');
+  if (modal) modal.style.display = 'none';
+  _hpCurrentMedia = null;
+};
+
+// ── BUILD FORM ────────────────────────────────────────────────
+function hpBuildForm(s) {
+  const type = s?.type || 'hero';
+  const types = ['hero','editorial','feature','split','strip','products'];
+  return `
+    <div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Section Type *</label>
+        <select id="hp-type" onchange="hpOnTypeChange(this)" style="width:100%;padding:9px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit">
+          ${types.map(t => `<option value="${t}" ${type===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:#999;margin-top:4px">
+          hero / editorial / feature: fullscreen media · split: two columns · strip: text band · products: product grid
+        </div>
+      </div>
+
+      <div id="hp-type-fields">${hpTypeFields(s)}</div>
+
+      <div id="hp-text-fields">${hpTextFields(s)}</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div>
+          <label class="form-label">Display Order</label>
+          <input type="number" id="hp-order" value="${s?.order ?? 0}" min="0"
+                 style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select id="hp-active" style="width:100%;padding:9px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit">
+            <option value="true"  ${s?.isActive!==false?'selected':''}>Live (visible)</option>
+            <option value="false" ${s?.isActive===false?'selected':''}>Hidden</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn-primary" onclick="window.hpSave('${s?._id||''}')" style="flex:1">
+          ${s ? 'Update Section' : 'Add Section'}
+        </button>
+        <button onclick="window.hpCloseModal()" style="padding:10px 20px;border:0.5px solid var(--border);background:transparent;cursor:pointer;border-radius:4px;font-family:inherit">
+          Cancel
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+window.hpOnTypeChange = function(sel) {
+  document.getElementById('hp-type-fields').innerHTML = hpTypeFields({ type: sel.value });
+  document.getElementById('hp-text-fields').innerHTML  = hpTextFields({ type: sel.value });
+  _hpCurrentMedia = null;
+};
+
+function hpTypeFields(s) {
+  const type = s?.type || 'hero';
+  if (type === 'strip') return `
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">Strip Text</label>
+      <input type="text" id="hp-strip-text" value="${s?.text||''}" placeholder="NEW COLLECTION COMING SOON"
+             style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+    </div>`;
+
+  if (type === 'products') return `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <label class="form-label">Section Heading</label>
+        <input type="text" id="hp-prod-title" value="${s?.title||'NEW ARRIVALS'}"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div>
+        <label class="form-label">Category filter (optional)</label>
+        <input type="text" id="hp-prod-cat" value="${s?.category||''}" placeholder="kids / women / men"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div>
+        <label class="form-label">Number of products</label>
+        <input type="number" id="hp-prod-limit" value="${s?.limit||8}" min="2" max="12"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div>
+        <label class="form-label">View All link</label>
+        <input type="text" id="hp-prod-link" value="${s?.viewAllLink||'shop.html'}"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="hp-prod-featured" ${s?.featured?'checked':''}>
+          Show featured products only
+        </label>
+      </div>
+    </div>`;
+
+  if (type === 'split') return hpSplitFields(s);
+
+  // hero / editorial / feature — media upload
+  return hpMediaField(s);
+}
+
+function hpMediaField(s) {
+  const hasMedia = s?.mediaUrl;
+  const isVideo  = s?.mediaType === 'video';
+  const preview  = hasMedia
+    ? (isVideo
+        ? `<video src="${s.mediaUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" controls muted></video>`
+        : `<img src="${s.mediaUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" alt="">`)
+    : `<div style="height:120px;background:#F0EDE8;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#999;border:2px dashed #E8E5E0">No media yet</div>`;
+
+  return `
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">
+        Media — Image or Video *
+        <span style="font-size:11px;font-weight:400;color:#999"> (images: JPG/PNG/WebP · videos: MP4/MOV, max 200MB)</span>
+      </label>
+      <div id="hp-media-preview" style="margin-bottom:12px">${preview}</div>
+      <div class="hp-upload-area" onclick="document.getElementById('hp-file-input').click()">
+        <input type="file" id="hp-file-input" accept="image/*,video/*" style="display:none" onchange="window.hpUploadMedia(this)">
+        <div style="text-align:center;padding:18px">
+          <div style="font-size:22px;margin-bottom:6px">&#128247;</div>
+          <div style="font-size:13px;font-weight:500">Click to upload image or video</div>
+        </div>
+      </div>
+      <div id="hp-upload-progress" style="display:none;margin-top:8px">
+        <div style="background:#E8E5E0;border-radius:99px;height:4px"><div id="hp-upload-bar" style="height:100%;background:var(--gold);border-radius:99px;width:0%;transition:width 0.3s"></div></div>
+        <div id="hp-upload-status" style="font-size:12px;color:#999;margin-top:4px">Uploading…</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px">
+        <div>
+          <label class="form-label">Text Position</label>
+          <select id="hp-pos" style="width:100%;padding:9px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit">
+            <option value="bottom-left"  ${s?.textPosition==='bottom-left'||!s?.textPosition?'selected':''}>Bottom Left</option>
+            <option value="center"       ${s?.textPosition==='center'?'selected':''}>Centre</option>
+            <option value="bottom-right" ${s?.textPosition==='bottom-right'?'selected':''}>Bottom Right</option>
+            <option value="top-left"     ${s?.textPosition==='top-left'?'selected':''}>Top Left</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Text Colour</label>
+          <select id="hp-text-color" style="width:100%;padding:9px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit">
+            <option value="light" ${s?.textColor!=='dark'?'selected':''}>White</option>
+            <option value="dark"  ${s?.textColor==='dark'?'selected':''}>Black</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Overlay</label>
+          <select id="hp-overlay" style="width:100%;padding:9px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit">
+            <option value="default" ${!s?.overlay||s?.overlay==='default'?'selected':''}>Subtle dark</option>
+            <option value="dark"    ${s?.overlay==='dark'?'selected':''}>Dark</option>
+            <option value="light"   ${s?.overlay==='light'?'selected':''}>Light</option>
+            <option value="none"    ${s?.overlay==='none'?'selected':''}>None</option>
+          </select>
+        </div>
+      </div>
+    </div>`;
+}
+
+function hpSplitFields(s) {
+  function col(side, m) {
+    const hasMedia = m?.url;
+    const isVideo  = m?.type === 'video';
+    const preview  = hasMedia
+      ? (isVideo
+          ? `<video src="${m.url}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" muted></video>`
+          : `<img src="${m.url}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" alt="">`)
+      : `<div style="height:80px;background:#F0EDE8;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#999">No media</div>`;
+    return `
+      <div style="border:0.5px solid var(--border);border-radius:6px;padding:14px">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;font-weight:500">${side.toUpperCase()} COLUMN</div>
+        <div id="hp-${side}-preview" style="margin-bottom:8px">${preview}</div>
+        <div class="hp-upload-area" onclick="document.getElementById('hp-${side}-file').click()" style="margin-bottom:10px">
+          <input type="file" id="hp-${side}-file" accept="image/*,video/*" style="display:none" onchange="window.hpUploadSplit(this,'${side}')">
+          <div style="text-align:center;padding:10px;font-size:12px">&#128247; Upload</div>
+        </div>
+        <input type="text" id="hp-${side}-text" placeholder="Text overlay (optional)" value="${m?.text||''}"
+               style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px;margin-bottom:6px">
+        <input type="text" id="hp-${side}-label" placeholder="Label (optional)" value="${m?.label||''}"
+               style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px;margin-bottom:6px">
+        <input type="text" id="hp-${side}-cta" placeholder="CTA text (optional)" value="${m?.cta||''}"
+               style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px;margin-bottom:6px">
+        <input type="text" id="hp-${side}-link" placeholder="CTA link (e.g. shop.html)" value="${m?.ctaLink||''}"
+               style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px">
+      </div>`;
+  }
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    ${col('left', s?.leftMedia)}${col('right', s?.rightMedia)}
+  </div>`;
+}
+
+function hpTextFields(s) {
+  const type = s?.type || 'hero';
+  if (type === 'strip' || type === 'products') return '';
+  if (type === 'split') return '';
+  return `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <label class="form-label">Label (small uppercase text)</label>
+        <input type="text" id="hp-label" value="${s?.label||''}" placeholder="NEW COLLECTION · 2026"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div>
+        <label class="form-label">CTA Button Text</label>
+        <input type="text" id="hp-cta" value="${s?.cta||''}" placeholder="EXPLORE COLLECTION"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">Title</label>
+        <input type="text" id="hp-title" value="${s?.title||''}" placeholder="Luxury Kidswear for Modern Families"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">Subtitle (optional)</label>
+        <input type="text" id="hp-subtitle" value="${s?.subtitle||''}" placeholder="Discover the new collection"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">CTA Link</label>
+        <input type="text" id="hp-cta-link" value="${s?.ctaLink||''}" placeholder="shop.html or shop.html?category=kids"
+               style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+      </div>
+    </div>`;
+}
+
+// ── MEDIA UPLOAD ─────────────────────────────────────────────
+window.hpUploadMedia = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const progress = document.getElementById('hp-upload-progress');
+  const bar      = document.getElementById('hp-upload-bar');
+  const status   = document.getElementById('hp-upload-status');
+  const preview  = document.getElementById('hp-media-preview');
+  if (progress) progress.style.display = 'block';
+  if (status)   status.textContent = 'Uploading to Cloudinary…';
+  if (bar)      bar.style.width = '30%';
+
+  try {
+    const fd = new FormData();
+    fd.append('media', file);
+    const res = await api('/admin/homepage/upload', { method: 'POST', body: fd });
+    _hpCurrentMedia = res.data;
+    if (bar)    bar.style.width = '100%';
+    if (status) status.textContent = 'Upload complete';
+
+    if (preview) {
+      preview.innerHTML = res.data.type === 'video'
+        ? `<video src="${res.data.url}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" controls muted></video>`
+        : `<img src="${res.data.url}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" alt="">`;
+    }
+    setTimeout(() => { if (progress) progress.style.display = 'none'; }, 1500);
+  } catch (err) {
+    if (status) status.textContent = 'Upload failed: ' + err.message;
+    if (bar) bar.style.width = '0%';
+    toast('Upload failed: ' + err.message, 'error');
+  }
+};
+
+let _hpSplitMedia = { left: null, right: null };
+window.hpUploadSplit = async function(input, side) {
+  const file = input.files[0];
+  if (!file) return;
+  const preview = document.getElementById(`hp-${side}-preview`);
+  try {
+    const fd = new FormData();
+    fd.append('media', file);
+    const res = await api('/admin/homepage/upload', { method: 'POST', body: fd });
+    _hpSplitMedia[side] = res.data;
+    if (preview) {
+      preview.innerHTML = res.data.type === 'video'
+        ? `<video src="${res.data.url}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" muted></video>`
+        : `<img src="${res.data.url}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" alt="">`;
+    }
+    toast('Uploaded', 'success');
+  } catch (err) {
+    toast('Upload failed: ' + err.message, 'error');
+  }
+};
+
+// ── SAVE ─────────────────────────────────────────────────────
+window.hpSave = async function(id) {
+  const type = document.getElementById('hp-type')?.value;
+  if (!type) return;
+
+  const body = {
+    type,
+    order:    parseInt(document.getElementById('hp-order')?.value) || 0,
+    isActive: document.getElementById('hp-active')?.value === 'true',
+  };
+
+  if (type === 'strip') {
+    body.text = document.getElementById('hp-strip-text')?.value || '';
+
+  } else if (type === 'products') {
+    body.title       = document.getElementById('hp-prod-title')?.value || 'NEW ARRIVALS';
+    body.category    = document.getElementById('hp-prod-cat')?.value || '';
+    body.limit       = parseInt(document.getElementById('hp-prod-limit')?.value) || 8;
+    body.viewAllLink = document.getElementById('hp-prod-link')?.value || 'shop.html';
+    body.featured    = document.getElementById('hp-prod-featured')?.checked || false;
+
+  } else if (type === 'split') {
+    const colData = (side, media) => ({
+      url:     media?.url || '',
+      type:    media?.type || 'image',
+      poster:  media?.posterUrl || '',
+      publicId: media?.publicId || '',
+      text:    document.getElementById(`hp-${side}-text`)?.value  || '',
+      label:   document.getElementById(`hp-${side}-label`)?.value || '',
+      cta:     document.getElementById(`hp-${side}-cta`)?.value   || '',
+      ctaLink: document.getElementById(`hp-${side}-link`)?.value  || '',
+    });
+    body.leftMedia  = colData('left',  _hpSplitMedia.left);
+    body.rightMedia = colData('right', _hpSplitMedia.right);
+
+  } else {
+    // hero / editorial / feature
+    if (!_hpCurrentMedia) {
+      toast('Please upload an image or video first', 'error');
+      return;
+    }
+    body.mediaType    = _hpCurrentMedia.type;
+    body.mediaUrl     = _hpCurrentMedia.url;
+    body.mediaPublicId = _hpCurrentMedia.publicId;
+    body.posterUrl    = _hpCurrentMedia.posterUrl || '';
+    body.textPosition = document.getElementById('hp-pos')?.value || 'bottom-left';
+    body.textColor    = document.getElementById('hp-text-color')?.value || 'light';
+    body.overlay      = document.getElementById('hp-overlay')?.value || 'default';
+    body.label    = document.getElementById('hp-label')?.value    || '';
+    body.title    = document.getElementById('hp-title')?.value    || '';
+    body.subtitle = document.getElementById('hp-subtitle')?.value || '';
+    body.cta      = document.getElementById('hp-cta')?.value      || '';
+    body.ctaLink  = document.getElementById('hp-cta-link')?.value || '';
+  }
+
+  try {
+    if (id) {
+      await api(`/admin/homepage/sections/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+      toast('Section updated');
+    } else {
+      await api('/admin/homepage/sections', { method: 'POST', body: JSON.stringify(body) });
+      toast('Section added');
+    }
+    window.hpCloseModal();
+    await hpRenderList();
+  } catch (err) {
+    toast('Save failed: ' + err.message, 'error');
+  }
+};
+
+// ── TOGGLE / DELETE ───────────────────────────────────────────
+window.hpToggle = async function(id, isActive) {
+  try {
+    await api(`/admin/homepage/sections/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ isActive: !isActive })
+    });
+    toast(isActive ? 'Section hidden' : 'Section live');
+    await hpRenderList();
+  } catch (err) {
+    toast('Failed: ' + err.message, 'error');
+  }
+};
+
+window.hpDelete = async function(id) {
+  if (!confirm('Delete this section? This cannot be undone.')) return;
+  try {
+    await api(`/admin/homepage/sections/${id}`, { method: 'DELETE' });
+    toast('Section deleted');
+    await hpRenderList();
+  } catch (err) {
+    toast('Delete failed: ' + err.message, 'error');
+  }
+};
 
 /* ══════════════════════════════════════
    INIT

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SAGONA — Premium Indian Kidswear</title>
   <!-- SEO -->
   <meta name="description" content="Sagona — premium kidswear crafted in India. Discover boys, girls, newborn &amp; festive collections. Free shipping above ₹999.">
@@ -22,14 +22,8 @@
   <meta name="twitter:image" content="https://res.cloudinary.com/YOUR_CLOUD/image/upload/sagona-og.jpg">
   <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
-    window._gtag = gtag;
-  </script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-Q651K9LXK5');</script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/nc_assets/CCS/style.css">
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
@@ -37,48 +31,42 @@
   <link rel="manifest" href="/favicon/site.webmanifest">
   <link rel="icon" href="/favicon/favicon.ico">
 </head>
-
 <body class="home-page">
 
-  <!-- ═══ FLOATING NAV ═══ -->
-  <nav class="zara-nav" id="zara-nav">
-    <div class="zara-nav-left">
-      <button class="zara-hamburger" id="menu-open" aria-label="Open menu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-
-    <a class="zara-brand" href="index.html">SAGONA</a>
-
-    <div class="zara-nav-right">
-      <a href="wishlist.html">Wishlist</a>
-      <a href="#" id="open-cart" style="position:relative;">Bag<span class="cart-count" id="cart-count"></span></a>
-      <a href="login.html">Account</a>
+  <!-- FLOATING NAV -->
+  <nav class="s-nav" id="s-nav">
+    <button class="s-nav-hamburger" id="s-open-menu" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a class="s-nav-brand" href="index.html">SAGONA</a>
+    <div class="s-nav-right">
+      <a href="shop.html" class="s-nav-link">SHOP</a>
+      <a href="#" class="s-nav-link" id="s-open-cart">
+        BAG <span id="s-cart-count" class="s-cart-badge">0</span>
+      </a>
+      <a href="login.html" class="s-nav-link" id="s-auth-link">LOG IN</a>
     </div>
   </nav>
 
-  <!-- ═══ MENU DRAWER ═══ -->
-  <div class="zara-menu-overlay" id="zara-menu">
-    <div class="zara-menu-inner">
-      <button class="zara-menu-close" id="menu-close" aria-label="Close menu">&times;</button>
-      <nav class="zara-menu-nav">
-        <a href="shop.html?category=kids">Kids</a>
-        <a href="shop.html?category=women">Women</a>
-        <a href="shop.html?category=men">Men</a>
-        <a href="shop.html?category=accessories">Accessories</a>
-        <a href="shop.html">All Products</a>
-      </nav>
-      <div class="zara-menu-footer">
-        <a href="login.html">Account</a>
-        <a href="wishlist.html">Wishlist</a>
-        <a href="cart.html">Bag</a>
-      </div>
+  <!-- SLIDE-IN MENU -->
+  <div class="s-menu-overlay" id="s-menu-overlay"></div>
+  <div class="s-menu-drawer" id="s-menu-drawer">
+    <button class="s-menu-close" id="s-close-menu">&#215;</button>
+    <nav class="s-menu-links">
+      <a href="shop.html?category=kids">KIDS</a>
+      <a href="shop.html?category=women">WOMEN</a>
+      <a href="shop.html?category=men">MEN</a>
+      <a href="shop.html?category=accessories">ACCESSORIES</a>
+      <a href="shop.html">NEW ARRIVALS</a>
+    </nav>
+    <div class="s-menu-bottom">
+      <a href="wishlist.html">WISHLIST</a>
+      <a href="returns.html">RETURNS</a>
+      <a href="support.html">HELP</a>
     </div>
   </div>
 
-  <!-- ═══ CART DRAWER ═══ -->
+  <!-- CART DRAWER -->
   <div id="cart-drawer" class="cart-drawer">
     <div class="cart-overlay" id="cart-overlay"></div>
     <div class="cart-panel">
@@ -90,138 +78,53 @@
       <div class="cart-footer">
         <div class="cart-total">
           <span>Total</span>
-          <strong id="drawer-total">₹0</strong>
+          <strong id="drawer-total">&#8377;0</strong>
         </div>
-        <a href="cart.html" class="btn ghost" style="display:block;text-align:center;margin-bottom:8px;">View Bag</a>
-        <a href="checkout.html" class="btn gold" style="display:block;text-align:center;">Checkout</a>
+        <a href="cart.html" class="btn ghost" style="display:block;text-align:center;margin-bottom:8px">View Bag</a>
+        <a href="checkout.html" class="btn gold" style="display:block;text-align:center">Checkout</a>
       </div>
     </div>
   </div>
 
-  <!-- ═══ HERO ═══ -->
-  <section class="zara-hero">
-    <img
-      src="https://images.unsplash.com/photo-1522771930-78848d9293e8?w=1600&q=80"
-      alt="SAGONA New Collection 2026"
-      loading="eager"
-      fetchpriority="high"
-    >
-    <div class="zara-hero-text">
-      <p>New Collection · 2026</p>
-      <h1>Luxury Kidswear<br>for Modern Families</h1>
-      <a href="shop.html" class="zara-hero-cta">Explore Collection</a>
-    </div>
-  </section>
-
-  <!-- ═══ EDITORIAL CATEGORY GRID ═══ -->
-  <section class="editorial-grid" aria-label="Shop by category">
-
-    <!-- Kids — tall cell, spans 2 rows -->
-    <a href="shop.html?category=kids" class="editorial-cell tall">
-      <img src="https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=1200&q=80" alt="Kids Collection" loading="lazy">
-      <div class="editorial-cell-label">Kids</div>
-    </a>
-
-    <!-- Women -->
-    <a href="shop.html?category=women" class="editorial-cell">
-      <img src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=900&q=80" alt="Women Collection" loading="lazy">
-      <div class="editorial-cell-label">Women</div>
-    </a>
-
-    <!-- Men -->
-    <a href="shop.html?category=men" class="editorial-cell">
-      <img src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=900&q=80" alt="Men Collection" loading="lazy">
-      <div class="editorial-cell-label">Men</div>
-    </a>
-
-    <!-- Accessories — wide cell, spans both columns -->
-    <a href="shop.html?category=accessories" class="editorial-cell wide">
-      <img src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=1400&q=80" alt="Accessories Collection" loading="lazy">
-      <div class="editorial-cell-label">Accessories</div>
-    </a>
-
-  </section>
-
-  <!-- ═══ NEW ARRIVALS ═══ -->
-  <section class="arrivals-section">
-    <div class="arrivals-header">
-      <h2>New Arrivals</h2>
-      <a href="shop.html" class="arrivals-view-all">View All</a>
-    </div>
-    <div id="featured-products" class="arrivals-grid"></div>
-  </section>
-
-  <!-- ═══ FOOTER ═══ -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div>
-          <div class="footer-brand">SAGONA</div>
-          <p>Premium Indian kidswear and lifestyle brand, crafted with care for modern families.</p>
-        </div>
-        <div>
-          <h4 style="font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Quick Links</h4>
-          <div class="footer-links">
-            <a href="shop.html">Shop</a>
-            <a href="wishlist.html">Wishlist</a>
-            <a href="login.html">Sign In</a>
-          </div>
-        </div>
-        <div>
-          <h4 style="font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Support</h4>
-          <div class="footer-links">
-            <a href="mailto:care@sagona.in">care@sagona.in</a>
-            <a href="returns.html">Returns</a>
-          </div>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 SAGONA. All rights reserved.</span>
-        <span>Made with care in India</span>
+  <!-- PAGE SECTIONS — rendered by main.js -->
+  <main class="s-page" id="s-page">
+    <div class="s-section s-hero-fallback" id="s-loading">
+      <div class="s-section-inner">
+        <div class="s-loading-brand">SAGONA</div>
       </div>
     </div>
-  </footer>
-
-  <div id="toast-container"></div>
-
-  <!-- Scroll + menu drawer JS -->
-  <script>
-    // Sticky nav on scroll
-    const nav = document.getElementById('zara-nav');
-    window.addEventListener('scroll', () => {
-      nav.classList.toggle('scrolled', window.scrollY > 60);
-    }, { passive: true });
-
-    // Menu open/close
-    const menu    = document.getElementById('zara-menu');
-    const menuBtn = document.getElementById('menu-open');
-    const closeBtn = document.getElementById('menu-close');
-
-    menuBtn.addEventListener('click', () => {
-      menu.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    });
-    closeBtn.addEventListener('click', closeMenu);
-    menu.addEventListener('click', (e) => {
-      if (e.target === menu) closeMenu();
-    });
-    function closeMenu() {
-      menu.classList.remove('open');
-      document.body.style.overflow = '';
-    }
-    // Close on nav link click
-    document.querySelectorAll('.zara-menu-nav a').forEach(a => {
-      a.addEventListener('click', closeMenu);
-    });
-  </script>
-
-  <script type="module" src="/nc_assets/js/main.js"></script>
-  <script type="module" src="/nc_assets/js/chatbot.js"></script>
+  </main>
 
   <!-- WhatsApp FAB -->
   <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
     <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.14 22.085c-.34.957-1.99 1.826-2.742 1.94-.703.108-1.59.153-2.563-.16-.59-.192-1.347-.449-2.31-.88-4.065-1.76-6.717-5.847-6.918-6.12-.2-.275-1.63-2.17-1.63-4.135 0-1.965 1.032-2.93 1.397-3.33.365-.4.795-.5 1.06-.5.266 0 .531.003.764.013.245.01.574-.093.9.686.34.8 1.153 2.764 1.254 2.963.1.2.167.435.033.7-.133.266-.2.43-.399.663-.2.234-.42.523-.6.703-.2.2-.408.416-.175.815.233.4 1.036 1.71 2.224 2.77 1.528 1.362 2.815 1.784 3.215 1.984.4.2.633.167.866-.1.233-.266.997-1.165 1.264-1.564.266-.4.532-.333.897-.2.366.133 2.33 1.098 2.73 1.298.4.2.665.3.764.467.1.165.1.954-.24 1.91z"/></svg>
   </a>
 
+  <!-- Chatbot -->
+  <div id="chat-bubble" class="chat-bubble" onclick="toggleChat()" aria-label="Open style assistant">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  </div>
+  <div id="chat-panel" class="chat-panel" style="display:none">
+    <div class="chat-panel-header">
+      <span>SAGi — Style Assistant</span>
+      <button onclick="toggleChat()" aria-label="Close chat">&#215;</button>
+    </div>
+    <div id="chat-messages" class="chat-messages"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button onclick="sendMessage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script type="module" src="/nc_assets/js/main.js"></script>
+  <script type="module" src="/nc_assets/js/chatbot.js"></script>
+  <script type="module" src="/nc_assets/js/cart.js"></script>
+  <script type="module" src="/nc_assets/js/auth.js"></script>
 </body>
 </html>
