@@ -90,8 +90,10 @@ async function checkPincode(pincode) {
 
   wrap.innerHTML = '<p style="padding:60px 0;text-align:center;color:var(--gray)">Loading…</p>';
 
-  const p = await request(`/products/${id}`);
-  if (!p) {
+  const raw = await request(`/products/${id}`);
+  // API returns { success: true, data: {...product} } — extract the product
+  const p = raw?.data || raw;
+  if (!p || !p._id) {
     wrap.innerHTML = '<p style="padding:60px 0;color:var(--gray)">Product not found.</p>';
     return;
   }

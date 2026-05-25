@@ -19,29 +19,44 @@ const formatUser = (user) => ({
   birthday: user.birthday,
 });
 
+// Resolve identifier (email or 10-digit phone) to a query
+function identifierQuery(identifier) {
+  if (!identifier) return null;
+  const trimmed = identifier.trim();
+  if (/^\d{10}$/.test(trimmed)) return { phone: trimmed };
+  return { email: trimmed.toLowerCase() };
+}
+
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, birthday } = req.body;
+    const { name, password, birthday } = req.body;
+    // Support both `email` (mobile app) and `identifier` (web — email or phone)
+    const raw = req.body.identifier || req.body.email || '';
+    const isPhone = /^\d{10}$/.test(raw.trim());
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields required" });
+    if (!name || !raw || !password) {
+      return res.status(400).json({ message: 'Name, email/phone, and password are required' });
     }
 
-    const exists = await User.findOne({ email: email.toLowerCase().trim() });
+    const query = identifierQuery(raw);
+    const exists = await User.findOne(query);
     if (exists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: 'An account with that email/phone already exists' });
     }
 
     const hashed = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
+    const userData = {
       name,
-      email: email.toLowerCase().trim(),
       password: hashed,
-      birthday
-    });
+      birthday: birthday || undefined,
+      ...(isPhone ? { phone: raw.trim() } : { email: raw.trim().toLowerCase() })
+    };
 
-    sendWelcome(user).catch((err) => console.error('sendWelcome failed:', err.message));
+    const user = await User.create(userData);
+
+    if (!isPhone) {
+      sendWelcome(user).catch((err) => console.error('sendWelcome failed:', err.message));
+    }
 
     return res.json({
       token: generateToken(user),
@@ -49,19 +64,26 @@ export const registerUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("registerUser:", error);
-    return res.status(500).json({ message: "Registration failed" });
+    console.error('registerUser:', error);
+    return res.status(500).json({ message: 'Registration failed' });
   }
 };
 
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    // Support both `email` (mobile app) and `identifier` (web — email or phone)
+    const raw = req.body.identifier || req.body.email || '';
+    const query = identifierQuery(raw);
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!query) {
+      return res.status(400).json({ message: 'Email or phone required' });
+    }
+
+    const user = await User.findOne(query);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     return res.json({
@@ -70,8 +92,8 @@ export const loginUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("loginUser:", error);
-    return res.status(500).json({ message: "Login failed" });
+    console.error('loginUser:', error);
+    return res.status(500).json({ message: 'Login failed' });
   }
 };
 
@@ -81,21 +103,76 @@ export const getCurrentUser = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+    const raw = req.body.identifier || req.body.email || '';
+    if (!raw) return res.status(400).json({ success: false, message: 'Email required' });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const query = identifierQuery(raw);
+    const user = query ? await User.findOne(query) : null;
     // Always respond 200 to avoid user enumeration
-    if (!user) return res.json({ success: true, message: 'If that email exists, an OTP has been sent.' });
+    if (!user || !user.email) {
+      return res.json({ success: true, message: 'If that account exists, an OTP has been sent.' });
+    }
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     storeOtp(user.email, otp);
     sendPasswordReset(user, otp).catch((err) => console.error('sendPasswordReset failed:', err.message));
 
-    res.json({ success: true, message: 'If that email exists, an OTP has been sent.' });
+    res.json({ success: true, message: 'If that account exists, an OTP has been sent.' });
   } catch (err) {
     console.error('forgotPassword:', err);
     res.status(500).json({ success: false, message: 'Failed to process request' });
+  }
+};
+
+export const getAddresses = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('addresses');
+    res.json({ success: true, data: user?.addresses || [] });
+  } catch (err) {
+    console.error('getAddresses:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch addresses' });
+  }
+};
+
+export const saveAddress = async (req, res) => {
+  try {
+    const { name, line1, line2, city, state, pincode, phone, label, isDefault } = req.body;
+    if (!line1 || !city || !state || !pincode) {
+      return res.status(400).json({ success: false, message: 'line1, city, state, pincode required' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (isDefault) {
+      user.addresses.forEach((a) => { a.isDefault = false; });
+    }
+
+    user.addresses.push({ name, line1, line2, city, state, pincode, phone, label, isDefault: !!isDefault });
+    await user.save();
+
+    res.json({ success: true, data: user.addresses });
+  } catch (err) {
+    console.error('saveAddress:', err);
+    res.status(500).json({ success: false, message: 'Failed to save address' });
+  }
+};
+
+export const deleteAddress = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const addr = user.addresses.id(req.params.id);
+    if (!addr) return res.status(404).json({ success: false, message: 'Address not found' });
+
+    addr.deleteOne();
+    await user.save();
+
+    res.json({ success: true, data: user.addresses });
+  } catch (err) {
+    console.error('deleteAddress:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete address' });
   }
 };
 

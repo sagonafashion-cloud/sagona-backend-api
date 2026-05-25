@@ -1,4 +1,5 @@
 import { request }  from './api.js';
+import { API_BASE } from './config.js';
 import { getAuth, getCart, saveCart } from './storage.js';
 
 const form          = document.querySelector('#checkout-form');
@@ -8,7 +9,6 @@ const shippingEl    = document.querySelector('#checkout-shipping');
 const gstEl         = document.querySelector('#checkout-gst');
 const discountEl    = document.querySelector('#birthday-discount');
 const pointsEl      = document.querySelector('#loyalty-points');
-const customerNameEl = document.querySelector('#customerName');
 const itemsPreview  = document.querySelector('#order-items-preview');
 
 const INR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -30,10 +30,13 @@ if (!cart.length) {
 }
 
 /* ── init ── */
-customerNameEl.value = auth.user?.name || '';
-customerNameEl.removeAttribute('readonly');
-customerNameEl.removeAttribute('disabled');
-if (pointsEl) pointsEl.textContent = auth.user?.loyaltyPoints || 0;
+const customerNameEl = document.querySelector('#ship-name') || document.querySelector('#customerName');
+if (customerNameEl) {
+  customerNameEl.value = auth?.user?.name || '';
+  customerNameEl.removeAttribute('readonly');
+  customerNameEl.removeAttribute('disabled');
+}
+if (pointsEl) pointsEl.textContent = auth?.user?.loyaltyPoints || 0;
 
 // render mini item list in summary
 if (itemsPreview) {
@@ -73,10 +76,112 @@ function updateTotal() {
 document.querySelector('#birthday')?.addEventListener('change', updateTotal);
 updateTotal();
 
+/* ── pincode autofill ── */
+window.autofillAddress = async function(pincode) {
+  if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) return;
+  const statusEl = document.getElementById('pincode-status');
+  if (statusEl) { statusEl.textContent = 'Looking up pincode…'; statusEl.style.color = '#888'; }
+
+  try {
+    // Try our backend PincodeMap first
+    const res = await fetch(`${API_BASE}/delivery/pincode/${pincode}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) {
+        fillCityState(json.data.city, json.data.state);
+        if (statusEl) { statusEl.textContent = `${json.data.city}, ${json.data.state} — you can edit if needed`; statusEl.style.color = '#1D9E75'; }
+        return;
+      }
+    }
+  } catch {}
+
+  // Fallback: India Post public API
+  try {
+    const r = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+    const d = await r.json();
+    const po = d?.[0]?.PostOffice?.[0];
+    if (po) {
+      fillCityState(po.District || po.Block || '', po.State || '');
+      if (statusEl) { statusEl.textContent = `${po.District}, ${po.State} — you can edit these`; statusEl.style.color = '#1D9E75'; }
+    } else {
+      if (statusEl) { statusEl.textContent = 'Pincode not found — please fill city and state manually'; statusEl.style.color = '#EF9F27'; }
+    }
+  } catch {
+    if (statusEl) { statusEl.textContent = 'Could not look up pincode — please fill manually'; statusEl.style.color = '#EF9F27'; }
+  }
+};
+
+function fillCityState(city, state) {
+  const cityEl  = document.getElementById('city');
+  const stateEl = document.getElementById('state');
+  if (cityEl  && !cityEl.value)  cityEl.value  = city  || '';
+  if (stateEl && !stateEl.value) stateEl.value = state || '';
+}
+
+// Auto-trigger when 6 digits typed
+document.getElementById('pincode')?.addEventListener('input', function() {
+  if (this.value.length === 6) autofillAddress(this.value);
+});
+
+/* ── saved addresses ── */
+window._savedAddresses = [];
+
+async function loadSavedAddresses() {
+  const token = auth?.token;
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/addresses`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const json = await res.json();
+    const data = json.data || [];
+    if (!data.length) return;
+    window._savedAddresses = data;
+    const container = document.getElementById('saved-addresses');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Use saved address</label>
+        <select onchange="fillSavedAddress(this.value)"
+                style="width:100%;padding:9px;border:0.5px solid #E8E5E0;border-radius:4px;font-size:13px">
+          <option value="">Select a saved address…</option>
+          ${data.map((a, i) => `<option value="${i}">${a.name} — ${a.line1}, ${a.city}</option>`).join('')}
+        </select>
+      </div>`;
+  } catch {}
+}
+
+window.fillSavedAddress = function(index) {
+  if (index === '' || !window._savedAddresses.length) return;
+  const a = window._savedAddresses[parseInt(index)];
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('ship-name',    a.name);
+  set('customerName', a.name);  // fallback id
+  set('address-line1', a.line1);
+  set('address',      a.line1); // fallback id
+  set('address-line2', a.line2);
+  set('address2',     a.line2);
+  set('city',         a.city);
+  set('state',        a.state);
+  set('pincode',      a.pincode);
+  set('phone',        a.phone);
+};
+
+loadSavedAddresses();
+
 /* ── build order payload ── */
+function getVal(ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el?.value?.trim()) return el.value.trim();
+  }
+  return '';
+}
+
 function buildPayload() {
   const items = cart.map((i) => ({
-    productId: i.id,
+    productId: i.id || i._id,
     name:      i.name,
     qty:       i.quantity,
     size:      i.size    || undefined,
@@ -84,19 +189,24 @@ function buildPayload() {
   }));
 
   const shippingAddress = {
-    name:    document.querySelector('#customerName')?.value?.trim() || auth.user?.name,
-    phone:   document.querySelector('#phone')?.value?.trim(),
-    line1:   document.querySelector('#address')?.value?.trim(),
-    line2:   document.querySelector('#address2')?.value?.trim() || undefined,
-    city:    document.querySelector('#city')?.value?.trim(),
-    state:   document.querySelector('#state')?.value?.trim(),
-    pincode: document.querySelector('#pincode')?.value?.trim()
+    name:    getVal(['ship-name', 'customerName']) || auth?.user?.name || '',
+    phone:   getVal(['phone']),
+    line1:   getVal(['address-line1', 'address']),
+    line2:   getVal(['address-line2', 'address2']) || undefined,
+    city:    getVal(['city']),
+    state:   getVal(['state']),
+    pincode: getVal(['pincode'])
   };
 
   const discount = getBirthdayDiscount(document.querySelector('#birthday')?.value);
   const method   = document.querySelector('[name="payment"]:checked')?.value || 'COD';
 
-  return { items, shippingAddress, payment: { method }, discount };
+  return {
+    items,
+    shippingAddress,
+    payment: { method },
+    discount
+  };
 }
 
 /* ── place order (COD / post-Razorpay) ── */
@@ -104,16 +214,43 @@ async function placeOrder(paymentMethod, razorpayIds = {}) {
   const payload = buildPayload();
   payload.payment = { method: paymentMethod, ...razorpayIds };
 
-  await request('/orders', {
+  const response = await fetch(`${API_BASE}/orders`, {
     method: 'POST',
-    body:   JSON.stringify(payload)
+    headers: {
+      'Content-Type': 'application/json',
+      ...(auth?.token ? { Authorization: `Bearer ${auth.token}` } : {})
+    },
+    body: JSON.stringify(payload)
   });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const msg = errData.message || (errData.errors?.[0]?.msg) || `Order failed: ${response.status}`;
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+
+  // Offer to save address for logged-in users
+  if (auth?.token && payload.shippingAddress.line1) {
+    const save = confirm('Save this address for future orders?');
+    if (save) {
+      fetch(`${API_BASE}/auth/addresses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.token}`
+        },
+        body: JSON.stringify(payload.shippingAddress)
+      }).catch(() => {});
+    }
+  }
 
   saveCart([]);
 
   // GA4 — purchase
   window._gtag?.('event', 'purchase', {
-    transaction_id: Date.now().toString(),
+    transaction_id: data.data?.orderNumber || Date.now().toString(),
     currency: 'INR',
     value:    Number(totalEl?.textContent || 0),
     items: cart.map((i) => ({
@@ -173,14 +310,14 @@ form.addEventListener('submit', async (e) => {
             razorpayOrderId:   response.razorpay_order_id,
             razorpayPaymentId: response.razorpay_payment_id
           });
-        } catch {
-          alert('Payment verified but order creation failed. Contact care@sagona.in');
+        } catch (err) {
+          alert(`Payment verified but order failed: ${err.message}. Contact care@sagona.in`);
         }
       },
       prefill: {
-        name:    auth.user?.name,
-        email:   auth.user?.email,
-        contact: document.querySelector('#phone')?.value
+        name:    auth?.user?.name,
+        email:   auth?.user?.email,
+        contact: document.getElementById('phone')?.value
       },
       theme: { color: '#C9A84C' }
     });
@@ -194,8 +331,8 @@ form.addEventListener('submit', async (e) => {
     rzp.open();
 
   } catch (err) {
-    console.error('checkout:', err);
-    alert('Checkout failed. Please try again.');
+    console.error('checkout error:', err.message);
+    alert(`Checkout failed: ${err.message}`);
     submitBtn.disabled = false;
     submitBtn.textContent = 'Place Order';
   }

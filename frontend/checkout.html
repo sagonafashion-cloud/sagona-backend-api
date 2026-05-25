@@ -31,46 +31,52 @@
 
         <h3 class="checkout-form-section">Shipping Address</h3>
 
+        <!-- Saved addresses dropdown (populated by JS if logged in) -->
+        <div id="saved-addresses"></div>
+
         <div class="form-group">
           <label>Full Name *</label>
-          <input id="customerName" class="field" type="text" required placeholder="Name on delivery" autocomplete="name" />
+          <input id="ship-name" name="customerName" class="field" type="text" required placeholder="Name on delivery" autocomplete="name" />
         </div>
 
         <div class="form-group">
           <label>Phone</label>
-          <input id="phone" class="field" type="tel" required placeholder="10-digit mobile number" />
+          <input id="phone" class="field" type="tel" placeholder="10-digit mobile number" inputmode="numeric" maxlength="10" />
         </div>
 
         <div class="form-group">
-          <label>Address Line 1</label>
-          <input id="address" class="field" required placeholder="House / flat / street" />
+          <label>Pincode *</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="pincode" class="field" required placeholder="6-digit pincode" maxlength="6" inputmode="numeric" style="flex:1" />
+            <button type="button" onclick="autofillAddress(document.getElementById('pincode').value)" style="padding:10px 14px;background:var(--black);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">Check</button>
+          </div>
+          <span id="pincode-status" style="font-size:12px;color:#888;margin-top:4px;display:block"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Address Line 1 *</label>
+          <input id="address-line1" name="address" class="field" required placeholder="House / flat / street" />
         </div>
 
         <div class="form-group">
           <label>Address Line 2 <span style="color:var(--light-gray)">(optional)</span></label>
-          <input id="address2" class="field" placeholder="Landmark, area" />
+          <input id="address-line2" name="address2" class="field" placeholder="Landmark, area" />
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label>City</label>
+            <label>City *</label>
             <input id="city" class="field" required placeholder="Mumbai" />
           </div>
           <div class="form-group">
-            <label>State</label>
+            <label>State *</label>
             <input id="state" class="field" required placeholder="Maharashtra" />
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Pincode</label>
-            <input id="pincode" class="field" required placeholder="400001" maxlength="6" inputmode="numeric" />
-          </div>
-          <div class="form-group">
-            <label>Birthday <span style="color:var(--light-gray)">(optional)</span></label>
-            <input id="birthday" type="date" class="field" />
-          </div>
+        <div class="form-group">
+          <label>Birthday <span style="color:var(--light-gray)">(optional — get 10% off on your birthday)</span></label>
+          <input id="birthday" type="date" class="field" />
         </div>
 
         <h3 class="checkout-form-section" style="margin-top:24px">Payment Method</h3>

@@ -462,7 +462,7 @@ document.getElementById('add-product-btn')?.addEventListener('click', () => {
     handleImageSelect(e.target.files);
   });
 
-  document.getElementById('mp-save').addEventListener('click', saveProduct);
+  document.getElementById('mp-save').addEventListener('click', () => saveProduct());
 });
 
 async function saveProduct(editId = null) {

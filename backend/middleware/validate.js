@@ -12,12 +12,16 @@ export const validate = (req, res, next) => {
 // ── Auth ──────────────────────────────────────────────────
 export const registerRules = [
   body('name').trim().isLength({ min: 2, max: 50 }).withMessage('Name must be 2–50 characters'),
-  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+  // Accept email or identifier (email OR phone) — both are optional individually
+  body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('identifier').optional({ checkFalsy: true }),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
 ];
 
 export const loginRules = [
-  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+  // Accept email (mobile app) or identifier (web — email or phone)
+  body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('identifier').optional({ checkFalsy: true }),
   body('password').notEmpty().withMessage('Password required'),
 ];
 
@@ -32,14 +36,18 @@ export const createOrderRules = [
   body('items').isArray({ min: 1 }).withMessage('Order must contain at least one item'),
   body('items.*.productId').notEmpty().withMessage('Each item needs a productId'),
   body('items.*.qty').isInt({ min: 1 }).withMessage('Qty must be a positive integer'),
-  body('items.*.price').isFloat({ min: 0 }).withMessage('Price must be non-negative'),
+  // price is read from Product DB — not required from client
   body('shippingAddress.name').trim().notEmpty().withMessage('Recipient name required'),
-  body('shippingAddress.phone').matches(/^\d{10}$/).withMessage('Phone must be 10 digits'),
+  // phone format is relaxed — digits only, 10 chars, but optional if not provided
+  body('shippingAddress.phone').optional({ checkFalsy: true })
+    .matches(/^\d{10}$/).withMessage('Phone must be 10 digits'),
   body('shippingAddress.line1').trim().notEmpty().withMessage('Address line 1 required'),
   body('shippingAddress.city').trim().notEmpty().withMessage('City required'),
   body('shippingAddress.state').trim().notEmpty().withMessage('State required'),
   body('shippingAddress.pincode').matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
-  body('paymentMethod').isIn(['COD', 'Razorpay']).withMessage('Invalid payment method'),
+  // payment.method is used (not paymentMethod) — both accepted
+  body('payment.method').optional({ checkFalsy: true })
+    .isIn(['COD', 'ONLINE', 'Razorpay']).withMessage('Invalid payment method'),
 ];
 
 // ── Admin products ────────────────────────────────────────

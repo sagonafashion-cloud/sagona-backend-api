@@ -31,6 +31,23 @@ function etaDate(days) {
   return d.toISOString().slice(0, 10);
 }
 
+export const getPincodeInfo = async (req, res) => {
+  try {
+    const { pincode } = req.params;
+    if (!pincode || !/^\d{6}$/.test(pincode)) {
+      return res.status(400).json({ success: false, message: 'Pincode must be 6 digits' });
+    }
+    const entry = await PincodeMap.findOne({ pincode });
+    if (!entry) {
+      return res.status(404).json({ success: false, message: 'Pincode not found' });
+    }
+    res.json({ success: true, data: { city: entry.city, state: entry.state, pincode } });
+  } catch (err) {
+    console.error('getPincodeInfo:', err);
+    res.status(500).json({ success: false, message: 'Lookup failed' });
+  }
+};
+
 export const checkDelivery = async (req, res) => {
   try {
     const { sku, pincode, colour, size } = req.body;

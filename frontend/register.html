@@ -52,8 +52,8 @@
         </div>
 
         <div class="float-field">
-          <input name="email" type="email" id="f-email" placeholder=" " required autocomplete="email">
-          <label for="f-email">Email Address</label>
+          <input name="identifier" type="text" id="f-identifier" placeholder=" " required autocomplete="username" inputmode="email">
+          <label for="f-identifier">Email or Phone Number</label>
         </div>
 
         <div class="float-field">
@@ -116,13 +116,15 @@
       btn.textContent = 'Creating…';
 
       try {
+        const identifier = document.getElementById('f-identifier').value.trim();
         await request('/auth/register', {
           method: 'POST',
           body: JSON.stringify({
-            name:     form.name.value,
-            email:    form.email.value,
-            password: form.password.value,
-            birthday: form.birthday.value
+            name:       form.name.value,
+            identifier,
+            email:      identifier,  // backward-compat for mobile app
+            password:   form.password.value,
+            birthday:   form.birthday.value
           })
         });
 
