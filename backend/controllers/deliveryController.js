@@ -32,19 +32,39 @@ function etaDate(days) {
 }
 
 export const getPincodeInfo = async (req, res) => {
+  const { pincode } = req.params;
+  if (!pincode || !/^\d{6}$/.test(pincode)) {
+    return res.status(400).json({ success: false, message: 'Pincode must be 6 digits' });
+  }
+
+  // Check local DB first
   try {
-    const { pincode } = req.params;
-    if (!pincode || !/^\d{6}$/.test(pincode)) {
-      return res.status(400).json({ success: false, message: 'Pincode must be 6 digits' });
+    const local = await PincodeMap.findOne({ pincode }).lean();
+    if (local) {
+      return res.json({ success: true, data: { city: local.city, state: local.state, pincode } });
     }
-    const entry = await PincodeMap.findOne({ pincode });
-    if (!entry) {
-      return res.status(404).json({ success: false, message: 'Pincode not found' });
+  } catch {}
+
+  // Fallback: proxy to India Post API (avoids browser CORS issues)
+  try {
+    const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+    const data = await response.json();
+    const postOffice = data?.[0]?.PostOffice?.[0];
+
+    if (postOffice && data[0].Status === 'Success') {
+      const city  = postOffice.District || postOffice.Block || postOffice.Name || '';
+      const state = postOffice.State || '';
+
+      // Cache in our DB for future lookups
+      PincodeMap.create({ pincode, city, state, lat: 0, lng: 0 }).catch(() => {});
+
+      return res.json({ success: true, data: { city, state, pincode } });
     }
-    res.json({ success: true, data: { city: entry.city, state: entry.state, pincode } });
+
+    return res.json({ success: false, data: null, message: 'Pincode not found' });
   } catch (err) {
-    console.error('getPincodeInfo:', err);
-    res.status(500).json({ success: false, message: 'Lookup failed' });
+    console.error('getPincodeInfo fallback:', err);
+    return res.status(500).json({ success: false, message: 'Lookup failed: ' + err.message });
   }
 };
 

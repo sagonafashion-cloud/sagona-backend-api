@@ -79,44 +79,41 @@ updateTotal();
 /* ── pincode autofill ── */
 window.autofillAddress = async function(pincode) {
   if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) return;
+
   const statusEl = document.getElementById('pincode-status');
   if (statusEl) { statusEl.textContent = 'Looking up pincode…'; statusEl.style.color = '#888'; }
 
   try {
-    // Try our backend PincodeMap first
-    const res = await fetch(`${API_BASE}/delivery/pincode/${pincode}`);
-    if (res.ok) {
-      const json = await res.json();
-      if (json.data) {
-        fillCityState(json.data.city, json.data.state);
-        if (statusEl) { statusEl.textContent = `${json.data.city}, ${json.data.state} — you can edit if needed`; statusEl.style.color = '#1D9E75'; }
-        return;
+    const res  = await fetch(`${API_BASE}/delivery/pincode/${pincode}`);
+    const json = await res.json();
+
+    if (json.success && json.data) {
+      const { city, state } = json.data;
+      const cityEl  = document.getElementById('city');
+      const stateEl = document.getElementById('state');
+      if (cityEl)  cityEl.value  = city  || '';
+      if (stateEl) stateEl.value = state || '';
+
+      if (statusEl) {
+        statusEl.textContent = city && state
+          ? `${city}, ${state} — you can edit these if needed`
+          : 'Pincode found — please fill city and state';
+        statusEl.style.color = '#1D9E75';
+      }
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Pincode not found — please fill city and state manually';
+        statusEl.style.color = '#EF9F27';
       }
     }
-  } catch {}
-
-  // Fallback: India Post public API
-  try {
-    const r = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-    const d = await r.json();
-    const po = d?.[0]?.PostOffice?.[0];
-    if (po) {
-      fillCityState(po.District || po.Block || '', po.State || '');
-      if (statusEl) { statusEl.textContent = `${po.District}, ${po.State} — you can edit these`; statusEl.style.color = '#1D9E75'; }
-    } else {
-      if (statusEl) { statusEl.textContent = 'Pincode not found — please fill city and state manually'; statusEl.style.color = '#EF9F27'; }
+  } catch (err) {
+    console.error('Pincode lookup error:', err);
+    if (statusEl) {
+      statusEl.textContent = 'Could not look up pincode — please fill manually';
+      statusEl.style.color = '#EF9F27';
     }
-  } catch {
-    if (statusEl) { statusEl.textContent = 'Could not look up pincode — please fill manually'; statusEl.style.color = '#EF9F27'; }
   }
 };
-
-function fillCityState(city, state) {
-  const cityEl  = document.getElementById('city');
-  const stateEl = document.getElementById('state');
-  if (cityEl  && !cityEl.value)  cityEl.value  = city  || '';
-  if (stateEl && !stateEl.value) stateEl.value = state || '';
-}
 
 // Auto-trigger when 6 digits typed
 document.getElementById('pincode')?.addEventListener('input', function() {
