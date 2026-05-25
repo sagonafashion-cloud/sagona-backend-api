@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Account — Sagona</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://sagona.in/account.html">
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q651K9LXK5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Q651K9LXK5', { send_page_view: true });
+    window._gtag = gtag;
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/favicon/site.webmanifest">
+  <link rel="icon" href="/favicon/favicon.ico">
+
+  <style>
+    /* ── Account layout ── */
+    .acct-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 40px;
+      padding: 48px 0 80px;
+      align-items: start;
+    }
+
+    /* ── Sidebar ── */
+    .acct-sidebar {
+      position: sticky;
+      top: 80px;
+      background: #fff;
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .acct-sidebar-head {
+      padding: 20px;
+      border-bottom: 0.5px solid var(--border);
+      background: var(--cream, #faf8f5);
+    }
+    .acct-sidebar-head p { font-size: 12px; color: var(--gray); margin-top: 2px; }
+    .acct-tab {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      font-size: 13px;
+      color: var(--black);
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      border-bottom: 0.5px solid var(--border);
+      transition: background 0.15s;
+    }
+    .acct-tab:last-child { border-bottom: none; }
+    .acct-tab:hover { background: var(--cream, #faf8f5); }
+    .acct-tab-active { background: var(--cream, #faf8f5); font-weight: 500; color: var(--gold); }
+    .acct-tab-icon { font-size: 16px; width: 20px; text-align: center; }
+    #signout-btn { color: #b91c1c; margin-top: 4px; }
+    #signout-btn:hover { background: #fff5f5; }
+
+    /* ── Content panel ── */
+    .acct-content { min-height: 400px; }
+    .acct-section { display: none; }
+    .acct-section-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    /* ── Profile ── */
+    .acct-profile-info { margin-bottom: 24px; }
+    .acct-info-row {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .acct-info-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--gray); width: 60px; flex-shrink: 0; }
+    .acct-info-value { font-size: 15px; }
+    .acct-edit-form { background: #faf8f5; padding: 24px; border-radius: 8px; margin-bottom: 24px; }
+    .acct-form-group { margin-bottom: 16px; }
+    .acct-form-group label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--gray); margin-bottom: 6px; }
+    .acct-form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 0.5px solid #E8E5E0;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      box-sizing: border-box;
+    }
+    .acct-form-group input:focus { outline: none; border-color: var(--gold); }
+    .acct-btn-row { display: flex; gap: 12px; }
+
+    /* ── Orders ── */
+    .acct-order-card {
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .acct-order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .acct-order-header:hover { background: #faf8f5; }
+    .acct-order-num { font-weight: 500; font-size: 14px; }
+    .acct-order-meta { font-size: 12px; color: var(--gray); margin-top: 3px; }
+    .acct-order-items {
+      padding: 0 20px 16px;
+      border-top: 0.5px solid var(--border);
+    }
+    .acct-item-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--gray);
+      padding: 6px 0;
+    }
+
+    /* ── Addresses ── */
+    .acct-address-card {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 16px 20px;
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .acct-del-btn {
+      border: none;
+      background: none;
+      color: var(--gray);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .acct-del-btn:hover { color: #b91c1c; }
+    .acct-add-form { background: #faf8f5; padding: 24px; border-radius: 8px; margin-bottom: 20px; }
+    .acct-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* ── Wishlist ── */
+    .acct-wishlist-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+    }
+    .acct-wish-card { border: 0.5px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .acct-wish-card img { width: 100%; height: 220px; object-fit: cover; display: block; }
+    .acct-wish-info { padding: 12px; }
+    .acct-wish-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+    .acct-wish-price { font-size: 14px; color: var(--gold); }
+
+    /* ── Loyalty ── */
+    .acct-loyalty-card {
+      background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+      max-width: 420px;
+    }
+    .acct-pts-value {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 48px;
+      color: #C9A84C;
+      line-height: 1;
+      margin: 8px 0 4px;
+    }
+    .acct-loyalty-how { margin-top: 24px; }
+    .acct-loyalty-how h4 { font-size: 13px; font-weight: 500; margin-bottom: 12px; color: var(--gray); }
+    .acct-loyalty-rule {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 13px;
+      margin-bottom: 10px;
+      padding: 12px 16px;
+      background: #faf8f5;
+      border-radius: 6px;
+    }
+    .acct-loyalty-rule-icon { font-size: 18px; flex-shrink: 0; }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .acct-layout {
+        grid-template-columns: 1fr;
+        padding: 24px 0 60px;
+        gap: 0;
+      }
+      .acct-sidebar {
+        position: static;
+        display: flex;
+        flex-wrap: wrap;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+      }
+      .acct-sidebar-head { display: none; }
+      .acct-tab {
+        flex: 1;
+        min-width: 80px;
+        padding: 10px 8px;
+        font-size: 11px;
+        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        border-bottom: 2px solid transparent;
+        border-right: 0.5px solid var(--border);
+      }
+      .acct-tab-active { border-bottom-color: var(--gold); background: none; }
+      .acct-tab-icon { font-size: 18px; }
+      #signout-btn { border-bottom: none; }
+      .acct-content { padding-top: 24px; }
+      .acct-form-row { grid-template-columns: 1fr; }
+      .acct-wishlist-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Standard Header ── -->
+  <header class="header-standard">
+    <div class="nav-inner">
+      <nav class="h-left">
+        <a href="shop.html?category=kids">Kids</a>
+        <a href="shop.html?category=women">Women</a>
+        <a href="shop.html?category=men">Men</a>
+        <a href="shop.html?category=accessories">Accessories</a>
+      </nav>
+      <a class="h-brand" href="index.html">SAGONA</a>
+      <div class="h-right">
+        <a href="wishlist.html">Wishlist</a>
+        <a href="cart.html" style="position:relative">Bag<span class="cart-count" id="cart-count"></span></a>
+        <a href="account.html" style="color:var(--gold);font-weight:500">Account</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="acct-layout">
+
+      <!-- ── Sidebar ── -->
+      <aside class="acct-sidebar">
+        <div class="acct-sidebar-head">
+          <strong id="sidebar-name" style="font-size:15px">My Account</strong>
+          <p id="sidebar-email"></p>
+        </div>
+
+        <button class="acct-tab acct-tab-active" data-tab="profile" id="tab-profile">
+          <span class="acct-tab-icon">👤</span> Profile
+        </button>
+        <button class="acct-tab" data-tab="orders" id="tab-orders">
+          <span class="acct-tab-icon">📦</span> My Orders
+        </button>
+        <button class="acct-tab" data-tab="addresses" id="tab-addresses">
+          <span class="acct-tab-icon">📍</span> Addresses
+        </button>
+        <button class="acct-tab" data-tab="wishlist" id="tab-wishlist">
+          <span class="acct-tab-icon">♡</span> Wishlist
+        </button>
+        <button class="acct-tab" data-tab="loyalty" id="tab-loyalty">
+          <span class="acct-tab-icon">⭐</span> Loyalty
+        </button>
+        <button class="acct-tab" id="signout-btn" style="border-bottom:none">
+          <span class="acct-tab-icon">↩</span> Sign Out
+        </button>
+      </aside>
+
+      <!-- ── Content ── -->
+      <div class="acct-content">
+
+        <!-- PROFILE -->
+        <div id="sec-profile" class="acct-section">
+          <h2 class="acct-section-title">Profile</h2>
+
+          <div id="prof-display">
+            <div class="acct-profile-info">
+              <div class="acct-info-row">
+                <span class="acct-info-label">Name</span>
+                <span class="acct-info-value" id="prof-name">—</span>
+              </div>
+              <div class="acct-info-row">
+                <span class="acct-info-label">Email / Phone</span>
+                <span class="acct-info-value" id="prof-email">—</span>
+              </div>
+              <div class="acct-info-row">
+                <span class="acct-info-label">Points</span>
+                <span class="acct-info-value"><strong id="prof-points" style="color:var(--gold)">0</strong> pts</span>
+              </div>
+            </div>
+            <button class="btn ghost" id="prof-edit-btn">Edit Profile</button>
+          </div>
+
+          <div id="prof-form" style="display:none">
+            <div class="acct-edit-form">
+              <div class="acct-form-group">
+                <label>Full Name</label>
+                <input type="text" id="edit-name" placeholder="Your name">
+              </div>
+              <div class="acct-form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="edit-phone" placeholder="10-digit mobile" maxlength="10" inputmode="numeric">
+              </div>
+              <div class="acct-btn-row">
+                <button class="btn gold" id="prof-save-btn">Save Changes</button>
+                <button class="btn ghost" id="prof-cancel-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:32px;padding-top:24px;border-top:0.5px solid var(--border)">
+            <h3 style="font-size:14px;font-weight:500;margin-bottom:12px">Quick Links</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+              <a href="shop.html" class="btn ghost" style="font-size:13px">Shop Now</a>
+              <a href="checkout.html" class="btn ghost" style="font-size:13px">Go to Checkout</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- MY ORDERS -->
+        <div id="sec-orders" class="acct-section">
+          <h2 class="acct-section-title">My Orders</h2>
+          <div id="orders-list">
+            <p style="color:var(--gray)">Click the tab to load your orders.</p>
+          </div>
+        </div>
+
+        <!-- ADDRESSES -->
+        <div id="sec-addresses" class="acct-section">
+          <h2 class="acct-section-title">Saved Addresses</h2>
+
+          <div id="addresses-list"></div>
+
+          <button class="btn ghost" id="add-address-btn" style="margin-bottom:16px">+ Add New Address</button>
+
+          <div id="add-address-form" style="display:none">
+            <div class="acct-add-form">
+              <h3 style="font-size:15px;font-weight:500;margin-bottom:20px">New Address</h3>
+              <form id="new-addr-form">
+                <div class="acct-form-row">
+                  <div class="acct-form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="addr-name" required placeholder="Name on delivery">
+                  </div>
+                  <div class="acct-form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="addr-phone" placeholder="10-digit mobile" maxlength="10" inputmode="numeric">
+                  </div>
+                </div>
+                <div class="acct-form-group">
+                  <label>Pincode *</label>
+                  <input type="text" id="addr-pincode" required placeholder="6-digit pincode" maxlength="6" inputmode="numeric" style="max-width:180px">
+                </div>
+                <div class="acct-form-group">
+                  <label>Address Line 1 *</label>
+                  <input type="text" id="addr-line1" required placeholder="House / flat / street">
+                </div>
+                <div class="acct-form-group">
+                  <label>Address Line 2 <span style="font-weight:300">(optional)</span></label>
+                  <input type="text" id="addr-line2" placeholder="Landmark, area">
+                </div>
+                <div class="acct-form-row">
+                  <div class="acct-form-group">
+                    <label>City *</label>
+                    <input type="text" id="addr-city" required placeholder="Mumbai">
+                  </div>
+                  <div class="acct-form-group">
+                    <label>State *</label>
+                    <input type="text" id="addr-state" required placeholder="Maharashtra">
+                  </div>
+                </div>
+                <div class="acct-btn-row">
+                  <button type="submit" class="btn gold" id="addr-save-btn">Save Address</button>
+                  <button type="button" class="btn ghost" id="addr-cancel-btn">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- WISHLIST -->
+        <div id="sec-wishlist" class="acct-section">
+          <h2 class="acct-section-title">Wishlist</h2>
+          <div id="wishlist-list">
+            <p style="color:var(--gray)">Click the tab to load your wishlist.</p>
+          </div>
+        </div>
+
+        <!-- LOYALTY POINTS -->
+        <div id="sec-loyalty" class="acct-section">
+          <h2 class="acct-section-title">Loyalty Points</h2>
+
+          <div class="acct-loyalty-card">
+            <p style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#888">Your Balance</p>
+            <p class="acct-pts-value" id="loyalty-pts">0</p>
+            <p style="font-size:13px;color:#aaa">≈ <span id="loyalty-value">₹0</span> discount on next order</p>
+          </div>
+
+          <div class="acct-loyalty-how">
+            <h4>How to Earn Points</h4>
+            <div class="acct-loyalty-rule">
+              <span class="acct-loyalty-rule-icon">🛍️</span>
+              <div><strong>Every purchase</strong> — earn 1 point per ₹10 spent</div>
+            </div>
+            <div class="acct-loyalty-rule">
+              <span class="acct-loyalty-rule-icon">🎂</span>
+              <div><strong>Birthday bonus</strong> — 10% off on your birthday (add birthday in profile)</div>
+            </div>
+            <div class="acct-loyalty-rule">
+              <span class="acct-loyalty-rule-icon">💰</span>
+              <div><strong>Redeem</strong> — 100 points = ₹10 off (applied automatically at checkout)</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /acct-content -->
+    </div><!-- /acct-layout -->
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-bottom">
+      <span>© 2026 SAGONA</span>
+      <a href="index.html" style="color:var(--gold)">sagona.in</a>
+    </div>
+  </footer>
+
+  <!-- WhatsApp FAB -->
+  <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.14 22.085c-.34.957-1.99 1.826-2.742 1.94-.703.108-1.59.153-2.563-.16-.59-.192-1.347-.449-2.31-.88-4.065-1.76-6.717-5.847-6.918-6.12-.2-.275-1.63-2.17-1.63-4.135 0-1.965 1.032-2.93 1.397-3.33.365-.4.795-.5 1.06-.5.266 0 .531.003.764.013.245.01.574-.093.9.686.34.8 1.153 2.764 1.254 2.963.1.2.167.435.033.7-.133.266-.2.43-.399.663-.2.234-.42.523-.6.703-.2.2-.408.416-.175.815.233.4 1.036 1.71 2.224 2.77 1.528 1.362 2.815 1.784 3.215 1.984.4.2.633.167.866-.1.233-.266.997-1.165 1.264-1.564.266-.4.532-.333.897-.2.366.133 2.33 1.098 2.73 1.298.4.2.665.3.764.467.1.165.1.954-.24 1.91z"/></svg>
+  </a>
+
+  <script type="module" src="/nc_assets/js/account.js"></script>
+  <script type="module" src="/nc_assets/js/cart.js"></script>
+
+  <!-- Populate sidebar name/email from localStorage before module loads -->
+  <script>
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || 'null');
+      if (u) {
+        document.getElementById('sidebar-name').textContent  = u.name  || 'My Account';
+        document.getElementById('sidebar-email').textContent = u.email || u.phone || '';
+      }
+    } catch {}
+  </script>
+
+</body>
+</html>

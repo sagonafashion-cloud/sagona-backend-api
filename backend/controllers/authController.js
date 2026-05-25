@@ -101,6 +101,21 @@ export const getCurrentUser = async (req, res) => {
   return res.json({ user: formatUser(req.user) });
 };
 
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const update = {};
+    if (name?.trim()) update.name = name.trim();
+    if (phone !== undefined) update.phone = phone.trim() || undefined;
+
+    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true });
+    res.json({ success: true, user: formatUser(user) });
+  } catch (err) {
+    console.error('updateProfile:', err);
+    res.status(500).json({ success: false, message: 'Profile update failed' });
+  }
+};
+
 export const forgotPassword = async (req, res) => {
   try {
     const raw = req.body.identifier || req.body.email || '';
