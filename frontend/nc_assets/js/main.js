@@ -50,11 +50,8 @@ function updateCartBadge() {
 }
 
 function initCartDrawerTrigger() {
-  document.getElementById('s-open-cart')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('cart-drawer')?.classList.add('active');
-    if (window.refreshCartDrawer) window.refreshCartDrawer();
-  });
+  // Drawer open is handled by cart.js (which also defines window.refreshCartDrawer)
+  // Nothing to wire here — kept for future extension
 }
 
 // ── AUTH NAV ─────────────────────────────────────────────────
