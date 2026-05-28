@@ -191,6 +191,32 @@ export const deleteAddress = async (req, res) => {
   }
 };
 
+export const updateAddress = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const addr = user.addresses.id(req.params.id);
+    if (!addr) return res.status(404).json({ success: false, message: 'Address not found' });
+
+    const { name, line1, line2, city, state, pincode, phone, label } = req.body;
+    if (name    !== undefined) addr.name    = name;
+    if (line1   !== undefined) addr.line1   = line1;
+    if (line2   !== undefined) addr.line2   = line2;
+    if (city    !== undefined) addr.city    = city;
+    if (state   !== undefined) addr.state   = state;
+    if (pincode !== undefined) addr.pincode = pincode;
+    if (phone   !== undefined) addr.phone   = phone;
+    if (label   !== undefined) addr.label   = label;
+
+    await user.save();
+    res.json({ success: true, data: user.addresses });
+  } catch (err) {
+    console.error('updateAddress:', err);
+    res.status(500).json({ success: false, message: 'Failed to update address' });
+  }
+};
+
 export const updatePushToken = async (req, res) => {
   try {
     const { expoPushToken } = req.body;

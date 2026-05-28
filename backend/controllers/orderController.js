@@ -217,6 +217,55 @@ export const updateOrder = async (req, res) => {
 };
 
 /* ═══════════════════════════════════
+   CUSTOMER — CANCEL ORDER
+═══════════════════════════════════ */
+export const cancelOrder = async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, 'customer.userId': req.user._id });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    if (!['placed', 'confirmed'].includes(order.status)) {
+      return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage' });
+    }
+
+    order.status = 'cancelled';
+    await order.save();
+    sendStatusUpdate(order).catch(() => {});
+
+    res.json({ success: true, message: 'Order cancelled successfully' });
+  } catch (err) {
+    console.error('cancelOrder:', err);
+    res.status(500).json({ success: false, message: 'Cancel failed' });
+  }
+};
+
+/* ═══════════════════════════════════
+   CUSTOMER — RETURN / REPLACE REQUEST
+═══════════════════════════════════ */
+export const createReturnRequest = async (req, res) => {
+  try {
+    const { returnType, reason } = req.body;
+    if (!reason?.trim()) return res.status(400).json({ success: false, message: 'Reason required' });
+
+    const order = await Order.findOne({ _id: req.params.id, 'customer.userId': req.user._id });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    if (order.status !== 'delivered') {
+      return res.status(400).json({ success: false, message: 'Only delivered orders can be returned or replaced' });
+    }
+
+    const note = `[${returnType?.toUpperCase() || 'RETURN'} REQUEST] ${reason} (submitted ${new Date().toISOString()})`;
+    order.notes = order.notes ? `${note} | ${order.notes}` : note;
+    await order.save();
+
+    res.json({ success: true, message: `${returnType === 'replace' ? 'Replacement' : 'Return'} request submitted. We will contact you within 24 hours.` });
+  } catch (err) {
+    console.error('createReturnRequest:', err);
+    res.status(500).json({ success: false, message: 'Request failed' });
+  }
+};
+
+/* ═══════════════════════════════════
    ADMIN — CREATE MANUAL ORDER
 ═══════════════════════════════════ */
 export const createManualOrder = async (req, res) => {

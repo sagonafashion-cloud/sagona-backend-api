@@ -358,49 +358,7 @@
 
           <button class="btn ghost" id="add-address-btn" style="margin-bottom:16px">+ Add New Address</button>
 
-          <div id="add-address-form" style="display:none">
-            <div class="acct-add-form">
-              <h3 style="font-size:15px;font-weight:500;margin-bottom:20px">New Address</h3>
-              <form id="new-addr-form">
-                <div class="acct-form-row">
-                  <div class="acct-form-group">
-                    <label>Full Name *</label>
-                    <input type="text" id="addr-name" required placeholder="Name on delivery">
-                  </div>
-                  <div class="acct-form-group">
-                    <label>Phone</label>
-                    <input type="tel" id="addr-phone" placeholder="10-digit mobile" maxlength="10" inputmode="numeric">
-                  </div>
-                </div>
-                <div class="acct-form-group">
-                  <label>Pincode *</label>
-                  <input type="text" id="addr-pincode" required placeholder="6-digit pincode" maxlength="6" inputmode="numeric" style="max-width:180px">
-                </div>
-                <div class="acct-form-group">
-                  <label>Address Line 1 *</label>
-                  <input type="text" id="addr-line1" required placeholder="House / flat / street">
-                </div>
-                <div class="acct-form-group">
-                  <label>Address Line 2 <span style="font-weight:300">(optional)</span></label>
-                  <input type="text" id="addr-line2" placeholder="Landmark, area">
-                </div>
-                <div class="acct-form-row">
-                  <div class="acct-form-group">
-                    <label>City *</label>
-                    <input type="text" id="addr-city" required placeholder="Mumbai">
-                  </div>
-                  <div class="acct-form-group">
-                    <label>State *</label>
-                    <input type="text" id="addr-state" required placeholder="Maharashtra">
-                  </div>
-                </div>
-                <div class="acct-btn-row">
-                  <button type="submit" class="btn gold" id="addr-save-btn">Save Address</button>
-                  <button type="button" class="btn ghost" id="addr-cancel-btn">Cancel</button>
-                </div>
-              </form>
-            </div>
-          </div>
+          <div id="address-form-area"></div>
         </div>
 
         <!-- WISHLIST -->
@@ -453,6 +411,8 @@
   <a href="https://wa.me/919099690446?text=Hi%20Sagona%2C%20I%20need%20help" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
     <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.47 2.027 7.773L0 32l8.476-2.004A15.942 15.942 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.14 22.085c-.34.957-1.99 1.826-2.742 1.94-.703.108-1.59.153-2.563-.16-.59-.192-1.347-.449-2.31-.88-4.065-1.76-6.717-5.847-6.918-6.12-.2-.275-1.63-2.17-1.63-4.135 0-1.965 1.032-2.93 1.397-3.33.365-.4.795-.5 1.06-.5.266 0 .531.003.764.013.245.01.574-.093.9.686.34.8 1.153 2.764 1.254 2.963.1.2.167.435.033.7-.133.266-.2.43-.399.663-.2.234-.42.523-.6.703-.2.2-.408.416-.175.815.233.4 1.036 1.71 2.224 2.77 1.528 1.362 2.815 1.784 3.215 1.984.4.2.633.167.866-.1.233-.266.997-1.165 1.264-1.564.266-.4.532-.333.897-.2.366.133 2.33 1.098 2.73 1.298.4.2.665.3.764.467.1.165.1.954-.24 1.91z"/></svg>
   </a>
+
+  <div id="toast-container" style="position:fixed;bottom:24px;right:24px;z-index:9999"></div>
 
   <script type="module" src="/nc_assets/js/account.js"></script>
   <script type="module" src="/nc_assets/js/cart.js"></script>

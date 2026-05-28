@@ -1,5 +1,5 @@
 import { request }  from './api.js';
-import { API_BASE } from './config.js';
+import { API_BASE, fetchPincodeData } from './config.js';
 import { getAuth, getCart, saveCart } from './storage.js';
 
 const form          = document.querySelector('#checkout-form');
@@ -77,47 +77,11 @@ document.querySelector('#birthday')?.addEventListener('change', updateTotal);
 updateTotal();
 
 /* ── pincode autofill ── */
-window.autofillAddress = async function(pincode) {
-  if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) return;
-
-  const statusEl = document.getElementById('pincode-status');
-  if (statusEl) { statusEl.textContent = 'Looking up pincode…'; statusEl.style.color = '#888'; }
-
-  try {
-    const res  = await fetch(`${API_BASE}/delivery/pincode/${pincode}`);
-    const json = await res.json();
-
-    if (json.success && json.data) {
-      const { city, state } = json.data;
-      const cityEl  = document.getElementById('city');
-      const stateEl = document.getElementById('state');
-      if (cityEl)  cityEl.value  = city  || '';
-      if (stateEl) stateEl.value = state || '';
-
-      if (statusEl) {
-        statusEl.textContent = city && state
-          ? `${city}, ${state} — you can edit these if needed`
-          : 'Pincode found — please fill city and state';
-        statusEl.style.color = '#1D9E75';
-      }
-    } else {
-      if (statusEl) {
-        statusEl.textContent = 'Pincode not found — please fill city and state manually';
-        statusEl.style.color = '#EF9F27';
-      }
-    }
-  } catch (err) {
-    console.error('Pincode lookup error:', err);
-    if (statusEl) {
-      statusEl.textContent = 'Could not look up pincode — please fill manually';
-      statusEl.style.color = '#EF9F27';
-    }
-  }
-};
+window.autofillAddress = (pincode) => fetchPincodeData(pincode, 'city', 'state', 'pincode-status');
 
 // Auto-trigger when 6 digits typed
 document.getElementById('pincode')?.addEventListener('input', function() {
-  if (this.value.length === 6) autofillAddress(this.value);
+  if (this.value.length === 6) fetchPincodeData(this.value, 'city', 'state', 'pincode-status');
 });
 
 /* ── saved addresses ── */

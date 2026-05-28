@@ -47,24 +47,37 @@ export const getPincodeInfo = async (req, res) => {
 
   // Fallback: proxy to India Post API (avoids browser CORS issues)
   try {
-    const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(
+      `https://api.postalpincode.in/pincode/${pincode}`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+
     const data = await response.json();
-    const postOffice = data?.[0]?.PostOffice?.[0];
 
-    if (postOffice && data[0].Status === 'Success') {
-      const city  = postOffice.District || postOffice.Block || postOffice.Name || '';
-      const state = postOffice.State || '';
+    if (data?.[0]?.Status === 'Success' && data[0].PostOffice?.length > 0) {
+      const po    = data[0].PostOffice[0];
+      const city  = po.District || po.Block || po.Name || '';
+      const state = po.State || '';
 
-      // Cache in our DB for future lookups
-      PincodeMap.create({ pincode, city, state, lat: 0, lng: 0 }).catch(() => {});
+      if (city && state) {
+        PincodeMap.findOneAndUpdate(
+          { pincode },
+          { pincode, city, state, lat: 0, lng: 0 },
+          { upsert: true, new: true }
+        ).catch(() => {});
+      }
 
       return res.json({ success: true, data: { city, state, pincode } });
     }
 
-    return res.json({ success: false, data: null, message: 'Pincode not found' });
+    return res.json({ success: false, data: null, message: 'Pincode not found in India Post database' });
   } catch (err) {
-    console.error('getPincodeInfo fallback:', err);
-    return res.status(500).json({ success: false, message: 'Lookup failed: ' + err.message });
+    console.error('getPincodeInfo India Post error for', pincode, ':', err.message);
+    return res.status(500).json({ success: false, message: 'Pincode lookup failed — please fill manually' });
   }
 };
 
