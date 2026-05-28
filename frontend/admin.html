@@ -159,6 +159,7 @@
     <nav id="admin-nav">
       <div class="admin-nav-item active" data-section="dashboard">📊 Dashboard</div>
       <div class="admin-nav-item" data-section="orders">📦 Orders</div>
+      <div class="admin-nav-item" data-section="returns">↩ Returns <span id="returns-badge" style="display:none;background:#dc2626;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-left:4px;font-family:'Inter',sans-serif"></span></div>
       <div class="admin-nav-item" data-section="products">👗 Products</div>
       <div class="admin-nav-item" data-section="stores">🏪 Stores</div>
       <div class="admin-nav-item" data-section="homepage">🖼 Homepage</div>
@@ -225,6 +226,7 @@
             <option value="packed">Packed</option>
             <option value="shipped">Shipped</option>
             <option value="delivered">Delivered</option>
+            <option value="return_requested">Return Requested</option>
             <option value="cancelled">Cancelled</option>
             <option value="returned">Returned</option>
           </select>
@@ -241,6 +243,16 @@
           </table>
         </div>
         <div id="orders-pagination" style="text-align:right;margin-top:12px;font-size:13px;color:var(--gray)"></div>
+      </div>
+
+      <!-- ── RETURNS ── -->
+      <div id="section-returns" style="display:none">
+        <div class="section-header">
+          <h2>Return &amp; Replace Requests</h2>
+        </div>
+        <div id="returns-list">
+          <div class="loading">Loading…</div>
+        </div>
       </div>
 
       <!-- ── PRODUCTS ── -->

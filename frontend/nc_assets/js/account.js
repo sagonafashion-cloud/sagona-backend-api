@@ -9,13 +9,14 @@ if (!token) {
 const INR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 const STATUS_COLOR = {
-  placed:    { bg: '#dbeafe', text: '#1e40af' },
-  confirmed: { bg: '#dcfce7', text: '#15803d' },
-  packed:    { bg: '#ede9fe', text: '#6d28d9' },
-  shipped:   { bg: '#fef3c7', text: '#b45309' },
-  delivered: { bg: '#dcfce7', text: '#15803d' },
-  returned:  { bg: '#f3f4f6', text: '#4b5563' },
-  cancelled: { bg: '#fee2e2', text: '#b91c1c' },
+  placed:           { bg: '#dbeafe', text: '#1e40af' },
+  confirmed:        { bg: '#dcfce7', text: '#15803d' },
+  packed:           { bg: '#ede9fe', text: '#6d28d9' },
+  shipped:          { bg: '#fef3c7', text: '#b45309' },
+  delivered:        { bg: '#dcfce7', text: '#15803d' },
+  return_requested: { bg: '#fef3c7', text: '#92400e' },
+  returned:         { bg: '#f3f4f6', text: '#4b5563' },
+  cancelled:        { bg: '#fee2e2', text: '#b91c1c' },
 };
 
 function statusBadge(status) {
@@ -150,12 +151,12 @@ function getOrderActions(order) {
 
   if (status === 'delivered' && inWindow) {
     html += `
-      <button onclick="requestReturn('${order._id}','return')"
+      <button onclick="window.requestReturn('${order._id}','return')"
               style="padding:8px 18px;background:transparent;border:0.5px solid #555;color:#555;
                      cursor:pointer;font-size:11px;letter-spacing:0.08em;border-radius:3px">
         RETURN
       </button>
-      <button onclick="requestReturn('${order._id}','replace')"
+      <button onclick="window.requestReturn('${order._id}','replace')"
               style="padding:8px 18px;background:#0A0A0A;border:0.5px solid #0A0A0A;color:#fff;
                      cursor:pointer;font-size:11px;letter-spacing:0.08em;border-radius:3px">
         REPLACE
@@ -191,25 +192,156 @@ window.cancelOrder = async function(orderId, orderNumber) {
 };
 
 window.requestReturn = async function(orderId, type) {
-  const label  = type === 'replace' ? 'replacing' : 'returning';
-  const reason = prompt(`Please state your reason for ${label} this item:`);
-  if (!reason) return;
+  if (type === 'return') {
+    const reason = prompt('Please tell us why you want to return this item:');
+    if (!reason) return;
+    await submitReturnRequest(orderId, 'return', reason, null, null);
+  } else if (type === 'replace') {
+    showReplacementSelector(orderId);
+  }
+};
+
+async function showReplacementSelector(orderId) {
+  const modal = document.createElement('div');
+  modal.id = 'replacement-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:8px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h3 style="font-family:'Playfair Display',serif;font-size:20px;font-weight:500">Select Replacement Product</h3>
+        <button onclick="document.getElementById('replacement-modal').remove()"
+                style="background:none;border:none;font-size:22px;cursor:pointer;color:#888">&#215;</button>
+      </div>
+      <p style="font-size:13px;color:#888;margin-bottom:20px">Choose the product you would like as a replacement. Our team will confirm availability.</p>
+      <div style="margin-bottom:16px">
+        <input type="text" id="replacement-search" placeholder="Search products…"
+               oninput="window.searchReplacementProducts(this.value)"
+               style="width:100%;padding:10px 14px;border:0.5px solid #E8E5E0;border-radius:4px;font-size:13px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:6px">Reason for replacement *</label>
+        <textarea id="replacement-reason" rows="2" placeholder="e.g. Wrong size, defective product…"
+                  style="width:100%;padding:10px 14px;border:0.5px solid #E8E5E0;border-radius:4px;font-size:13px;outline:none;resize:none;font-family:inherit;box-sizing:border-box"></textarea>
+      </div>
+      <div id="replacement-products" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">
+        <div style="grid-column:1/-1;text-align:center;padding:20px;color:#888;font-size:13px">Loading products…</div>
+      </div>
+      <div id="replacement-selected" style="display:none;background:#EAF3DE;border-radius:6px;padding:12px 16px;margin-bottom:16px">
+        <div style="font-size:12px;color:#1D9E75;font-weight:500;margin-bottom:4px">SELECTED FOR REPLACEMENT</div>
+        <div id="replacement-selected-name" style="font-size:14px;font-weight:500"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="window.submitReplacement('${orderId}')"
+                style="flex:1;padding:12px;background:#C9A84C;color:#fff;border:none;cursor:pointer;font-size:12px;letter-spacing:0.1em;border-radius:3px;font-family:inherit">
+          SUBMIT REPLACEMENT REQUEST
+        </button>
+        <button onclick="document.getElementById('replacement-modal').remove()"
+                style="padding:12px 20px;background:transparent;border:0.5px solid #E8E5E0;cursor:pointer;font-size:12px;border-radius:3px;font-family:inherit">
+          CANCEL
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  await loadReplacementProducts('');
+}
+
+let _selectedReplacement = null;
+
+async function loadReplacementProducts(query) {
+  const grid = document.getElementById('replacement-products');
+  if (!grid) return;
   try {
-    const res  = await fetch(`${API_BASE}/orders/${orderId}/return-request`, {
+    const params = new URLSearchParams({ status: 'active', limit: '12' });
+    if (query) params.set('search', query);
+    const res  = await fetch(`${API_BASE}/products?${params}`);
+    const json = await res.json();
+    const products = json.data || [];
+
+    if (!products.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#888">No products found</div>';
+      return;
+    }
+
+    grid.innerHTML = products.map((p) => {
+      const img = p.images?.[0] || p.image || '';
+      const safeName = p.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const safeImg  = img.replace(/'/g, '%27');
+      return `
+        <div onclick="window.selectReplacement('${p._id}','${safeName}','${safeImg}')"
+             id="rp-${p._id}"
+             style="border:0.5px solid #E8E5E0;border-radius:6px;overflow:hidden;cursor:pointer;transition:border 0.15s,background 0.15s">
+          <div style="aspect-ratio:1;overflow:hidden;background:#F8F6F3">
+            ${img ? `<img src="${img}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;background:#F0EDE8"></div>'}
+          </div>
+          <div style="padding:8px">
+            <div style="font-size:12px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+            <div style="font-size:12px;color:#555">&#8377;${Number(p.price).toLocaleString('en-IN')}</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    grid.innerHTML = `<div style="grid-column:1/-1;color:red;padding:16px">Failed to load: ${err.message}</div>`;
+  }
+}
+
+let _replacementSearchTimer = null;
+window.searchReplacementProducts = (query) => {
+  clearTimeout(_replacementSearchTimer);
+  _replacementSearchTimer = setTimeout(() => loadReplacementProducts(query), 400);
+};
+
+window.selectReplacement = (id, name, img) => {
+  _selectedReplacement = { id, name, img };
+  document.querySelectorAll('[id^="rp-"]').forEach((el) => {
+    el.style.border = '0.5px solid #E8E5E0';
+    el.style.background = '#fff';
+  });
+  const card = document.getElementById(`rp-${id}`);
+  if (card) { card.style.border = '2px solid #C9A84C'; card.style.background = '#FAEEDA'; }
+  const selDiv  = document.getElementById('replacement-selected');
+  const selName = document.getElementById('replacement-selected-name');
+  if (selDiv)  selDiv.style.display = 'block';
+  if (selName) selName.textContent  = name;
+};
+
+window.submitReplacement = async (orderId) => {
+  const reason = document.getElementById('replacement-reason')?.value.trim();
+  if (!reason)               { alert('Please enter a reason for replacement'); return; }
+  if (!_selectedReplacement) { alert('Please select a replacement product'); return; }
+
+  await submitReturnRequest(
+    orderId, 'replace', reason,
+    _selectedReplacement.id,
+    _selectedReplacement.name
+  );
+
+  document.getElementById('replacement-modal')?.remove();
+  _selectedReplacement = null;
+};
+
+async function submitReturnRequest(orderId, type, reason, replacementProductId, replacementProductName) {
+  try {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/return-request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeader() },
-      body: JSON.stringify({ returnType: type, reason })
+      body: JSON.stringify({
+        returnType: type,
+        reason,
+        replacementProductId:   replacementProductId   || '',
+        replacementProductName: replacementProductName || ''
+      })
     });
     const data = await res.json();
     if (data.success) {
-      showToast(data.message);
+      showToast(data.message || 'Request submitted successfully');
+      loadOrders();
     } else {
       alert(data.message || 'Request failed');
     }
   } catch (err) {
-    alert('Failed: ' + err.message);
+    alert('Failed to submit: ' + err.message);
   }
-};
+}
 
 async function loadOrders() {
   const container = document.getElementById('orders-list');

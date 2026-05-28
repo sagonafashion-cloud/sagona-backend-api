@@ -45,6 +45,21 @@ const paymentSchema = new mongoose.Schema({
   paidAt: { type: Date }
 }, { _id: false });
 
+const returnRequestSchema = new mongoose.Schema({
+  requestedAt: { type: Date },
+  reason:      { type: String },
+  type:        { type: String, enum: ['return', 'replace'] },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'completed'],
+    default: 'pending'
+  },
+  replacementProductId:   { type: String },
+  replacementProductName: { type: String },
+  adminNote:   { type: String },
+  resolvedAt:  { type: Date }
+}, { _id: false });
+
 const shipmentSchema = new mongoose.Schema({
   storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store' },
   items: [{ type: String }],          // array of SKUs in this shipment
@@ -84,9 +99,11 @@ const orderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['placed', 'confirmed', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'],
+      enum: ['placed', 'confirmed', 'packed', 'shipped', 'delivered', 'return_requested', 'returned', 'cancelled'],
       default: 'placed'
     },
+
+    returnRequest: returnRequestSchema,
 
     invoiceUrl: { type: String },
     couponCode: { type: String },

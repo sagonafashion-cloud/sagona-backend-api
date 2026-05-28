@@ -144,7 +144,7 @@ async function startApp() {
 /* ══════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════ */
-const SECTIONS = ['dashboard','orders','products','stores','homepage','analytics','gst','users'];
+const SECTIONS = ['dashboard','orders','returns','products','stores','homepage','analytics','gst','users'];
 
 function initNav() {
   document.getElementById('admin-nav').addEventListener('click', (e) => {
@@ -165,11 +165,12 @@ function showSection(name) {
   const loaders = {
     dashboard: loadDashboard,
     orders:    loadOrders,
+    returns:   loadReturns,
     products:  loadProducts,
     stores:    loadStores,
     homepage:  loadHomepageManager,
     analytics: loadAnalytics,
-    gst:       () => {},          // loaded on demand
+    gst:       () => {},
     users:     loadAdminUsers
   };
   loaders[name]?.();
@@ -226,6 +227,17 @@ async function loadDashboard() {
     // Recent orders
     const recentOrders = orders.value?.data || [];
     renderOrderRows('dash-orders-body', recentOrders, false);
+
+    // Returns badge
+    try {
+      const returnsRes = await api('/admin/orders/returns');
+      const pendingCount = returnsRes.data?.length || 0;
+      const badge = document.getElementById('returns-badge');
+      if (badge) {
+        badge.textContent = pendingCount;
+        badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+      }
+    } catch {}
 
   } catch (err) {
     console.error('loadDashboard:', err);
@@ -306,7 +318,7 @@ async function loadOrders() {
 }
 
 function renderOrderRows(tbodyId, orders, showActions) {
-  const STATUS_OPTS = ['placed','confirmed','packed','shipped','delivered','returned','cancelled'];
+  const STATUS_OPTS = ['placed','confirmed','packed','shipped','delivered','return_requested','returned','cancelled'];
   const tbody = document.getElementById(tbodyId);
   if (!orders.length) {
     tbody.innerHTML = `<tr><td colspan="${showActions ? 8 : 5}" class="loading">No orders found.</td></tr>`;
@@ -350,6 +362,114 @@ function renderOrderRows(tbodyId, orders, showActions) {
 // Order filters
 document.getElementById('order-search')?.addEventListener('input', debounce(() => { _ordersPage = 1; loadOrders(); }, 400));
 document.getElementById('order-status-filter')?.addEventListener('change', () => { _ordersPage = 1; loadOrders(); });
+
+/* ══════════════════════════════════════
+   RETURNS
+══════════════════════════════════════ */
+async function loadReturns() {
+  const list = document.getElementById('returns-list');
+  list.innerHTML = '<div class="loading">Loading…</div>';
+
+  try {
+    const res = await api('/admin/orders/returns');
+    const returns = res.data || [];
+
+    // Update badge
+    const badge = document.getElementById('returns-badge');
+    if (badge) {
+      badge.textContent = returns.length;
+      badge.style.display = returns.length > 0 ? 'inline-block' : 'none';
+    }
+
+    if (!returns.length) {
+      list.innerHTML = '<div class="loading">No pending return requests</div>';
+      return;
+    }
+
+    list.innerHTML = `
+      <div class="admin-card">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ORDER #</th>
+              <th>CUSTOMER</th>
+              <th>TYPE</th>
+              <th>REASON</th>
+              <th>REPLACEMENT PRODUCT</th>
+              <th>REQUESTED</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${returns.map((order) => {
+              const rr = order.returnRequest;
+              const isReplace = rr.type === 'replace';
+              const date = new Date(rr.requestedAt).toLocaleDateString('en-IN');
+              return `
+                <tr>
+                  <td style="font-weight:500;color:var(--gold)">${order.orderNumber}</td>
+                  <td>
+                    <div>${order.customer?.name || '—'}</div>
+                    <div style="font-size:11px;color:var(--gray)">${order.customer?.email || ''}</div>
+                  </td>
+                  <td>
+                    <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;
+                      background:${isReplace ? '#E6F1FB' : '#FCEBEB'};
+                      color:${isReplace ? '#0C447C' : '#791F1F'}">
+                      ${isReplace ? 'REPLACE' : 'RETURN'}
+                    </span>
+                  </td>
+                  <td style="font-size:13px;max-width:200px">${rr.reason || '—'}</td>
+                  <td style="font-size:13px">
+                    ${isReplace && rr.replacementProductName
+                      ? `<span style="color:var(--gold)">${rr.replacementProductName}</span>`
+                      : isReplace ? '<span style="color:var(--gray)">Not selected yet</span>' : '—'
+                    }
+                  </td>
+                  <td style="font-size:12px;color:var(--gray)">${date}</td>
+                  <td>
+                    <div style="display:flex;gap:6px">
+                      <button onclick="window.actionReturn('${order._id}','approved')"
+                              style="padding:6px 14px;background:#1D9E75;color:#fff;border:none;
+                                     cursor:pointer;font-size:11px;letter-spacing:0.06em;border-radius:3px">
+                        APPROVE
+                      </button>
+                      <button onclick="window.actionReturn('${order._id}','rejected')"
+                              style="padding:6px 14px;background:transparent;color:#E24B4A;
+                                     border:0.5px solid #E24B4A;cursor:pointer;font-size:11px;
+                                     letter-spacing:0.06em;border-radius:3px">
+                        REJECT
+                      </button>
+                    </div>
+                  </td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+  } catch (err) {
+    list.innerHTML = `<div style="color:red;padding:20px">Failed to load: ${err.message}</div>`;
+  }
+}
+
+window.actionReturn = async function(orderId, action) {
+  const note = action === 'rejected'
+    ? prompt('Enter reason for rejection (optional, shown in admin notes):')
+    : null;
+  if (action === 'rejected' && note === null) return; // user cancelled prompt
+
+  try {
+    await api(`/admin/orders/${orderId}/return-action`, {
+      method: 'PUT',
+      body: JSON.stringify({ action, adminNote: note || '' })
+    });
+    toast(action === 'approved' ? 'Return approved successfully' : 'Return rejected', action === 'approved' ? 'success' : 'error');
+    loadReturns();
+  } catch (err) {
+    toast('Failed: ' + err.message, 'error');
+  }
+};
 
 /* ══════════════════════════════════════
    PRODUCTS

@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getOrders, getMyOrders, getOrderById, updateOrder, cancelOrder, createReturnRequest } from '../controllers/orderController.js';
+import { createOrder, getOrders, getMyOrders, getOrderById, updateOrder, cancelOrder, initiateReturn } from '../controllers/orderController.js';
 import { protect, admin } from '../middleware/auth.js';
 import { validate, createOrderRules } from '../middleware/validate.js';
 
@@ -11,6 +11,6 @@ router.get('/:id',             protect,        getOrderById);
 router.get('/',                protect, admin, getOrders);
 router.put('/:id',             protect, admin, updateOrder);
 router.post('/:id/cancel',     protect,        cancelOrder);
-router.post('/:id/return-request', protect,    createReturnRequest);
+router.post('/:id/return-request', protect,    initiateReturn);
 
 export default router;

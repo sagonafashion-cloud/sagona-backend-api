@@ -242,26 +242,45 @@ export const cancelOrder = async (req, res) => {
 /* ═══════════════════════════════════
    CUSTOMER — RETURN / REPLACE REQUEST
 ═══════════════════════════════════ */
-export const createReturnRequest = async (req, res) => {
+export const initiateReturn = async (req, res) => {
   try {
-    const { returnType, reason } = req.body;
-    if (!reason?.trim()) return res.status(400).json({ success: false, message: 'Reason required' });
+    const { returnType, reason, replacementProductId, replacementProductName } = req.body;
 
     const order = await Order.findOne({ _id: req.params.id, 'customer.userId': req.user._id });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    if (order.status !== 'delivered') {
-      return res.status(400).json({ success: false, message: 'Only delivered orders can be returned or replaced' });
+    const delivered = ['delivered', 'DELIVERED'].includes(order.status);
+    if (!delivered) {
+      return res.status(400).json({ success: false, message: 'Order must be delivered before requesting return or replacement' });
     }
 
-    const note = `[${returnType?.toUpperCase() || 'RETURN'} REQUEST] ${reason} (submitted ${new Date().toISOString()})`;
-    order.notes = order.notes ? `${note} | ${order.notes}` : note;
+    if (order.returnRequest?.status === 'pending') {
+      return res.status(400).json({ success: false, message: 'A return request is already pending for this order' });
+    }
+
+    order.returnRequest = {
+      requestedAt: new Date(),
+      reason: reason || '',
+      type: returnType || 'return',
+      status: 'pending',
+      replacementProductId: replacementProductId || '',
+      replacementProductName: replacementProductName || ''
+    };
+    order.status = 'return_requested';
     await order.save();
 
-    res.json({ success: true, message: `${returnType === 'replace' ? 'Replacement' : 'Return'} request submitted. We will contact you within 24 hours.` });
+    console.log(`Return request: Order ${order.orderNumber} | Type: ${returnType} | Reason: ${reason}`);
+
+    res.json({
+      success: true,
+      message: returnType === 'replace'
+        ? 'Replacement request submitted. Our team will contact you within 24 hours.'
+        : 'Return request submitted. Our team will contact you within 24 hours.',
+      data: { orderNumber: order.orderNumber, returnType, status: 'pending' }
+    });
   } catch (err) {
-    console.error('createReturnRequest:', err);
-    res.status(500).json({ success: false, message: 'Request failed' });
+    console.error('initiateReturn error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -294,29 +313,66 @@ export const createManualOrder = async (req, res) => {
 };
 
 /* ═══════════════════════════════════
-   ADMIN — INITIATE RETURN
+   ADMIN — PROCESS RETURN (legacy admin-initiated)
 ═══════════════════════════════════ */
-export const initiateReturn = async (req, res) => {
+export const adminInitiateReturn = async (req, res) => {
   try {
-    const { reason, items } = req.body;
+    const { reason } = req.body;
     if (!reason) return res.status(400).json({ success: false, message: 'Reason required' });
 
     const existing = await Order.findById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: 'Order not found' });
 
     const newNotes = `Return initiated: ${reason}${existing.notes ? ` | ${existing.notes}` : ''}`;
-
     const order = await Order.findByIdAndUpdate(
       req.params.id,
       { status: 'returned', notes: newNotes },
       { new: true }
     );
 
-    // TODO Phase 4: send return confirmation email
-
     res.json({ success: true, data: order });
   } catch (err) {
-    console.error('initiateReturn:', err);
+    console.error('adminInitiateReturn:', err);
     res.status(500).json({ success: false, message: 'Return initiation failed' });
+  }
+};
+
+/* ═══════════════════════════════════
+   ADMIN — GET PENDING RETURN REQUESTS
+═══════════════════════════════════ */
+export const getPendingReturns = async (req, res) => {
+  try {
+    const returns = await Order.find({ 'returnRequest.status': 'pending' })
+      .sort({ 'returnRequest.requestedAt': -1 })
+      .lean();
+    res.json({ success: true, data: returns, total: returns.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ═══════════════════════════════════
+   ADMIN — APPROVE / REJECT RETURN
+═══════════════════════════════════ */
+export const actionReturn = async (req, res) => {
+  try {
+    const { action, adminNote } = req.body;
+    if (!['approved', 'rejected'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'action must be approved or rejected' });
+    }
+
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    order.returnRequest.status    = action;
+    order.returnRequest.adminNote = adminNote || '';
+    order.returnRequest.resolvedAt = new Date();
+    order.status = action === 'approved' ? 'returned' : 'delivered';
+    await order.save();
+
+    res.json({ success: true, message: `Return request ${action}`, data: order });
+  } catch (err) {
+    console.error('actionReturn:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
