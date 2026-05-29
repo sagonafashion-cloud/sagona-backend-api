@@ -260,7 +260,13 @@
       <div id="section-products" style="display:none">
         <div class="section-header">
           <h2>Products</h2>
-          <button class="btn gold" id="add-product-btn">+ Add Product</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost" id="bulk-upload-btn"
+                    style="border-color:var(--gold);color:var(--gold)">
+              &#8679; BULK UPLOAD
+            </button>
+            <button class="btn gold" id="add-product-btn">+ Add Product</button>
+          </div>
         </div>
         <div class="filter-bar">
           <input id="product-search" placeholder="Search products…" style="flex:1;min-width:200px">

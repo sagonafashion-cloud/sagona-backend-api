@@ -631,7 +631,7 @@ function renderProducts(products) {
       <td><span class="pill ${p.status === 'active' ? 'pill-delivered' : 'pill-placed'}">${p.status || 'active'}</span></td>
       <td style="white-space:nowrap">
         <button class="btn ghost" style="padding:5px 10px;font-size:10px" onclick="editProduct('${p._id}')">Edit</button>
-        <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#C9A84C" onclick="window.openSizingConfig('${p._id}','${p.name?.replace(/'/g,'')}')">Sizing</button>
+        <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#C9A84C" onclick="window.openSizingConfig('${p._id}')">Sizing</button>
         <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#dc2626" onclick="archiveProduct('${p._id}','${p.name}')">Archive</button>
       </td>
     </tr>`;
@@ -641,6 +641,9 @@ function renderProducts(products) {
 document.getElementById('product-search')?.addEventListener('input', debounce(loadProducts, 400));
 document.getElementById('product-category-filter')?.addEventListener('change', loadProducts);
 document.getElementById('product-status-filter')?.addEventListener('change', loadProducts);
+
+/* ── bulk upload ── */
+document.getElementById('bulk-upload-btn')?.addEventListener('click', () => openBulkUpload());
 
 /* ── add product ── */
 document.getElementById('add-product-btn')?.addEventListener('click', () => {
@@ -840,7 +843,7 @@ const GARMENT_FIELDS = [
   { key: 'inseam',        label: 'Inseam' }
 ];
 
-window.openSizingConfig = async function(productId, productName) {
+window.openSizingConfig = async function(productId) {
   try {
     const data = await api(`/products/${productId}`);
     const p    = data.data || data;
@@ -977,6 +980,414 @@ window.saveSizingConfig = async function(productId) {
     toast(err.message || 'Save failed', 'error');
   }
 };
+
+/* ══════════════════════════════════════
+   BULK PRODUCT UPLOAD
+══════════════════════════════════════ */
+function openBulkUpload() {
+  document.getElementById('bulk-modal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'bulk-modal';
+  modal.style.cssText = [
+    'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;',
+    'display:flex;align-items:center;justify-content:center;padding:20px'
+  ].join('');
+
+  modal.innerHTML = `
+    <div style="background:#fff;width:100%;max-width:860px;max-height:90vh;
+                overflow-y:auto;border-radius:8px">
+
+      <div style="background:#0A0A0A;padding:20px 24px;border-radius:8px 8px 0 0;
+                  display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="color:#C9A84C;font-size:16px;font-weight:600;letter-spacing:0.06em">
+            BULK PRODUCT UPLOAD
+          </div>
+          <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:3px">
+            Upload Excel, CSV, Word, or PDF — up to 100 products at once
+          </div>
+        </div>
+        <button onclick="document.getElementById('bulk-modal').remove()"
+                style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer">
+          &#215;
+        </button>
+      </div>
+
+      <div style="padding:24px">
+
+        <!-- Step 1: Upload -->
+        <div id="bulk-step-upload">
+          <div style="background:#EAF3DE;border:0.5px solid #1D9E75;border-radius:6px;
+                      padding:14px 18px;margin-bottom:20px;display:flex;
+                      align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:#0A0A0A;margin-bottom:3px">
+                &#128196; Download the Sagona Product Template
+              </div>
+              <div style="font-size:12px;color:#555">
+                Fill this template and upload it. Includes all required fields,
+                size measurements, and sample data.
+              </div>
+            </div>
+            <a href="/nc_assets/files/Sagona_Product_Upload_Template.xlsx"
+               download="Sagona_Product_Upload_Template.xlsx"
+               style="padding:9px 18px;background:#1D9E75;color:#fff;text-decoration:none;
+                      border-radius:3px;font-size:12px;letter-spacing:0.08em;
+                      font-weight:500;white-space:nowrap">
+              &#8681; DOWNLOAD TEMPLATE
+            </a>
+          </div>
+
+          <div id="bulk-drop-zone"
+               onclick="document.getElementById('bulk-file-input').click()"
+               ondragover="event.preventDefault();this.style.borderColor='#C9A84C'"
+               ondragleave="this.style.borderColor='#E8E5E0'"
+               ondrop="window.handleBulkDrop(event)"
+               style="border:2px dashed #E8E5E0;border-radius:8px;padding:40px 20px;
+                      text-align:center;cursor:pointer;transition:border-color 0.2s;
+                      background:#FAFAF8;margin-bottom:20px">
+            <input type="file" id="bulk-file-input"
+                   accept=".xlsx,.xls,.csv,.docx,.pdf"
+                   style="display:none"
+                   onchange="window.handleBulkFileSelect(this)">
+            <div style="font-size:32px;margin-bottom:12px">&#128196;</div>
+            <div style="font-size:15px;font-weight:500;color:#0A0A0A;margin-bottom:6px">
+              Click to select file or drag and drop here
+            </div>
+            <div style="font-size:12px;color:#888;margin-bottom:4px">
+              Supported: Excel (.xlsx, .xls), CSV, Word (.docx), PDF
+            </div>
+            <div style="font-size:11px;color:#aaa">Maximum file size: 20MB</div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+            ${[
+              { val:'create_and_update', label:'Create new + Update existing', checked:true },
+              { val:'create_only',       label:'Create new only (skip existing)', checked:false },
+              { val:'update_only',       label:'Update existing only', checked:false }
+            ].map(o => `
+              <label style="display:flex;align-items:center;gap:7px;cursor:pointer;
+                            font-size:13px;padding:10px 14px;border:0.5px solid #E8E5E0;
+                            border-radius:5px;flex:1;min-width:140px">
+                <input type="radio" name="upload-mode" value="${o.val}"
+                       ${o.checked ? 'checked' : ''}
+                       style="accent-color:#C9A84C">
+                ${o.label}
+              </label>
+            `).join('')}
+          </div>
+
+          <div id="bulk-upload-progress" style="display:none;margin-bottom:16px">
+            <div style="height:4px;background:#E8E5E0;border-radius:99px;overflow:hidden">
+              <div id="bulk-progress-bar"
+                   style="height:100%;background:#C9A84C;border-radius:99px;
+                          width:0%;transition:width 0.3s"></div>
+            </div>
+            <div id="bulk-progress-text"
+                 style="font-size:12px;color:#888;margin-top:6px;text-align:center">
+              Parsing file...
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Preview -->
+        <div id="bulk-step-preview" style="display:none">
+          <div id="bulk-preview-content"></div>
+        </div>
+
+        <!-- Step 3: Result -->
+        <div id="bulk-step-result" style="display:none">
+          <div id="bulk-result-content"></div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+window.handleBulkDrop = function(event) {
+  event.preventDefault();
+  document.getElementById('bulk-drop-zone').style.borderColor = '#E8E5E0';
+  const file = event.dataTransfer.files[0];
+  if (file) _processBulkFile(file);
+};
+
+window.handleBulkFileSelect = function(input) {
+  if (input.files[0]) _processBulkFile(input.files[0]);
+};
+
+async function _processBulkFile(file) {
+  const progress = document.getElementById('bulk-upload-progress');
+  const bar      = document.getElementById('bulk-progress-bar');
+  const text     = document.getElementById('bulk-progress-text');
+  const dropZone = document.getElementById('bulk-drop-zone');
+
+  if (progress) progress.style.display = 'block';
+  if (bar)      bar.style.width = '20%';
+  if (text)     text.textContent = `Parsing ${file.name}...`;
+  if (dropZone) dropZone.style.opacity = '0.5';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const data = await api('/admin/products/bulk-parse', { method: 'POST', body: formData });
+
+    if (bar) bar.style.width = '100%';
+
+    setTimeout(() => {
+      if (progress) progress.style.display = 'none';
+      if (bar)      bar.style.width = '0%';
+      if (dropZone) dropZone.style.opacity = '1';
+      _showBulkPreview(data.data, file.name);
+    }, 400);
+
+  } catch (err) {
+    if (progress) progress.style.display = 'none';
+    if (dropZone) dropZone.style.opacity = '1';
+    if (bar)      bar.style.width = '0%';
+    toast('Parse failed: ' + err.message, 'error');
+  }
+}
+
+function _showBulkPreview(data, filename) {
+  document.getElementById('bulk-step-upload').style.display   = 'none';
+  document.getElementById('bulk-step-preview').style.display  = 'block';
+
+  const { products, summary, parseErrors } = data;
+  window._bulkParsedProducts = products;
+
+  const summaryCards = [
+    { label: 'Total found',  val: summary.total,       color: '#0A0A0A' },
+    { label: 'Valid',        val: summary.valid,       color: '#1D9E75' },
+    { label: 'Invalid',      val: summary.invalid,     color: '#E24B4A' },
+    { label: 'Will create',  val: summary.willCreate,  color: '#C9A84C' },
+    { label: 'Will update',  val: summary.willUpdate,  color: '#7F77DD' }
+  ];
+
+  const rows = products.map((p, i) => {
+    const isUpdate   = summary.existingSkus?.includes(p.sku);
+    const measCount  = p._garmentMeasurements?.length || 0;
+    const statusBadge = p.valid
+      ? (isUpdate
+          ? '<span style="padding:2px 8px;border-radius:99px;font-size:10px;background:#EEEDFE;color:#7F77DD;font-weight:600">UPDATE</span>'
+          : '<span style="padding:2px 8px;border-radius:99px;font-size:10px;background:#EAF3DE;color:#1D9E75;font-weight:600">CREATE</span>')
+      : '<span style="padding:2px 8px;border-radius:99px;font-size:10px;background:#FCEBEB;color:#E24B4A;font-weight:600">INVALID</span>';
+
+    const actionCell = p.valid
+      ? (p._warnings?.length
+          ? `<span title="${p._warnings.join('\n')}" style="font-size:11px;color:#EF9F27;cursor:help">&#9888; ${p._warnings.length} warning${p._warnings.length > 1 ? 's' : ''}</span>`
+          : '<span style="color:#1D9E75;font-size:11px">&#10003; Ready</span>')
+      : `<span title="${p._errors?.join('\n')}" style="font-size:11px;color:#E24B4A;cursor:help">&#9888; ${p._errors?.[0] || 'Invalid'}</span>`;
+
+    return `
+      <tr class="${p.valid ? 'bulk-valid-row' : 'bulk-invalid-row'}"
+          style="border-bottom:0.5px solid #E8E5E0;background:${i % 2 === 0 ? '#fff' : '#FAFAF8'}">
+        <td style="padding:8px 12px">${statusBadge}</td>
+        <td style="padding:8px 12px;font-weight:500;color:#0A0A0A;max-width:200px;
+                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${p.product_name || '—'}
+        </td>
+        <td style="padding:8px 12px;font-family:monospace;font-size:11px;color:#555">
+          ${p.sku || '—'}
+        </td>
+        <td style="padding:8px 12px;text-align:center">
+          ${p.price ? '₹' + p.price : '—'}
+        </td>
+        <td style="padding:8px 12px;text-align:center">${p.category || '—'}</td>
+        <td style="padding:8px 12px;font-size:11px;color:#555;max-width:140px;
+                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${p.available_sizes || '—'}
+        </td>
+        <td style="padding:8px 12px;text-align:center">${p.fit_type || 'regular'}</td>
+        <td style="padding:8px 12px;text-align:center">
+          ${measCount > 0
+            ? `<span style="color:#1D9E75;font-weight:500">&#10003; ${measCount} sizes</span>`
+            : '<span style="color:#aaa">—</span>'}
+        </td>
+        <td style="padding:8px 12px">${actionCell}</td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('bulk-preview-content').innerHTML = `
+    <div style="margin-bottom:20px">
+      <div style="font-size:14px;font-weight:500;color:#0A0A0A;margin-bottom:12px">
+        &#128202; Parse Results: <span style="color:#888;font-weight:400">${filename}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">
+        ${summaryCards.map(s => `
+          <div style="background:#F8F6F3;border-radius:6px;padding:12px;
+                      text-align:center;border:0.5px solid #E8E5E0">
+            <div style="font-size:22px;font-weight:600;color:${s.color}">${s.val}</div>
+            <div style="font-size:11px;color:#888;margin-top:2px">${s.label}</div>
+          </div>
+        `).join('')}
+      </div>
+      ${summary.duplicateSkusInFile?.length ? `
+        <div style="background:#FCEBEB;border-radius:5px;padding:10px 14px;
+                    margin-bottom:10px;font-size:12px;color:#E24B4A">
+          &#9888; Duplicate SKUs in file: ${summary.duplicateSkusInFile.join(', ')}
+          — only the last occurrence will be used.
+        </div>` : ''}
+      ${summary.existingSkus?.length ? `
+        <div style="background:#FAEEDA;border-radius:5px;padding:10px 14px;
+                    margin-bottom:10px;font-size:12px;color:#633806">
+          &#128204; These SKUs already exist and will be updated:
+          ${summary.existingSkus.map(s => `<strong>${s}</strong>`).join(', ')}
+        </div>` : ''}
+      ${parseErrors?.length ? `
+        <div style="background:#FCEBEB;border-radius:5px;padding:10px 14px;
+                    margin-bottom:10px;font-size:12px;color:#E24B4A">
+          ${parseErrors.map(e => `<div>&#9888; ${e}</div>`).join('')}
+        </div>` : ''}
+    </div>
+
+    <div style="border:0.5px solid #E8E5E0;border-radius:6px;overflow:hidden;margin-bottom:20px">
+      <div style="background:#0A0A0A;padding:10px 14px;display:flex;
+                  justify-content:space-between;align-items:center">
+        <span style="color:#fff;font-size:12px;font-weight:500;letter-spacing:0.06em">
+          PRODUCT PREVIEW
+        </span>
+        <label style="color:#888;font-size:11px;display:flex;align-items:center;gap:6px;
+                      cursor:pointer">
+          <input type="checkbox" id="bulk-hide-invalid"
+                 onchange="window.toggleBulkInvalidRows()"
+                 style="accent-color:#C9A84C">
+          Hide invalid rows
+        </label>
+      </div>
+      <div style="overflow-x:auto;max-height:380px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:800px">
+          <thead style="position:sticky;top:0;z-index:1">
+            <tr style="background:#1a1a1a">
+              ${['STATUS','PRODUCT NAME','SKU','PRICE','CATEGORY','SIZES','FIT','MEASUREMENTS','ACTION']
+                .map(h => `<th style="padding:9px 12px;text-align:left;
+                                      color:${h==='STATUS'?'#C9A84C':'#fff'};
+                                      font-size:10px;letter-spacing:0.06em;
+                                      white-space:nowrap">${h}</th>`)
+                .join('')}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button id="bulk-confirm-btn"
+              onclick="window.confirmBulkUpload()"
+              ${summary.valid === 0 ? 'disabled' : ''}
+              style="flex:1;padding:13px;background:#C9A84C;color:#fff;border:none;
+                     cursor:pointer;font-size:12px;letter-spacing:0.1em;
+                     border-radius:3px;font-family:inherit;font-weight:500;
+                     ${summary.valid === 0 ? 'opacity:0.4;cursor:not-allowed;' : ''}">
+        &#8679; UPLOAD ${summary.valid} VALID PRODUCT${summary.valid !== 1 ? 'S' : ''}
+        ${summary.invalid > 0 ? `(${summary.invalid} invalid will be skipped)` : ''}
+      </button>
+      <button onclick="document.getElementById('bulk-step-preview').style.display='none';
+                       document.getElementById('bulk-step-upload').style.display='block'"
+              style="padding:13px 20px;background:transparent;border:0.5px solid #E8E5E0;
+                     cursor:pointer;font-size:12px;border-radius:3px;font-family:inherit">
+        &#8678; BACK
+      </button>
+    </div>
+  `;
+}
+
+window.toggleBulkInvalidRows = function() {
+  const hide = document.getElementById('bulk-hide-invalid')?.checked;
+  document.querySelectorAll('.bulk-invalid-row').forEach(r => {
+    r.style.display = hide ? 'none' : '';
+  });
+};
+
+window.confirmBulkUpload = async function() {
+  const mode = document.querySelector('input[name="upload-mode"]:checked')?.value
+    || 'create_and_update';
+  const btn = document.getElementById('bulk-confirm-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'UPLOADING...'; }
+
+  try {
+    const data = await api('/admin/products/bulk-upload', {
+      method: 'POST',
+      body:   JSON.stringify({ products: window._bulkParsedProducts, mode })
+    });
+    _showBulkResult(data.data);
+  } catch (err) {
+    toast('Upload failed: ' + err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'RETRY'; }
+  }
+};
+
+function _showBulkResult(results) {
+  document.getElementById('bulk-step-preview').style.display = 'none';
+  document.getElementById('bulk-step-result').style.display  = 'block';
+
+  const total = results.created.length + results.updated.length +
+                results.failed.length  + results.skipped.length;
+
+  const cards = [
+    { label: 'Created', val: results.created.length, color: '#1D9E75', bg: '#EAF3DE' },
+    { label: 'Updated', val: results.updated.length, color: '#7F77DD', bg: '#EEEDFE' },
+    { label: 'Failed',  val: results.failed.length,  color: '#E24B4A', bg: '#FCEBEB' },
+    { label: 'Skipped', val: results.skipped.length, color: '#888',    bg: '#F0EDE8' }
+  ];
+
+  document.getElementById('bulk-result-content').innerHTML = `
+    <div style="text-align:center;padding:20px 0 28px">
+      <div style="font-size:48px;margin-bottom:14px">
+        ${results.failed.length === 0 ? '&#127881;' : '&#9888;&#65039;'}
+      </div>
+      <h3 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;
+                 font-weight:500;color:#0A0A0A;margin-bottom:6px">
+        Upload Complete
+      </h3>
+      <p style="font-size:13px;color:#888">${total} products processed</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px">
+      ${cards.map(s => `
+        <div style="background:${s.bg};border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:28px;font-weight:600;color:${s.color}">${s.val}</div>
+          <div style="font-size:12px;color:#888;margin-top:2px">${s.label}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    ${results.failed.length ? `
+      <div style="background:#FCEBEB;border-radius:6px;padding:14px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:600;color:#E24B4A;margin-bottom:8px">
+          FAILED — please check and re-upload:
+        </div>
+        ${results.failed.map(f => `
+          <div style="font-size:12px;color:#E24B4A;margin-bottom:3px">
+            &bull; ${f.sku} (${f.name || 'unknown'}) — ${f.reason}
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('bulk-modal').remove();loadProducts()"
+              style="flex:1;padding:12px;background:#0A0A0A;color:#fff;border:none;
+                     cursor:pointer;font-size:12px;letter-spacing:0.1em;
+                     border-radius:3px;font-family:inherit">
+        &#10003; VIEW ALL PRODUCTS
+      </button>
+      <button onclick="document.getElementById('bulk-step-result').style.display='none';
+                       document.getElementById('bulk-step-upload').style.display='block'"
+              style="padding:12px 20px;background:transparent;border:0.5px solid #E8E5E0;
+                     cursor:pointer;font-size:12px;border-radius:3px;font-family:inherit">
+        UPLOAD ANOTHER FILE
+      </button>
+    </div>
+  `;
+}
 
 /* ══════════════════════════════════════
    STORES
