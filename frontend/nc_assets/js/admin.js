@@ -631,6 +631,7 @@ function renderProducts(products) {
       <td><span class="pill ${p.status === 'active' ? 'pill-delivered' : 'pill-placed'}">${p.status || 'active'}</span></td>
       <td style="white-space:nowrap">
         <button class="btn ghost" style="padding:5px 10px;font-size:10px" onclick="editProduct('${p._id}')">Edit</button>
+        <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#C9A84C" onclick="window.openSizingConfig('${p._id}','${p.name?.replace(/'/g,'')}')">Sizing</button>
         <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#dc2626" onclick="archiveProduct('${p._id}','${p.name}')">Archive</button>
       </td>
     </tr>`;
@@ -824,6 +825,157 @@ window.archiveProduct = async (id, name) => {
     toast('Product archived', 'success');
     loadProducts();
   } catch (err) { toast(err.message || 'Archive failed', 'error'); }
+};
+
+/* ══════════════════════════════════════
+   SIZING CONFIGURATION
+══════════════════════════════════════ */
+const GARMENT_SIZES = ['1Y','2Y','3Y','4Y','5Y','6Y','7Y','8Y','9Y','10Y','11Y','12Y'];
+const GARMENT_FIELDS = [
+  { key: 'chestWidth',    label: 'Chest W' },
+  { key: 'waistWidth',    label: 'Waist W' },
+  { key: 'shoulderWidth', label: 'Shoulder' },
+  { key: 'garmentLength', label: 'Length' },
+  { key: 'sleeveLength',  label: 'Sleeve' },
+  { key: 'inseam',        label: 'Inseam' }
+];
+
+window.openSizingConfig = async function(productId, productName) {
+  try {
+    const data = await api(`/products/${productId}`);
+    const p    = data.data || data;
+    const meas = p.garmentMeasurements || [];
+    const getMeas = (size, field) => meas.find(m => m.size === size)?.[field] || '';
+
+    const opt = (arr, cur) => arr.map(v =>
+      `<option value="${v}" ${cur === v ? 'selected' : ''}>${v}</option>`
+    ).join('');
+
+    openModal(`
+      <h2 style="font-size:18px;margin-bottom:4px">Sizing Config</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:20px">${p.name}</p>
+
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+                  color:#888;margin-bottom:12px">FIT CONFIGURATION</div>
+      <div class="form-2col" style="margin-bottom:16px">
+        <div>
+          <label>Fit Type</label>
+          <select id="sc-fitType">
+            ${opt(['slim','regular','relaxed','oversized'], p.fitType || 'regular')}
+          </select>
+        </div>
+        <div>
+          <label>Fabric Stretch</label>
+          <select id="sc-fabricStretch">
+            ${opt(['none','low','medium','high'], p.fabricStretch || 'low')}
+          </select>
+        </div>
+        <div>
+          <label>Fabric Thickness</label>
+          <select id="sc-fabricThickness">
+            ${opt(['thin','medium','thick'], p.fabricThickness || 'medium')}
+          </select>
+        </div>
+        <div>
+          <label>Shrinkage % (after first wash)</label>
+          <input id="sc-shrinkage" type="number" min="0" max="15" step="0.5"
+                 value="${p.shrinkagePercent || 0}">
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label>Fit Note (shown to customer)</label>
+        <input id="sc-fitNote" type="text"
+               placeholder='e.g. "Runs small — size up recommended"'
+               value="${p.fitNote || ''}">
+      </div>
+      <div style="margin-bottom:20px">
+        <label>Size Up Note</label>
+        <input id="sc-sizeUpNote" type="text"
+               placeholder='e.g. "This product runs one size small"'
+               value="${p.sizeUpNote || ''}">
+      </div>
+
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+                  color:#888;margin-bottom:6px">GARMENT MEASUREMENTS (cm)</div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:12px">
+        All widths are half-measurements (garment flat). Leave blank to skip a size.
+      </div>
+      <div style="overflow-x:auto;margin-bottom:20px">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="background:#F8F6F3">
+              <th style="padding:8px;text-align:left;font-weight:600;color:#555;
+                         border:0.5px solid #E8E5E0">Size</th>
+              ${GARMENT_FIELDS.map(f =>
+                `<th style="padding:8px;text-align:center;font-weight:600;color:#555;
+                            border:0.5px solid #E8E5E0;white-space:nowrap">${f.label}</th>`
+              ).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${GARMENT_SIZES.map(size => `
+              <tr>
+                <td style="padding:6px 8px;border:0.5px solid #E8E5E0;font-weight:600;
+                           color:#0A0A0A;background:#FAFAFA;white-space:nowrap">${size}</td>
+                ${GARMENT_FIELDS.map(f => `
+                  <td style="padding:3px;border:0.5px solid #E8E5E0">
+                    <input type="number" min="0" max="100" step="0.5"
+                           id="sc-${size}-${f.key}"
+                           value="${getMeas(size, f.key)}"
+                           style="width:100%;border:none;text-align:center;
+                                  padding:6px 2px;font-size:12px;outline:none;
+                                  background:transparent;box-sizing:border-box;
+                                  min-width:48px">
+                  </td>
+                `).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn gold" onclick="window.saveSizingConfig('${productId}')">
+          Save Sizing Config
+        </button>
+        <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      </div>
+    `);
+  } catch (err) {
+    toast(err.message || 'Failed to load product', 'error');
+  }
+};
+
+window.saveSizingConfig = async function(productId) {
+  const garmentMeasurements = GARMENT_SIZES.reduce((acc, size) => {
+    const entry = { size };
+    let hasAny  = false;
+    GARMENT_FIELDS.forEach(({ key }) => {
+      const val = parseFloat(document.getElementById(`sc-${size}-${key}`)?.value);
+      if (!isNaN(val) && val > 0) { entry[key] = val; hasAny = true; }
+    });
+    if (hasAny) acc.push(entry);
+    return acc;
+  }, []);
+
+  const payload = {
+    fitType:          document.getElementById('sc-fitType')?.value,
+    fabricStretch:    document.getElementById('sc-fabricStretch')?.value,
+    fabricThickness:  document.getElementById('sc-fabricThickness')?.value,
+    shrinkagePercent: parseFloat(document.getElementById('sc-shrinkage')?.value) || 0,
+    fitNote:          document.getElementById('sc-fitNote')?.value.trim()    || '',
+    sizeUpNote:       document.getElementById('sc-sizeUpNote')?.value.trim() || '',
+    garmentMeasurements
+  };
+
+  try {
+    await api(`/admin/products/${productId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    toast(`Sizing config saved — ${garmentMeasurements.length} size${garmentMeasurements.length !== 1 ? 's' : ''} configured`, 'success');
+    closeModal();
+    loadProducts();
+  } catch (err) {
+    toast(err.message || 'Save failed', 'error');
+  }
 };
 
 /* ══════════════════════════════════════

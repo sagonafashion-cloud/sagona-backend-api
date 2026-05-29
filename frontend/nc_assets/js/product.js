@@ -1,6 +1,7 @@
 import { request }  from './api.js';
 import { API_BASE } from './config.js';
 import { getCart, saveCart } from './storage.js';
+import { initSizingTool } from './sizing.js';
 
 const wrap = document.querySelector('#product-view');
 const id   = new URLSearchParams(location.search).get('id');
@@ -234,6 +235,9 @@ async function checkPincode(pincode) {
 
   // accordions
   initAccordions();
+
+  // AI size recommendation — shows button only when garment measurements exist
+  initSizingTool(p._id, !!(p.garmentMeasurements?.length));
 
   // update page title
   document.title = `${p.name} | SAGONA`;

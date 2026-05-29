@@ -167,6 +167,21 @@ function getOrderActions(order) {
     html += `<span style="font-size:11px;color:#999">Return window closed (7 days)</span>`;
   }
 
+  if (status === 'delivered') {
+    const fbKey = `sz_fb_${order._id}`;
+    if (!localStorage.getItem(fbKey)) {
+      const firstItem = order.items?.[0];
+      html += `
+        <button onclick="window.openFitFeedback('${order._id}','${firstItem?.productId || ''}','${firstItem?.size || ''}')"
+                style="padding:8px 18px;background:#EAF3DE;border:0.5px solid #1D9E75;color:#1D9E75;
+                       cursor:pointer;font-size:11px;letter-spacing:0.08em;border-radius:3px">
+          &#10024; HOW DID IT FIT?
+        </button>`;
+    } else {
+      html += `<span style="font-size:11px;color:#1D9E75">&#10003; Fit feedback given</span>`;
+    }
+  }
+
   return html
     ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:0.5px solid #E8E5E0">${html}</div>`
     : '';
@@ -185,6 +200,81 @@ window.cancelOrder = async function(orderId, orderNumber) {
       loadOrders();
     } else {
       alert(data.message || 'Could not cancel order');
+    }
+  } catch (err) {
+    alert('Failed: ' + err.message);
+  }
+};
+
+window.openFitFeedback = function(orderId, productId, chosenSize) {
+  document.getElementById('fit-feedback-modal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fit-feedback-modal';
+  modal.style.cssText = [
+    'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;',
+    'display:flex;align-items:center;justify-content:center;padding:16px'
+  ].join('');
+
+  const options = [
+    { value: 'perfect',        emoji: '&#128076;', label: 'Perfect fit!' },
+    { value: 'slightly_tight', emoji: '&#128528;', label: 'Slightly tight' },
+    { value: 'too_tight',      emoji: '&#128530;', label: 'Too tight — returning' },
+    { value: 'slightly_loose', emoji: '&#128522;', label: 'Slightly loose' },
+    { value: 'too_loose',      emoji: '&#128514;', label: 'Too loose — returning' }
+  ];
+
+  modal.innerHTML = `
+    <div style="background:#fff;width:100%;max-width:400px;border-radius:16px;
+                padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+      <h3 style="font-family:'Playfair Display',Georgia,serif;font-size:20px;
+                 font-weight:500;margin-bottom:6px;color:#0A0A0A">
+        How did it fit?
+      </h3>
+      <p style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.5">
+        Your feedback helps us recommend sizes better for other parents.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+        ${options.map(opt => `
+          <button onclick="window.submitFitFeedbackForm('${orderId}','${productId}','${chosenSize}','${opt.value}')"
+                  style="padding:12px 16px;border:0.5px solid #E8E5E0;border-radius:8px;
+                         background:#fff;cursor:pointer;text-align:left;font-size:13px;
+                         font-family:inherit;display:flex;align-items:center;gap:12px"
+                  onmouseover="this.style.background='#F8F6F3';this.style.borderColor='#C9A84C'"
+                  onmouseout="this.style.background='#fff';this.style.borderColor='#E8E5E0'">
+            <span style="font-size:22px">${opt.emoji}</span>
+            <span style="font-weight:500;color:#0A0A0A">${opt.label}</span>
+          </button>
+        `).join('')}
+      </div>
+      <button onclick="document.getElementById('fit-feedback-modal').remove()"
+              style="width:100%;padding:10px;border:0.5px solid #E8E5E0;border-radius:6px;
+                     background:transparent;cursor:pointer;font-size:12px;color:#888;
+                     font-family:inherit;letter-spacing:0.06em">
+        SKIP
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+};
+
+window.submitFitFeedbackForm = async function(orderId, productId, chosenSize, fitFeedback) {
+  try {
+    const res  = await fetch(`${API_BASE}/sizing/feedback`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body:    JSON.stringify({ productId, orderId, chosenSize, fitFeedback })
+    });
+    const data = await res.json();
+    if (data.success) {
+      localStorage.setItem(`sz_fb_${orderId}`, '1');
+      document.getElementById('fit-feedback-modal')?.remove();
+      showToast(data.message || 'Thank you for your feedback!');
+      loadOrders();
+    } else {
+      alert(data.message || 'Failed to submit feedback');
     }
   } catch (err) {
     alert('Failed: ' + err.message);
