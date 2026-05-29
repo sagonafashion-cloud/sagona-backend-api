@@ -61,7 +61,51 @@ const productSchema = new mongoose.Schema(
 
     /* ── inventory ── */
     variants: [variantSchema],
-    stores: [storeStockSchema]
+    stores: [storeStockSchema],
+
+    /* ── AI sizing configuration — set by admin per product ── */
+    fitType: {
+      type: String,
+      enum: ['slim', 'regular', 'relaxed', 'oversized'],
+      default: 'regular'
+    },
+    fabricStretch: {
+      type: String,
+      enum: ['none', 'low', 'medium', 'high'],
+      default: 'low'
+    },
+    fabricThickness: {
+      type: String,
+      enum: ['thin', 'medium', 'thick'],
+      default: 'medium'
+    },
+    shrinkagePercent: { type: Number, default: 0 },
+    fitNote: String,
+    sizeUpNote: String,
+
+    garmentMeasurements: [{
+      size: String,
+      chestWidth: Number,
+      waistWidth: Number,
+      hipWidth: Number,
+      shoulderWidth: Number,
+      sleeveLength: Number,
+      garmentLength: Number,
+      inseam: Number,
+      neckWidth: Number
+    }],
+
+    sizingFeedback: [{
+      userId: mongoose.Schema.Types.ObjectId,
+      recommendedSize: String,
+      chosenSize: String,
+      fitFeedback: {
+        type: String,
+        enum: ['perfect', 'slightly_tight', 'too_tight', 'slightly_loose', 'too_loose']
+      },
+      returnedForSize: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now }
+    }]
   },
   { timestamps: true }
 );

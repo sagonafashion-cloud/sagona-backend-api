@@ -42,7 +42,34 @@ const userSchema = new mongoose.Schema(
 
     wishlist: [wishlistItemSchema],
 
-    expoPushToken: { type: String, trim: true }
+    expoPushToken: { type: String, trim: true },
+
+    childProfiles: [{
+      name: String,
+      gender: { type: String, enum: ['boy', 'girl', 'unisex'] },
+      dateOfBirth: Date,
+      height: Number,
+      weight: Number,
+      chestCircumference: Number,
+      waistCircumference: Number,
+      hipCircumference: Number,
+      shoulderWidth: Number,
+      inseamLength: Number,
+      lastMeasuredAt: Date,
+      measurementMethod: {
+        type: String,
+        enum: ['camera', 'manual', 'tape_measure'],
+        default: 'manual'
+      },
+      purchaseHistory: [{
+        productId: mongoose.Schema.Types.ObjectId,
+        productName: String,
+        size: String,
+        fitFeedback: String,
+        purchasedAt: Date
+      }],
+      createdAt: { type: Date, default: Date.now }
+    }]
   },
   { timestamps: true }
 );

@@ -32,6 +32,7 @@ import gstRoutes          from './routes/gstRoutes.js';
 import { adminChat }      from './controllers/chatController.js';
 import { adminProtect }  from './middleware/adminAuth.js';
 import homepageRoutes    from './routes/homepageRoutes.js';
+import sizingRoutes      from './routes/sizingRoutes.js';
 
 // ── Controllers (needed for raw-body webhook) ──────────────
 import { razorpayWebhook } from './controllers/paymentController.js';
@@ -165,6 +166,7 @@ app.use('/api/stores',   storeRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/chat',     chatRoutes);
 app.use('/api/support',  supportRoutes);
+app.use('/api/sizing',   sizingRoutes);
 
 // ── Admin API ──────────────────────────────────────────────
 app.use('/api/admin/auth',      adminAuthRoutes);
