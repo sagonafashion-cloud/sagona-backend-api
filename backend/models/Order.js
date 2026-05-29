@@ -60,19 +60,31 @@ const returnRequestSchema = new mongoose.Schema({
   resolvedAt:  { type: Date }
 }, { _id: false });
 
+const timelineEntrySchema = new mongoose.Schema({
+  status:      { type: String },
+  label:       { type: String },
+  description: { type: String },
+  timestamp:   { type: Date, default: Date.now },
+  location:    { type: String },
+  updatedBy:   { type: String }
+}, { _id: false });
+
 const shipmentSchema = new mongoose.Schema({
-  storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store' },
-  items: [{ type: String }],          // array of SKUs in this shipment
-  courier: { type: String },
-  trackingId: { type: String },
+  storeId:          { type: mongoose.Schema.Types.ObjectId, ref: 'Store' },
+  storeName:        { type: String },
+  items:            [{ type: String }],
+  courier:          { type: String },
+  trackingId:       { type: String },
+  trackingUrl:      { type: String },
   status: {
     type: String,
-    enum: ['pending', 'packed', 'dispatched', 'in_transit', 'delivered', 'returned'],
+    enum: ['pending', 'packed', 'dispatched', 'in_transit', 'out_for_delivery', 'delivered', 'failed_delivery', 'returned'],
     default: 'pending'
   },
-  etaDays: { type: Number },
-  dispatchedAt: { type: Date },
-  deliveredAt: { type: Date }
+  etaDays:          { type: Number },
+  dispatchedAt:     { type: Date },
+  expectedDelivery: { type: Date },
+  deliveredAt:      { type: Date }
 });
 
 /* ── main schema ── */
@@ -99,11 +111,13 @@ const orderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['placed', 'confirmed', 'packed', 'shipped', 'delivered', 'return_requested', 'returned', 'cancelled'],
+      enum: ['placed', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'return_requested', 'returned', 'cancelled'],
       default: 'placed'
     },
 
-    returnRequest: returnRequestSchema,
+    timeline:          [timelineEntrySchema],
+    estimatedDelivery: { type: Date },
+    returnRequest:     returnRequestSchema,
 
     invoiceUrl: { type: String },
     couponCode: { type: String },

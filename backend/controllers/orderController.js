@@ -3,7 +3,8 @@ import Product from '../models/Product.js';
 import User from '../models/User.js';
 import { calculateTax } from '../utils/taxCalculator.js';
 import { generateInvoiceForOrder } from './paymentController.js';
-import { sendOrderConfirmation, sendStatusUpdate } from '../utils/emailService.js';
+import { sendOrderConfirmation, sendStatusUpdate, sendOrderStatusEmail } from '../utils/emailService.js';
+import { buildTimelineEntry, calcEstimatedDelivery } from '../utils/orderTimeline.js';
 
 /* ═══════════════════════════════════
    CREATE ORDER (customer)
@@ -87,6 +88,11 @@ export const createOrder = async (req, res) => {
     // Loyalty: 1 point per ₹100
     const loyaltyEarned = Math.floor(billing.grandTotal / 100);
     await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: loyaltyEarned } });
+
+    // Add initial timeline entry and estimated delivery
+    order.timeline = [buildTimelineEntry('placed', '', 'system')];
+    order.estimatedDelivery = calcEstimatedDelivery(new Date(), 5);
+    await order.save();
 
     // COD: generate invoice + send confirmation (non-blocking)
     if (paymentMethod === 'COD') {
@@ -213,6 +219,90 @@ export const updateOrder = async (req, res) => {
     res.json({ success: true, data: order });
   } catch {
     res.status(400).json({ success: false, message: 'Update failed' });
+  }
+};
+
+/* ═══════════════════════════════════
+   ADMIN — UPDATE ORDER STATUS (enhanced: tracking + timeline)
+═══════════════════════════════════ */
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status, trackingId, courier, trackingUrl,
+            location, note, expectedDelivery } = req.body;
+
+    const validStatuses = [
+      'placed', 'confirmed', 'packed', 'shipped', 'out_for_delivery',
+      'delivered', 'cancelled', 'return_requested', 'returned'
+    ];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const prevStatus = order.status;
+    order.status = status;
+
+    // Build and append timeline entry
+    const entry = buildTimelineEntry(status, location || '', req.adminUser?.name || 'admin');
+    if (note) entry.description = note;
+    if (!order.timeline) order.timeline = [];
+    order.timeline.push(entry);
+
+    // Update shipment tracking if provided
+    if (trackingId || courier) {
+      if (!order.shipments || !order.shipments.length) order.shipments = [{}];
+      const shipment = order.shipments[0];
+      if (trackingId) shipment.trackingId = trackingId;
+      if (courier)    shipment.courier    = courier;
+      if (trackingUrl) shipment.trackingUrl = trackingUrl;
+      if (expectedDelivery) {
+        shipment.expectedDelivery = new Date(expectedDelivery);
+        order.estimatedDelivery   = new Date(expectedDelivery);
+      }
+      if (status === 'shipped')           shipment.dispatchedAt = new Date();
+      if (status === 'delivered')         shipment.deliveredAt  = new Date();
+      shipment.status =
+        status === 'shipped'          ? 'dispatched'      :
+        status === 'out_for_delivery' ? 'out_for_delivery' :
+        status === 'delivered'        ? 'delivered'       :
+        shipment.status;
+    }
+
+    await order.save();
+
+    // Email customer on status change
+    if (order.customer?.email && prevStatus !== status) {
+      sendOrderStatusEmail(order, status).catch((err) =>
+        console.error('Status email error:', err.message)
+      );
+    }
+
+    res.json({ success: true, data: order, message: `Status updated to ${status}` });
+  } catch (err) {
+    console.error('updateOrderStatus error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ═══════════════════════════════════
+   CUSTOMER — GET ORDER TRACKING
+═══════════════════════════════════ */
+export const getOrderTracking = async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      ...(req.user ? { 'customer.userId': req.user._id } : {})
+    })
+    .select('orderNumber status timeline shipments estimatedDelivery createdAt customer billing items')
+    .lean();
+
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    res.json({ success: true, data: order });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
