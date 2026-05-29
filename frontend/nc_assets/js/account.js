@@ -343,6 +343,142 @@ async function submitReturnRequest(orderId, type, reason, replacementProductId, 
   }
 }
 
+const PROGRESS_STEPS = [
+  { key: 'placed',           label: 'Placed' },
+  { key: 'confirmed',        label: 'Confirmed' },
+  { key: 'packed',           label: 'Packed' },
+  { key: 'shipped',          label: 'Shipped' },
+  { key: 'out_for_delivery', label: 'Out for Delivery' },
+  { key: 'delivered',        label: 'Delivered' }
+];
+
+function buildProgressBar(status) {
+  const terminal  = ['cancelled', 'return_requested', 'returned'];
+  if (terminal.includes(status)) return '';
+
+  const activeIdx = PROGRESS_STEPS.findIndex((s) => s.key === status);
+  const pct       = activeIdx < 0 ? 0 : Math.round((activeIdx / (PROGRESS_STEPS.length - 1)) * 100);
+
+  const circles = PROGRESS_STEPS.map((step, i) => {
+    const done    = i <= activeIdx;
+    const bg      = done ? '#C9A84C' : '#E8E5E0';
+    const textCol = done ? '#fff' : '#999';
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+        <div style="width:24px;height:24px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:11px;color:${textCol};font-weight:600;position:relative;z-index:1">
+          ${done ? '✓' : ''}
+        </div>
+        <span style="font-size:10px;color:${done ? '#C9A84C' : '#aaa'};text-align:center;line-height:1.3">${step.label}</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div style="padding:16px 0 4px">
+      <div style="position:relative;display:flex;align-items:flex-start">
+        <div style="position:absolute;top:12px;left:0;right:0;height:2px;background:#E8E5E0;z-index:0">
+          <div style="height:100%;width:${pct}%;background:#C9A84C;transition:width 0.4s"></div>
+        </div>
+        ${circles}
+      </div>
+    </div>`;
+}
+
+function buildTimeline(timeline, currentStatus) {
+  if (!timeline || !timeline.length) {
+    if (!currentStatus) return '';
+    return `
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0">
+        <div style="width:10px;height:10px;border-radius:50%;background:#C9A84C;margin-top:3px;flex-shrink:0"></div>
+        <div>
+          <div style="font-size:13px;font-weight:500;text-transform:capitalize">${currentStatus.replace(/_/g,' ')}</div>
+        </div>
+      </div>`;
+  }
+
+  const sorted = [...timeline].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  return sorted.map((entry, i) => {
+    const isLatest  = i === 0;
+    const dotColor  = isLatest ? '#C9A84C' : '#D4CFC9';
+    const dateStr   = entry.timestamp
+      ? new Date(entry.timestamp).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
+      : '';
+    return `
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:0.5px solid #F3F0EC">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+          <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};margin-top:3px"></div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:${isLatest ? '600' : '400'};color:${isLatest ? '#0A0A0A' : '#555'}">${entry.label || entry.status || '—'}</div>
+          ${entry.description ? `<div style="font-size:12px;color:#777;margin-top:2px">${entry.description}</div>` : ''}
+          ${entry.location ? `<div style="font-size:11px;color:#aaa;margin-top:2px">📍 ${entry.location}</div>` : ''}
+          ${dateStr ? `<div style="font-size:11px;color:#aaa;margin-top:2px">${dateStr}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderOrderCard(o) {
+  const itemCount = (o.items || []).reduce((s, i) => s + (i.qty || 1), 0);
+  const total     = o.billing?.grandTotal ?? 0;
+  const shipment  = o.shipments?.find((s) => s.trackingId);
+  const estDel    = o.estimatedDelivery && !['delivered','cancelled','returned'].includes(o.status)
+    ? new Date(o.estimatedDelivery).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })
+    : null;
+
+  return `
+    <div class="acct-order-card" data-id="${o._id}">
+      <div class="acct-order-header" onclick="toggleOrderTracking('${o._id}')"
+           style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+        <div>
+          <p class="acct-order-num">${o.orderNumber || '—'}</p>
+          <p class="acct-order-meta">${fmtDate(o.createdAt)} · ${itemCount} item${itemCount !== 1 ? 's' : ''}</p>
+          ${estDel ? `<p style="font-size:11px;color:#1D9E75;margin-top:2px">Est. delivery: ${estDel}</p>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="text-align:right">
+            ${statusBadge(o.status)}
+            <p style="margin-top:6px;font-weight:500;font-size:15px">${INR(total)}</p>
+          </div>
+          <span id="chevron-${o._id}" style="font-size:18px;color:#aaa;transition:transform 0.2s">›</span>
+        </div>
+      </div>
+
+      <div id="tracking-${o._id}" style="display:none;padding:4px 0 8px">
+        ${buildProgressBar(o.status)}
+
+        ${shipment ? `
+          <div style="background:#F8F6F3;border-radius:6px;padding:12px 14px;margin:12px 0;font-size:13px">
+            <div style="font-weight:500">${shipment.courier || 'Courier'}</div>
+            <div style="color:#555;margin-top:2px">AWB: <strong>${shipment.trackingId}</strong></div>
+            ${shipment.trackingUrl ? `
+              <a href="${shipment.trackingUrl}" target="_blank" rel="noopener"
+                 style="display:inline-block;margin-top:10px;padding:7px 16px;background:#0A0A0A;color:#fff;
+                        text-decoration:none;font-size:11px;letter-spacing:0.08em;border-radius:3px">
+                TRACK SHIPMENT
+              </a>` : ''}
+          </div>` : ''}
+
+        <div style="margin:12px 0">
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;color:#aaa;margin-bottom:8px">ORDER UPDATES</div>
+          ${buildTimeline(o.timeline, o.status)}
+        </div>
+
+        <div style="border-top:0.5px solid var(--border);padding-top:12px;margin-top:4px">
+          ${(o.items || []).map((item) => `
+            <div class="acct-item-row">
+              <span>${item.name}${item.size ? ` · ${item.size}` : ''}${item.colour ? ` · ${item.colour}` : ''}</span>
+              <span>${INR(item.unitPrice)} × ${item.qty}</span>
+            </div>`).join('')}
+          <div class="acct-item-row" style="font-weight:500;border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
+            <span>Total</span><span>${INR(total)}</span>
+          </div>
+        </div>
+
+        ${getOrderActions(o)}
+      </div>
+    </div>`;
+}
+
 async function loadOrders() {
   const container = document.getElementById('orders-list');
   container.innerHTML = '<p style="color:var(--gray)">Loading orders…</p>';
@@ -357,48 +493,20 @@ async function loadOrders() {
       return;
     }
 
-    container.innerHTML = orders.map((o) => {
-      const itemCount = (o.items || []).reduce((s, i) => s + (i.qty || 1), 0);
-      const total     = o.billing?.grandTotal ?? 0;
-      return `
-        <div class="acct-order-card" data-id="${o._id}">
-          <div class="acct-order-header" onclick="toggleOrder('${o._id}')">
-            <div>
-              <p class="acct-order-num">${o.orderNumber || '—'}</p>
-              <p class="acct-order-meta">${fmtDate(o.createdAt)} · ${itemCount} item${itemCount !== 1 ? 's' : ''}</p>
-            </div>
-            <div style="text-align:right">
-              ${statusBadge(o.status)}
-              <p style="margin-top:6px;font-weight:500;font-size:15px">${INR(total)}</p>
-            </div>
-          </div>
-          <div class="acct-order-items" id="order-items-${o._id}" style="display:none">
-            ${(o.items || []).map((item) => `
-              <div class="acct-item-row">
-                <span>${item.name}${item.size ? ` · ${item.size}` : ''}${item.colour ? ` · ${item.colour}` : ''}</span>
-                <span>${INR(item.unitPrice)} × ${item.qty}</span>
-              </div>`).join('')}
-            <div class="acct-item-row" style="font-weight:500;border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
-              <span>Total</span><span>${INR(total)}</span>
-            </div>
-            ${o.shipments?.some((s) => s.trackingId) ? `
-              <p style="font-size:12px;color:var(--gray);margin-top:8px">
-                Tracking: <strong>${o.shipments.find((s) => s.trackingId)?.trackingId}</strong>
-                (${o.shipments.find((s) => s.trackingId)?.courier || ''})
-              </p>` : ''}
-            ${getOrderActions(o)}
-          </div>
-        </div>`;
-    }).join('');
+    container.innerHTML = orders.map((o) => renderOrderCard(o)).join('');
 
   } catch {
     container.innerHTML = '<p style="color:#c00">Could not load orders. Please try again.</p>';
   }
 }
 
-window.toggleOrder = function(id) {
-  const el = document.getElementById(`order-items-${id}`);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+window.toggleOrderTracking = function(id) {
+  const body    = document.getElementById(`tracking-${id}`);
+  const chevron = document.getElementById(`chevron-${id}`);
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display    = open ? 'block' : 'none';
+  if (chevron) chevron.style.transform = open ? 'rotate(90deg)' : 'none';
 };
 
 document.getElementById('tab-orders').addEventListener('click', loadOrders);

@@ -298,6 +298,7 @@ function renderDoughnut(canvasId, items, existing, setter) {
    ORDERS
 ══════════════════════════════════════ */
 let _ordersPage = 1;
+const _ordersCache = {}; // orderId → order object
 
 async function loadOrders() {
   const search = document.getElementById('order-search')?.value || '';
@@ -318,12 +319,14 @@ async function loadOrders() {
 }
 
 function renderOrderRows(tbodyId, orders, showActions) {
-  const STATUS_OPTS = ['placed','confirmed','packed','shipped','delivered','return_requested','returned','cancelled'];
   const tbody = document.getElementById(tbodyId);
   if (!orders.length) {
     tbody.innerHTML = `<tr><td colspan="${showActions ? 8 : 5}" class="loading">No orders found.</td></tr>`;
     return;
   }
+  // Cache orders for modal access
+  orders.forEach((o) => { _ordersCache[o._id] = o; });
+
   tbody.innerHTML = orders.map((o) => `
     <tr>
       <td><a href="#" style="color:var(--gold)">${o.orderNumber || o._id?.slice(-8)}</a></td>
@@ -335,29 +338,146 @@ function renderOrderRows(tbodyId, orders, showActions) {
       <td>${fmt(o.createdAt)}</td>
       ${showActions ? `
       <td>
-        <select class="status-select" data-order-id="${o._id}" data-current="${o.status}">
-          ${STATUS_OPTS.map((s) => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
-        </select>
+        <button onclick="window.openStatusModal('${o._id}')"
+                style="padding:5px 12px;background:transparent;border:0.5px solid var(--border);
+                       border-radius:3px;font-size:11px;cursor:pointer;letter-spacing:0.05em">
+          UPDATE
+        </button>
       </td>` : ''}
     </tr>`).join('');
-
-  // status change listener
-  tbody.querySelectorAll('.status-select').forEach((sel) => {
-    sel.addEventListener('change', async () => {
-      try {
-        await api(`/admin/orders/${sel.dataset.orderId}/status`, {
-          method: 'PUT',
-          body:   JSON.stringify({ status: sel.value })
-        });
-        toast('Order status updated', 'success');
-        if (tbodyId === 'orders-body') loadOrders();
-      } catch (err) {
-        toast(err.message || 'Update failed', 'error');
-        sel.value = sel.dataset.current;
-      }
-    });
-  });
 }
+
+window.openStatusModal = function(orderId) {
+  const order = _ordersCache[orderId];
+  if (!order) return;
+  openModal(buildStatusUpdateModal(order));
+};
+
+function buildStatusUpdateModal(order) {
+  return `
+    <h2 style="font-size:16px;font-weight:500;margin-bottom:4px">Update Order Status</h2>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:20px">${order.orderNumber} · ${order.customer?.name || ''}</p>
+    <div style="padding:4px">
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:6px">New Status *</label>
+        <select id="new-status" onchange="window.onStatusChange(this.value)"
+                style="width:100%;padding:9px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit">
+          <option value="">Select status…</option>
+          <option value="confirmed"        ${order.status==='confirmed'?        'selected':''}>✅ Confirmed</option>
+          <option value="packed"           ${order.status==='packed'?           'selected':''}>📦 Packed</option>
+          <option value="shipped"          ${order.status==='shipped'?          'selected':''}>🚚 Shipped</option>
+          <option value="out_for_delivery" ${order.status==='out_for_delivery'? 'selected':''}>🛵 Out for Delivery</option>
+          <option value="delivered"        ${order.status==='delivered'?        'selected':''}>✅ Delivered</option>
+          <option value="cancelled"        ${order.status==='cancelled'?        'selected':''}>❌ Cancelled</option>
+        </select>
+      </div>
+
+      <div id="tracking-fields" style="display:none;background:#F8F6F3;border-radius:6px;padding:16px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#888;margin-bottom:12px">SHIPMENT DETAILS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:5px">Courier *</label>
+            <select id="courier-name" style="width:100%;padding:9px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit">
+              <option value="">Select courier…</option>
+              <option value="Delhivery">Delhivery</option>
+              <option value="Shiprocket">Shiprocket</option>
+              <option value="DTDC">DTDC</option>
+              <option value="Blue Dart">Blue Dart</option>
+              <option value="Ekart">Ekart</option>
+              <option value="Xpressbees">Xpressbees</option>
+              <option value="Shadowfax">Shadowfax</option>
+              <option value="Amazon Logistics">Amazon Logistics</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:5px">AWB / Tracking # *</label>
+            <input type="text" id="tracking-id" placeholder="e.g. 1234567890"
+                   style="width:100%;padding:9px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;box-sizing:border-box">
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:5px">Tracking URL (auto-generated if blank)</label>
+            <input type="url" id="tracking-url" placeholder="https://courier.com/track/…"
+                   style="width:100%;padding:9px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:5px">Expected Delivery</label>
+            <input type="date" id="expected-delivery"
+                   style="width:100%;padding:9px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
+          </div>
+        </div>
+      </div>
+
+      <div id="location-field" style="display:none;margin-bottom:14px">
+        <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:5px">Current Location (optional)</label>
+        <input type="text" id="status-location" placeholder="e.g. Jaipur Warehouse"
+               style="width:100%;padding:9px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;box-sizing:border-box">
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:5px">Note to customer (optional)</label>
+        <textarea id="status-note" rows="2" placeholder="Custom message shown in tracking timeline…"
+                  style="width:100%;padding:9px;border:0.5px solid var(--border);border-radius:4px;font-size:13px;resize:none;font-family:inherit;box-sizing:border-box"></textarea>
+      </div>
+
+      <button onclick="window.submitStatusUpdate('${order._id}')"
+              style="width:100%;padding:12px;background:#C9A84C;color:#fff;border:none;cursor:pointer;
+                     font-size:12px;letter-spacing:0.1em;border-radius:3px;font-family:inherit">
+        UPDATE STATUS &amp; NOTIFY CUSTOMER
+      </button>
+    </div>
+  `;
+}
+
+window.onStatusChange = function(status) {
+  const trackingFields = document.getElementById('tracking-fields');
+  const locationField  = document.getElementById('location-field');
+  if (trackingFields) trackingFields.style.display = status === 'shipped' ? 'block' : 'none';
+  if (locationField)  locationField.style.display  = ['shipped','out_for_delivery'].includes(status) ? 'block' : 'none';
+};
+
+window.submitStatusUpdate = async function(orderId) {
+  const status = document.getElementById('new-status')?.value;
+  if (!status) { toast('Please select a status', 'error'); return; }
+
+  const trackingId  = document.getElementById('tracking-id')?.value.trim();
+  const courierName = document.getElementById('courier-name')?.value;
+
+  if (status === 'shipped' && !trackingId)  { toast('Tracking number is required when marking as shipped', 'error'); return; }
+  if (status === 'shipped' && !courierName) { toast('Please select a courier', 'error'); return; }
+
+  let trackingUrl = document.getElementById('tracking-url')?.value.trim();
+  if (!trackingUrl && trackingId && courierName) {
+    const urlMap = {
+      'Delhivery':  `https://www.delhivery.com/track/package/${trackingId}`,
+      'DTDC':       `https://www.dtdc.in/tracking/tracking_results.asp?Ttype=awb&strCnno=${trackingId}`,
+      'Blue Dart':  `https://www.bluedart.com/tracking?trackFor=0&refNo=${trackingId}`,
+      'Ekart':      `https://ekartlogistics.com/shipmenttrack/${trackingId}`,
+      'Xpressbees': `https://www.xpressbees.com/shipment/tracking?awbNo=${trackingId}`,
+      'Shadowfax':  `https://tracker.shadowfax.in/?wbn=${trackingId}`,
+    };
+    trackingUrl = urlMap[courierName] || '';
+  }
+
+  const body = {
+    status,
+    trackingId:       trackingId       || undefined,
+    courier:          courierName      || undefined,
+    trackingUrl:      trackingUrl      || undefined,
+    location:         document.getElementById('status-location')?.value.trim()   || undefined,
+    note:             document.getElementById('status-note')?.value.trim()        || undefined,
+    expectedDelivery: document.getElementById('expected-delivery')?.value         || undefined
+  };
+
+  try {
+    await api(`/admin/orders/${orderId}/status`, { method: 'PUT', body: JSON.stringify(body) });
+    toast('Status updated — customer notified by email', 'success');
+    closeModal();
+    loadOrders();
+  } catch (err) {
+    toast('Update failed: ' + err.message, 'error');
+  }
+};
 
 // Order filters
 document.getElementById('order-search')?.addEventListener('input', debounce(() => { _ordersPage = 1; loadOrders(); }, 400));
