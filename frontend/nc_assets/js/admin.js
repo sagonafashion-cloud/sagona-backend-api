@@ -20,7 +20,7 @@ function toast(msg, type = '') {
 
 /* ── admin fetch (uses admin_token) ── */
 async function api(path, opts = {}) {
-  const token = localStorage.getItem('admin_token');
+  const token = sessionStorage.getItem('admin_token');
   const isFormData = opts.body instanceof FormData;
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -46,14 +46,14 @@ let _tempToken = null;
 let _adminUser = null;
 
 async function checkAuth() {
-  const token = localStorage.getItem('admin_token');
+  const token = sessionStorage.getItem('admin_token');
   if (!token) return false;
   try {
     const data = await api('/admin/auth/me');
     _adminUser = data.data;
     return true;
   } catch {
-    localStorage.removeItem('admin_token');
+    sessionStorage.removeItem('admin_token');
     return false;
   }
 }
@@ -80,7 +80,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
       document.getElementById('login-step2').style.display = 'block';
       document.getElementById('totp-code').focus();
     } else {
-      localStorage.setItem('admin_token', data.token);
+      sessionStorage.setItem('admin_token', data.token);
       _adminUser = data.admin;
       startApp();
     }
@@ -105,7 +105,7 @@ document.getElementById('totp-btn').addEventListener('click', async () => {
       method: 'POST',
       body:   JSON.stringify({ tempToken: _tempToken, code })
     });
-    localStorage.setItem('admin_token', data.token);
+    sessionStorage.setItem('admin_token', data.token);
     _adminUser = data.admin;
     startApp();
   } catch (err) {
@@ -125,7 +125,7 @@ document.getElementById('totp-code')?.addEventListener('keydown', (e) => {
 /* ── logout ── */
 document.getElementById('logout-btn').addEventListener('click', async () => {
   try { await api('/admin/auth/logout', { method: 'POST' }); } catch {}
-  localStorage.removeItem('admin_token');
+  sessionStorage.removeItem('admin_token');
   location.reload();
 });
 
@@ -1602,7 +1602,7 @@ async function loadGst() {
 async function exportGst() {
   const from = document.getElementById('gst-from')?.value;
   const to   = document.getElementById('gst-to')?.value;
-  const token = localStorage.getItem('admin_token');
+  const token = sessionStorage.getItem('admin_token');
   const params = new URLSearchParams({ format: 'csv' });
   if (from) params.set('from', from);
   if (to)   params.set('to', to);

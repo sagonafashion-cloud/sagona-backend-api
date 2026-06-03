@@ -1,19 +1,15 @@
-const storedApiBase = window.localStorage.getItem('SAGONA_API_BASE');
+// SAFE — only public values. No secrets. No private keys.
+// The Razorpay Key SECRET must never appear here — it lives only on the backend.
 
-const hostname = window.location.hostname.toLowerCase();
+const hostname   = window.location.hostname.toLowerCase();
 const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
-const useSameOriginApi =
-    window.localStorage.getItem('SAGONA_USE_SAME_ORIGIN_API') === 'true';
+export const API_BASE = isLocalhost
+  ? 'http://localhost:5000/api'
+  : 'https://sagona-backend-api.onrender.com/api';
 
-export const API_BASE =
-    storedApiBase ||
-    (isLocalhost
-        ? 'http://localhost:5000/api'
-        : useSameOriginApi
-            ? `${window.location.protocol}//${window.location.host}/api`
-            : 'https://sagona-backend-api.onrender.com/api');
-
+// Razorpay KEY ID is public by design — safe in frontend.
+// Update this value after regenerating your key pair in Step 1 of the security checklist.
 export const RAZORPAY_KEY_ID = 'rzp_live_SnTOdSqnhxjlWr';
 
 export async function fetchPincodeData(pincode, cityFieldId, stateFieldId, statusElementId) {
