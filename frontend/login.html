@@ -161,11 +161,14 @@
       const identifier = document.getElementById('f-identifier').value.trim();
 
       try {
+        // Only send `email` when the identifier is actually an email address.
+        // A phone number sent as `email` fails backend email validation (422).
+        const isEmail = identifier.includes('@');
         const data = await request('/auth/login', {
           method: 'POST',
           body: JSON.stringify({
             identifier,
-            email:    identifier,   // backward-compat for mobile app schema
+            ...(isEmail ? { email: identifier } : {}),   // backward-compat for mobile app schema
             password: form.password.value
           })
         });
@@ -177,7 +180,11 @@
         }
 
         saveToken(data.token);
-        saveUser(data);
+        // The API returns { token, user } — persist just the user object so
+        // getUser() yields a flat user (name/email/loyaltyPoints) the way
+        // account.js and checkout.js read it. Storing the whole envelope here
+        // nested it one level too deep, blanking the checkout name/loyalty prefill.
+        saveUser(data.user);
 
         // `next` comes straight from the URL query string — never follow it
         // blindly (open-redirect risk). Only allow a bare same-site page

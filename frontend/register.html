@@ -118,12 +118,16 @@
 
       try {
         const identifier = document.getElementById('f-identifier').value.trim();
+        // Only send `email` when the identifier is actually an email address.
+        // Sending a phone number as `email` fails backend email validation
+        // (422 → "Something went wrong"). Phone-only signups go via `identifier`.
+        const isEmail = identifier.includes('@');
         await request('/auth/register', {
           method: 'POST',
           body: JSON.stringify({
             name:       form.name.value,
             identifier,
-            email:      identifier,  // backward-compat for mobile app
+            ...(isEmail ? { email: identifier } : {}),  // backward-compat for mobile app
             password:   form.password.value,
             birthday:   form.birthday.value
           })

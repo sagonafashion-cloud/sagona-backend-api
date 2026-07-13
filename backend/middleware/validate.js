@@ -1,10 +1,18 @@
 import { validationResult, body, param } from 'express-validator';
 
-// Runs accumulated validators and short-circuits with 422 on failure
+// Runs accumulated validators and short-circuits with 422 on failure.
+// A top-level `message` (the first validator's message) is included so
+// clients that only read `message` surface a real reason instead of a
+// generic "Something went wrong". The full `errors` array is kept intact.
 export const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(422).json({ success: false, errors: errors.array() });
+    const arr = errors.array();
+    return res.status(422).json({
+      success: false,
+      message: arr[0]?.msg || 'Validation failed',
+      errors: arr
+    });
   }
   next();
 };

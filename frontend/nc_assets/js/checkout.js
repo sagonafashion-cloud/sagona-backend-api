@@ -252,15 +252,25 @@ form.addEventListener('submit', async (e) => {
     // prices — we only send items/shippingAddress, never a trusted amount.
     const { items, shippingAddress } = buildPayload();
 
-    const rzpOrder = await request('/payment/create-order', {
+    const rzpOrderRes = await request('/payment/create-order', {
       method: 'POST',
       body:   JSON.stringify({ items, shippingAddress })
     });
 
-    const keyData = await request('/payment/key');
+    const keyRes = await request('/payment/key');
+
+    // Both endpoints wrap their payload as { success, data } — read the
+    // Razorpay order and public key from `.data` (the fallback keeps this
+    // working even if an endpoint ever returns them at the top level).
+    const rzpOrder = rzpOrderRes.data || rzpOrderRes;
+    const keyId    = keyRes.data?.keyId || keyRes.keyId;
+
+    if (!keyId || !rzpOrder?.id) {
+      throw new Error('Payment could not be initialised. Please try again or use COD.');
+    }
 
     const rzp = new window.Razorpay({
-      key:      keyData.keyId,
+      key:      keyId,
       amount:   rzpOrder.amount,
       currency: rzpOrder.currency || 'INR',
       order_id: rzpOrder.id,

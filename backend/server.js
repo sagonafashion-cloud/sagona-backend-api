@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
@@ -122,6 +123,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// ── Response compression (gzip) ────────────────────────────
+// Shrinks JSON API payloads (product lists, homepage sections) before they go
+// over the wire — meaningful on slower mobile connections. Only kicks in for
+// responses above the threshold; small responses are sent as-is.
+app.use(compression({ threshold: 1024 }));
+
 // ── Body parsing ───────────────────────────────────────────
 app.use(express.json());
 
@@ -206,3 +213,20 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// ── Keep-alive (Render free tier cold-start mitigation) ────
+// Render stops a free web service after ~15 min with no inbound traffic; the
+// next visitor then waits 20–60s for a cold start, which reads as "the site is
+// loading very slowly". A lightweight self-ping every 14 min generates inbound
+// traffic that keeps the instance warm. Render injects RENDER_EXTERNAL_URL
+// automatically, so this needs no manual configuration; it stays off locally.
+// (This alone is not a guarantee — an external uptime monitor is the most
+// reliable option — but it costs nothing and helps in practice.)
+const KEEPALIVE_URL = process.env.KEEPALIVE_URL || process.env.RENDER_EXTERNAL_URL;
+if (process.env.NODE_ENV === 'production' && KEEPALIVE_URL && typeof fetch === 'function') {
+  const FOURTEEN_MIN = 14 * 60 * 1000;
+  setInterval(() => {
+    fetch(`${KEEPALIVE_URL.replace(/\/$/, '')}/api/health`)
+      .catch(() => { /* transient network blip — ignore, next tick retries */ });
+  }, FOURTEEN_MIN).unref();
+}

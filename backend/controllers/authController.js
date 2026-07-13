@@ -7,7 +7,10 @@ const generateToken = (user) =>
   jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    // 30-day customer sessions: long enough that shoppers are not bounced to
+    // the login screen mid-journey (e.g. right after a checkout). Admin tokens
+    // are issued separately with a shorter lifetime.
+    { expiresIn: "30d" }
   );
 
 const formatUser = (user) => ({
@@ -64,6 +67,16 @@ export const registerUser = async (req, res) => {
     });
 
   } catch (error) {
+    // A duplicate-key error means the email/phone is already taken. This can
+    // slip past the findOne() pre-check on a race, or when the underlying
+    // Mongo index is unique-but-not-sparse (a legacy index can reject a second
+    // account that simply has no phone/email). Surface a clear 400 instead of a
+    // generic 500 so the shopper sees a real reason rather than "Registration failed".
+    if (error?.code === 11000) {
+      const field = Object.keys(error.keyPattern || error.keyValue || {})[0];
+      const label = field === 'phone' ? 'phone number' : field === 'email' ? 'email' : 'account';
+      return res.status(400).json({ message: `An account with that ${label} already exists` });
+    }
     console.error('registerUser:', error);
     return res.status(500).json({ message: 'Registration failed' });
   }
