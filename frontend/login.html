@@ -45,6 +45,8 @@
       <h1>Welcome Back</h1>
       <p class="auth-sub">Sign in to continue shopping</p>
 
+      <p id="session-msg" style="display:none;margin:-8px 0 16px;padding:10px 14px;background:#FEF6E7;border:0.5px solid #EFC97C;border-radius:4px;font-size:13px;color:#8A6116"></p>
+
       <form id="login-form" autocomplete="on">
 
         <div class="float-field">
@@ -128,6 +130,7 @@
     const errorMsg   = document.getElementById('error-msg');
     const btn        = document.getElementById('login-btn');
     const rememberMe = document.getElementById('remember-me');
+    const sessionMsg = document.getElementById('session-msg');
 
     // Pre-fill identifier if remembered
     const remembered = localStorage.getItem('sagona_remember');
@@ -135,6 +138,18 @@
       document.getElementById('f-identifier').value = remembered;
       rememberMe.checked = true;
     }
+
+    // Show a one-time "session expired" notice if we were bounced here after
+    // an old/rotated JWT was rejected (see api.js's handleSessionExpired()).
+    // Read-then-clear so it only ever shows once, even on refresh.
+    try {
+      const loginMessage = sessionStorage.getItem('loginMessage');
+      if (loginMessage) {
+        sessionMsg.textContent   = loginMessage;
+        sessionMsg.style.display = 'block';
+        sessionStorage.removeItem('loginMessage');
+      }
+    } catch { /* sessionStorage unavailable — non-fatal */ }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();

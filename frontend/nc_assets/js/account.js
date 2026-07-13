@@ -1,5 +1,6 @@
 import { API_BASE, fetchPincodeData, escapeHtml } from './config.js';
 import { getToken, getUser, saveUser, clearAuth } from './storage.js';
+import { handleSessionExpired } from './api.js';
 
 const token = getToken();
 if (!token) {
@@ -77,9 +78,15 @@ function renderProfile() {
 
 renderProfile();
 
+// Verify the stored token is still valid on every account page load — if the
+// backend's JWT secret was rotated since this token was issued, this 401s
+// and we bounce to login instead of silently rendering a stale/empty profile.
 fetch(`${API_BASE}/auth/me`, { headers: authHeader() })
-  .then((r) => r.json())
-  .then((d) => { if (d.user) { user = d.user; saveUser(user); renderProfile(); } })
+  .then((r) => {
+    if (r.status === 401) { handleSessionExpired(); return null; }
+    return r.json();
+  })
+  .then((d) => { if (d?.user) { user = d.user; saveUser(user); renderProfile(); } })
   .catch(() => {});
 
 document.getElementById('prof-edit-btn').addEventListener('click', () => {

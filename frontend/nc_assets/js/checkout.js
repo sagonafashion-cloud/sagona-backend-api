@@ -1,4 +1,4 @@
-import { request }  from './api.js';
+import { request, handleSessionExpired }  from './api.js';
 import { API_BASE, fetchPincodeData } from './config.js';
 import { getAuth, getCart, saveCart } from './storage.js';
 
@@ -94,6 +94,7 @@ async function loadSavedAddresses() {
     const res = await fetch(`${API_BASE}/auth/addresses`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    if (res.status === 401) { handleSessionExpired(); return; }
     if (!res.ok) return;
     const json = await res.json();
     const data = json.data || [];
@@ -185,6 +186,12 @@ async function placeOrder(paymentMethod, razorpayIds = {}) {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      handleSessionExpired();
+      const err = new Error('Session expired');
+      err.sessionExpired = true;
+      throw err;
+    }
     const errData = await response.json().catch(() => ({}));
     const msg = errData.message || (errData.errors?.[0]?.msg) || `Order failed: ${response.status}`;
     throw new Error(msg);
@@ -275,6 +282,7 @@ form.addEventListener('submit', async (e) => {
             razorpaySignature: response.razorpay_signature
           });
         } catch (err) {
+          if (err.sessionExpired) return; // already redirecting to login
           alert(`Payment verified but order failed: ${err.message}. Contact care@sagona.in`);
         }
       },
@@ -295,6 +303,7 @@ form.addEventListener('submit', async (e) => {
     rzp.open();
 
   } catch (err) {
+    if (err.sessionExpired) return; // already redirecting to login
     console.error('checkout error:', err.message);
     alert(`Checkout failed: ${err.message}`);
     submitBtn.disabled = false;
