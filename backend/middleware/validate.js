@@ -62,3 +62,37 @@ export const createProductRules = [
 export const deliveryCheckRules = [
   body('pincode').matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
 ];
+
+// ── Addresses ─────────────────────────────────────────────
+export const addressRules = [
+  body('line1').trim().notEmpty().withMessage('Address line 1 required'),
+  body('city').trim().notEmpty().withMessage('City required'),
+  body('state').trim().notEmpty().withMessage('State required'),
+  body('pincode').matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
+  body('phone').optional({ checkFalsy: true })
+    .matches(/^\d{10}$/).withMessage('Phone must be 10 digits'),
+  body('name').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
+  body('label').optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
+  body('isDefault').optional().isBoolean().withMessage('isDefault must be true/false'),
+];
+
+// ── Payment ───────────────────────────────────────────────
+// create-order shares the same items/shippingAddress shape as createOrderRules,
+// so it's reused directly at the route level rather than duplicated here.
+export const verifyPaymentRules = [
+  body('razorpayOrderId').trim().notEmpty().withMessage('razorpayOrderId required'),
+  body('razorpayPaymentId').trim().notEmpty().withMessage('razorpayPaymentId required'),
+  body('razorpaySignature').trim().notEmpty().withMessage('razorpaySignature required'),
+  body('orderId').optional({ checkFalsy: true }).isMongoId().withMessage('Invalid orderId'),
+];
+
+// ── Admin auth ────────────────────────────────────────────
+export const adminLoginRules = [
+  body('email').trim().notEmpty().withMessage('Email required'),
+  body('password').notEmpty().withMessage('Password required'),
+];
+
+// ── Generic param validation ──────────────────────────────
+export const mongoIdParam = (name = 'id') => [
+  param(name).isMongoId().withMessage(`Invalid ${name}`),
+];

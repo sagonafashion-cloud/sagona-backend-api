@@ -2,11 +2,12 @@ import express from 'express';
 import axios from 'axios';
 import { checkDelivery } from '../controllers/deliveryController.js';
 import { validate, deliveryCheckRules } from '../middleware/validate.js';
+import { pincodeLimiter } from '../middleware/rateLimiters.js';
 import PincodeMap from '../models/PincodeMap.js';
 
 const router = express.Router();
 
-router.get('/pincode/:pincode', async (req, res) => {
+router.get('/pincode/:pincode', pincodeLimiter, async (req, res) => {
   const { pincode } = req.params;
 
   if (!/^\d{6}$/.test(pincode)) {
@@ -84,6 +85,6 @@ router.get('/pincode/:pincode', async (req, res) => {
   });
 });
 
-router.post('/check', deliveryCheckRules, validate, checkDelivery);
+router.post('/check', pincodeLimiter, deliveryCheckRules, validate, checkDelivery);
 
 export default router;

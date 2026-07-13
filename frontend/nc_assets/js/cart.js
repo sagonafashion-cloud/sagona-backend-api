@@ -1,5 +1,6 @@
 // cart.js
 import { getCart, saveCart } from './storage.js';
+import { escapeHtml } from './config.js';
 
 const INR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
@@ -48,11 +49,17 @@ function renderCart() {
       <div class="table-row">
         <img src="${item.image || ''}" style="width:60px;height:60px;object-fit:cover"
              onerror="this.style.display='none'">
-        <span>${item.name}${label ? ` <span style="font-size:12px;color:#888">(${label})</span>` : ''}</span>
+        <span>${escapeHtml(item.name)}${label ? ` <span style="font-size:12px;color:#888">(${escapeHtml(label)})</span>` : ''}</span>
         <span>₹${item.price}</span>
         <span>Qty: ${item.quantity || 1}</span>
         <span>₹${itemTotal}</span>
         <button class="remove" data-key="${getCartKey(item)}">Remove</button>
+        <button onclick="openTryOnModal('${(item.id||'').replace(/'/g,"\\'")}','${(item.image||'').replace(/'/g,"\\'")}','${(item.name||'').replace(/'/g,"\\'")}')"
+                style="padding:6px 12px;background:transparent;border:0.5px solid #0A0A0A;
+                       color:#0A0A0A;cursor:pointer;font-size:10px;letter-spacing:0.1em;
+                       border-radius:3px">
+          👗 TRY ON
+        </button>
       </div>`;
   }).join('');
 
@@ -80,12 +87,12 @@ function renderDrawer() {
     const lineTotal = (item.price || 0) * (item.quantity || 1);
     return `
       <div style="display:flex;gap:12px;padding:14px 0;border-bottom:0.5px solid #E8E5E0">
-        <img src="${item.image || ''}" alt="${item.name}"
+        <img src="${item.image || ''}" alt="${escapeHtml(item.name)}"
              style="width:64px;height:80px;object-fit:cover;flex-shrink:0;background:#F8F6F3"
              onerror="this.style.display='none'">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
-          ${label ? `<div style="font-size:11px;color:#888;margin-top:2px">${label}</div>` : ''}
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(item.name)}</div>
+          ${label ? `<div style="font-size:11px;color:#888;margin-top:2px">${escapeHtml(label)}</div>` : ''}
           <div style="font-size:13px;margin-top:4px">${INR(item.price)} × ${item.quantity || 1}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">

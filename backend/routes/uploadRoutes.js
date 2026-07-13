@@ -3,6 +3,7 @@ import multer from 'multer';
 import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
 import { adminProtect } from '../middleware/adminAuth.js';
+import { verifyImageSignature } from '../utils/fileValidation.js';
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ const uploadToCloudinary = (buffer, options) =>
   });
 
 /* POST /api/admin/upload/image */
-router.post('/image', adminProtect, upload.single('image'), async (req, res) => {
+router.post('/image', adminProtect, upload.single('image'), verifyImageSignature({ field: 'image' }), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No image file provided' });

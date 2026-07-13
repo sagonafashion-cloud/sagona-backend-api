@@ -1,4 +1,4 @@
-import { API_BASE, fetchPincodeData } from './config.js';
+import { API_BASE, fetchPincodeData, escapeHtml } from './config.js';
 import { getToken, getUser, saveUser, clearAuth } from './storage.js';
 
 const token = getToken();
@@ -44,7 +44,7 @@ function showToast(msg) {
 const authHeader = () => ({ Authorization: `Bearer ${token}` });
 
 /* ── navigation ── */
-const sections = ['profile', 'orders', 'addresses', 'wishlist', 'loyalty'];
+const sections = ['profile', 'orders', 'addresses', 'wishlist', 'loyalty', 'tryon'];
 
 function activateTab(id) {
   sections.forEach((s) => {
@@ -52,11 +52,15 @@ function activateTab(id) {
     const sec = document.getElementById(`sec-${s}`);
     if (sec) sec.style.display = s === id ? 'block' : 'none';
   });
+  if (id === 'tryon') loadTryOnSection();
 }
 
 document.querySelectorAll('.acct-tab').forEach((el) => {
   el.addEventListener('click', () => activateTab(el.dataset.tab));
 });
+
+// Support #tryon deep-link (e.g. from modal "Manage in My Account")
+if (location.hash === '#tryon') activateTab('tryon');
 
 activateTab('profile');
 
@@ -556,7 +560,7 @@ function renderOrderCard(o) {
         <div style="border-top:0.5px solid var(--border);padding-top:12px;margin-top:4px">
           ${(o.items || []).map((item) => `
             <div class="acct-item-row">
-              <span>${item.name}${item.size ? ` · ${item.size}` : ''}${item.colour ? ` · ${item.colour}` : ''}</span>
+              <span>${escapeHtml(item.name)}${item.size ? ` · ${escapeHtml(item.size)}` : ''}${item.colour ? ` · ${escapeHtml(item.colour)}` : ''}</span>
               <span>${INR(item.unitPrice)} × ${item.qty}</span>
             </div>`).join('')}
           <div class="acct-item-row" style="font-weight:500;border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
@@ -633,10 +637,10 @@ function renderAddresses() {
               style="position:absolute;top:14px;right:14px;background:none;border:none;
                      font-size:18px;cursor:pointer;color:#aaa"
               title="Remove">&#215;</button>
-      <div style="font-size:14px;font-weight:500;margin-bottom:4px">${a.name || ''}</div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:4px">${escapeHtml(a.name)}</div>
       <div style="font-size:13px;color:#555;line-height:1.6">
-        ${[a.line1, a.line2, a.city, a.state, a.pincode].filter(Boolean).join(', ')}
-        ${a.phone ? `<br>${a.phone}` : ''}
+        ${[a.line1, a.line2, a.city, a.state, a.pincode].filter(Boolean).map(escapeHtml).join(', ')}
+        ${a.phone ? `<br>${escapeHtml(a.phone)}` : ''}
       </div>
       <button onclick="editAddress(${i})"
               style="margin-top:12px;padding:6px 16px;background:transparent;
@@ -853,3 +857,158 @@ document.getElementById('signout-btn').addEventListener('click', () => {
   clearAuth();
   location.href = 'index.html';
 });
+
+/* ══════════════════════════════════════════
+   TRY-ON STUDIO
+══════════════════════════════════════════ */
+async function loadTryOnSection() {
+  const sec = document.getElementById('sec-tryon');
+  if (!sec) return;
+
+  sec.innerHTML = `
+    <h2 class="acct-section-title">Try-On Studio</h2>
+    <p style="font-size:13px;color:#888;line-height:1.6;margin-bottom:24px">
+      Upload one photo of yourself and try any garment from Sagona on yourself
+      in one click — no re-uploading needed.
+    </p>
+    <div id="tryon-photo-card"
+         style="border:0.5px solid #E8E5E0;border-radius:10px;padding:28px;
+                margin-bottom:24px;background:#FAFAF8">
+      <div id="tryon-photo-content">
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:40px;margin-bottom:12px">👤</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:6px;color:#0A0A0A">
+            No photo uploaded yet
+          </div>
+          <div style="font-size:13px;color:#888;margin-bottom:20px">
+            Upload a clear, full-length or waist-up photo of yourself
+          </div>
+        </div>
+      </div>
+      <div style="background:#EAF3DE;border-radius:6px;padding:12px 16px;
+                  margin-bottom:18px;font-size:12px;color:#2D6A4F;line-height:1.7">
+        🔒 <strong>Your privacy matters.</strong> Your photo is stored securely and
+        only used for virtual try-on. It is never shared publicly or used for
+        advertising. You can delete it at any time.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+        ${[
+          ['✅ Full-length or waist-up', '✅ Good lighting, clear face'],
+          ['✅ Plain or simple background', '✅ Fitted or light clothing'],
+          ['❌ No group photos', '❌ No heavy patterns or layers'],
+        ].map(([a, b]) => `
+          <div style="font-size:12px;color:#555;padding:8px 10px;background:#fff;
+                      border-radius:4px;border:0.5px solid #E8E5E0">${a}</div>
+          <div style="font-size:12px;color:#555;padding:8px 10px;background:#fff;
+                      border-radius:4px;border:0.5px solid #E8E5E0">${b}</div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="flex:1;padding:12px;background:#C9A84C;color:#fff;border-radius:3px;
+                      font-size:12px;letter-spacing:0.1em;cursor:pointer;text-align:center">
+          <input type="file" id="tryon-file-input" accept="image/*"
+                 style="display:none" onchange="handleTryOnPhotoUpload(this)">
+          📸 UPLOAD MY PHOTO
+        </label>
+        <button id="tryon-delete-btn" onclick="deleteTryOnPhoto()"
+                style="display:none;padding:12px 20px;background:transparent;
+                       border:0.5px solid #E24B4A;color:#E24B4A;cursor:pointer;
+                       border-radius:3px;font-size:12px;letter-spacing:0.08em">
+          🗑 DELETE PHOTO
+        </button>
+      </div>
+      <div id="tryon-upload-progress"
+           style="display:none;margin-top:12px;font-size:12px;color:#888;text-align:center">
+        Uploading...
+        <div style="margin-top:6px;height:3px;background:#E8E5E0;border-radius:99px">
+          <div id="tryon-prog-bar"
+               style="height:100%;background:#C9A84C;border-radius:99px;
+                      width:0%;transition:width 0.4s"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  await loadCurrentTryOnPhoto();
+}
+
+async function loadCurrentTryOnPhoto() {
+  try {
+    const res = await fetch(`${API_BASE}/tryon/photo`, { headers: authHeader() });
+    const data = await res.json();
+    if (data.success && data.data.hasPhoto) {
+      renderTryOnPhotoCard(data.data.url, data.data.uploadedAt);
+    }
+  } catch {}
+}
+
+function renderTryOnPhotoCard(photoUrl, uploadedAt) {
+  const content = document.getElementById('tryon-photo-content');
+  const deleteBtn = document.getElementById('tryon-delete-btn');
+  const date = uploadedAt
+    ? new Date(uploadedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
+  if (content) content.innerHTML = `
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="position:relative;flex-shrink:0">
+        <img src="${photoUrl}" alt="My try-on photo"
+             style="width:120px;height:150px;object-fit:cover;border-radius:8px;
+                    border:2px solid #C9A84C">
+        <div style="position:absolute;bottom:-8px;right:-8px;width:28px;height:28px;
+                    background:#1D9E75;border-radius:50%;display:flex;
+                    align-items:center;justify-content:center;font-size:14px">✓</div>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:500;color:#0A0A0A;margin-bottom:4px">
+          Photo uploaded ✓
+        </div>
+        ${date ? `<div style="font-size:12px;color:#888;margin-bottom:8px">Uploaded ${date}</div>` : ''}
+        <div style="font-size:13px;color:#1D9E75;font-weight:500">
+          You can now try on any garment from product pages or your cart!
+        </div>
+      </div>
+    </div>
+  `;
+  if (deleteBtn) deleteBtn.style.display = 'block';
+  window._tryOnPhotoUrl = photoUrl;
+}
+
+window.handleTryOnPhotoUpload = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const progress = document.getElementById('tryon-upload-progress');
+  const bar = document.getElementById('tryon-prog-bar');
+  if (progress) progress.style.display = 'block';
+  if (bar) bar.style.width = '30%';
+  const formData = new FormData();
+  formData.append('photo', file);
+  try {
+    const res = await fetch(`${API_BASE}/tryon/upload-photo`, {
+      method: 'POST', headers: authHeader(), body: formData
+    });
+    if (bar) bar.style.width = '100%';
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    window._tryOnPhotoUrl = data.data.url;
+    renderTryOnPhotoCard(data.data.url, new Date());
+    showToast('Photo uploaded! You can now try on garments.');
+  } catch (err) {
+    showToast('Upload failed: ' + err.message);
+  } finally {
+    if (progress) progress.style.display = 'none';
+    if (bar) bar.style.width = '0%';
+    input.value = '';
+  }
+};
+
+window.deleteTryOnPhoto = async function() {
+  if (!confirm('Delete your try-on photo? You can upload a new one anytime.')) return;
+  try {
+    await fetch(`${API_BASE}/tryon/photo`, { method: 'DELETE', headers: authHeader() });
+    window._tryOnPhotoUrl = null;
+    loadTryOnSection();
+    showToast('Photo deleted successfully');
+  } catch (err) {
+    showToast('Failed: ' + err.message);
+  }
+};

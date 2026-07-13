@@ -78,6 +78,19 @@ export default function AccountScreen() {
               <Text style={styles.loyaltyLabel}>loyalty points</Text>
             </View>
 
+            {/* Try-On Studio shortcut */}
+            <TouchableOpacity
+              style={styles.tryOnBanner}
+              onPress={() => router.push('/tryon-studio' as any)}
+            >
+              <Text style={styles.tryOnBannerIcon}>👗</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tryOnBannerTitle}>Try-On Studio</Text>
+                <Text style={styles.tryOnBannerSub}>Upload your photo · Try any garment in one tap</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+            </TouchableOpacity>
+
             <Text style={styles.sectionTitle}>My Orders</Text>
             {isLoading && <Text style={styles.loading}>Loading orders...</Text>}
             {!isLoading && (!orders || orders.length === 0) && (
@@ -137,4 +150,11 @@ const styles = StyleSheet.create({
   orderDate: { fontFamily: fonts.body, fontSize: 12, color: colors.lightGray, marginTop: 4 },
   orderTotal: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.black, marginTop: 4 },
   footer: { paddingBottom: spacing.xl },
+  tryOnBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+                 backgroundColor: colors.white, borderRadius: radius.md,
+                 padding: spacing.md, borderWidth: 1, borderColor: colors.gold,
+                 marginBottom: spacing.lg },
+  tryOnBannerIcon: { fontSize: 28 },
+  tryOnBannerTitle: { fontFamily: fonts.heading, fontSize: 16, color: colors.black },
+  tryOnBannerSub: { fontFamily: fonts.body, fontSize: 12, color: colors.lightGray, marginTop: 2 },
 });

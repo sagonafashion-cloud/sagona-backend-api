@@ -1,5 +1,5 @@
 import { getWishlist, saveWishlist, getCart, saveCart } from './storage.js';
-import { API_BASE } from './config.js';
+import { API_BASE, escapeHtml } from './config.js';
 
 const list = document.querySelector('#wishlist-list');
 
@@ -29,7 +29,7 @@ function renderWishlist() {
           <div style="background:#fff;cursor:pointer" onclick="location.href='product.html?id=${item.id || item._id}'">
             <div style="aspect-ratio:3/4;overflow:hidden;background:#F8F6F3;position:relative">
               ${img
-                ? `<img src="${img}" alt="${item.name}"
+                ? `<img src="${img}" alt="${escapeHtml(item.name)}"
                         style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s ease"
                         loading="lazy"
                         onmouseover="this.style.transform='scale(1.04)'"
@@ -39,7 +39,7 @@ function renderWishlist() {
               }
             </div>
             <div style="padding:12px 0 20px">
-              <div style="font-size:13px;font-weight:500;color:#0A0A0A;margin-bottom:4px">${item.name}</div>
+              <div style="font-size:13px;font-weight:500;color:#0A0A0A;margin-bottom:4px">${escapeHtml(item.name)}</div>
               <div style="font-size:13px;color:#555">
                 ₹${Number(item.price).toLocaleString('en-IN')}
                 ${hasDiscount ? `<span style="text-decoration:line-through;color:#999;margin-left:6px;font-size:12px">₹${Number(item.mrp).toLocaleString('en-IN')}</span>` : ''}

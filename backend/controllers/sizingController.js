@@ -1,6 +1,7 @@
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import SizingFeedback from '../models/SizingFeedback.js';
+import Order from '../models/Order.js';
 
 // ── RECOMMENDATION ENGINE ──────────────────────────────────────────────────────
 export const getRecommendation = async (req, res) => {
@@ -220,6 +221,15 @@ export const deleteChildProfile = async (req, res) => {
 export const submitFitFeedback = async (req, res) => {
   try {
     const { productId, recommendedSize, chosenSize, fitFeedback, orderId, childMeasurements } = req.body;
+
+    // Verify the order actually belongs to the requesting user before trusting it —
+    // otherwise a client could attach feedback to an order that isn't theirs.
+    if (orderId) {
+      const owned = await Order.exists({ _id: orderId, 'customer.userId': req.user.id });
+      if (!owned) {
+        return res.status(404).json({ success: false, message: 'Order not found' });
+      }
+    }
 
     const isReturn = ['too_tight', 'too_loose'].includes(fitFeedback);
 

@@ -68,8 +68,9 @@ export default function CheckoutScreen() {
           { text: 'View orders', onPress: () => router.replace('/(tabs)/account' as any) }
         ]);
       } else {
-        // Razorpay: create order → open checkout
-        const { data: rzp } = await api.post('/payment/create-order', { amount: total });
+        // Razorpay: create order → open checkout. Amount is computed and verified
+        // server-side from real product prices, never sent from the client.
+        const { data: rzp } = await api.post('/payment/create-order', { items: orderItems, shippingAddress });
         Alert.alert('Online payment', 'Razorpay SDK integration requires native build.\nUse COD for now in Expo Go.');
       }
     } catch (err: any) {

@@ -1,5 +1,5 @@
 import { request }  from './api.js';
-import { API_BASE } from './config.js';
+import { API_BASE, escapeHtml } from './config.js';
 import { getCart, saveCart } from './storage.js';
 import { initSizingTool } from './sizing.js';
 
@@ -118,9 +118,9 @@ async function checkPincode(pincode) {
 
   // Accordion sections
   const accordionItems = [
-    { title: 'Description',       body: p.description || 'No description available.' },
-    { title: 'Fabric & Material', body: p.fabric       || 'Premium quality fabric.' },
-    { title: 'Care Instructions', body: p.careInstructions || 'Hand wash recommended. Do not bleach.' },
+    { title: 'Description',       body: escapeHtml(p.description) || 'No description available.' },
+    { title: 'Fabric & Material', body: escapeHtml(p.fabric)       || 'Premium quality fabric.' },
+    { title: 'Care Instructions', body: escapeHtml(p.careInstructions) || 'Hand wash recommended. Do not bleach.' },
     { title: 'Delivery & Returns', body: 'Free delivery on orders above ₹999. Easy 7-day returns on unused items in original packaging.' }
   ];
 
@@ -129,11 +129,11 @@ async function checkPincode(pincode) {
 
       <!-- GALLERY -->
       <div class="pdp-gallery">
-        <img src="${images[0]}" class="main-img" id="main-img" alt="${p.name}">
+        <img src="${images[0]}" class="main-img" id="main-img" alt="${escapeHtml(p.name)}">
         ${images.length > 1 ? `
         <div class="pdp-thumbs">
           ${images.map((img, i) => `
-            <img src="${img}" alt="${p.name}" class="${i === 0 ? 'active' : ''}" data-thumb="${img}">
+            <img src="${img}" alt="${escapeHtml(p.name)}" class="${i === 0 ? 'active' : ''}" data-thumb="${img}">
           `).join('')}
         </div>` : ''}
       </div>
@@ -141,7 +141,7 @@ async function checkPincode(pincode) {
       <!-- INFO -->
       <div class="pdp-info">
 
-        <h1>${p.name}</h1>
+        <h1>${escapeHtml(p.name)}</h1>
         ${metaHtml}
         <p class="pdp-price">${INR(p.price)} ${mrpHtml}</p>
 
@@ -210,6 +210,9 @@ async function checkPincode(pincode) {
     }
     addToCart(p, selectedSize, selectedColour);
   });
+
+  // try-on button — injected after add-to-bag
+  injectTryOnButton(p, images[0]);
 
   // wishlist
   document.getElementById('wish-btn').addEventListener('click', () => {
@@ -282,3 +285,34 @@ async function checkPincode(pincode) {
     document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', images[0]);
   }
 })();
+
+function injectTryOnButton(product, garmentUrl) {
+  const addBtn = document.getElementById('add-btn');
+  if (!addBtn) return;
+  const wrapper = document.createElement('div');
+  wrapper.style.marginTop = '10px';
+  const safeId   = (product._id   || '').replace(/'/g, "\\'");
+  const safeUrl  = (garmentUrl    || '').replace(/'/g, "\\'");
+  const safeName = (product.name  || '').replace(/'/g, "\\'");
+  wrapper.innerHTML = `
+    <button id="product-tryon-btn"
+            onclick="openTryOnModal('${safeId}','${safeUrl}','${safeName}')"
+            style="width:100%;padding:13px;background:transparent;border:1px solid #0A0A0A;
+                   color:#0A0A0A;cursor:pointer;font-size:11px;letter-spacing:0.14em;
+                   font-family:inherit;border-radius:3px;display:flex;align-items:center;
+                   justify-content:center;gap:8px;transition:all 0.25s"
+            onmouseover="this.style.background='#0A0A0A';this.style.color='#fff'"
+            onmouseout="this.style.background='transparent';this.style.color='#0A0A0A'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.5">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      TRY ON YOURSELF
+    </button>
+    <div style="text-align:center;font-size:11px;color:#888;margin-top:5px">
+      AI virtual try-on — see how it looks on you
+    </div>
+  `;
+  addBtn.parentNode.insertBefore(wrapper, addBtn.nextSibling);
+}

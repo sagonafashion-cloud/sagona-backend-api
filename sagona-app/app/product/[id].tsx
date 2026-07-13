@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import TryOnModal from '../../src/components/TryOnModal';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,9 +19,10 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
 
-  const [activeImage, setActiveImage] = useState(0);
+  const [activeImage, setActiveImage]   = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColour, setSelectedColour] = useState('');
+  const [tryOnVisible, setTryOnVisible] = useState(false);
 
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ['product', id],
@@ -142,10 +144,22 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Add to bag */}
+      {/* Add to bag + Try-On */}
       <View style={styles.footer}>
         <Button label={inStock ? 'Add to Bag' : 'Out of Stock'} onPress={handleAddToBag} disabled={!inStock} />
+        <TouchableOpacity onPress={() => setTryOnVisible(true)} style={styles.tryOnBtn}>
+          <Text style={styles.tryOnBtnText}>👗 TRY ON YOURSELF</Text>
+        </TouchableOpacity>
+        <Text style={styles.tryOnHint}>AI virtual try-on</Text>
       </View>
+
+      <TryOnModal
+        visible={tryOnVisible}
+        onClose={() => setTryOnVisible(false)}
+        productId={product?._id ?? ''}
+        garmentImageUrl={product?.images?.[0] ?? product?.image ?? ''}
+        productName={product?.name ?? ''}
+      />
     </SafeAreaView>
   );
 }
@@ -171,5 +185,9 @@ const styles = StyleSheet.create({
   sizeBtnTextActive: { color: colors.black },
   description: { fontFamily: fonts.body, fontSize: 14, color: colors.gray, lineHeight: 22 },
   outOfStock: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.error, marginTop: spacing.md },
-  footer: { padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  footer:       { padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  tryOnBtn:     { marginTop: 10, padding: 13, borderWidth: 1, borderColor: '#0A0A0A',
+                  borderRadius: 4, alignItems: 'center' },
+  tryOnBtnText: { fontSize: 11, letterSpacing: 1.4, color: '#0A0A0A', fontWeight: '600' },
+  tryOnHint:    { fontSize: 11, color: '#888', textAlign: 'center', marginTop: 5 },
 });

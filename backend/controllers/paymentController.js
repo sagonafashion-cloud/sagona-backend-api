@@ -4,38 +4,54 @@ import Order from '../models/Order.js';
 import Store from '../models/Store.js';
 import { generateAndUploadInvoice } from '../utils/invoiceGenerator.js';
 import { sendOrderConfirmation } from '../utils/emailService.js';
+import { computeOrderTotals } from '../utils/orderCalculator.js';
 
 /* ── helpers ── */
-const getRazorpayInstance = () => {
+export const getRazorpayInstance = () => {
   const keyId     = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) throw new Error('Razorpay not configured');
   return new Razorpay({ key_id: keyId, key_secret: keySecret });
 };
 
+// Timing-safe hex string comparison — never use === on secrets/signatures.
+export function safeCompareHex(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a, 'hex');
+  const bufB = Buffer.from(b, 'hex');
+  if (bufA.length !== bufB.length || bufA.length === 0) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 /* ═══════════════════════════════════
    CREATE RAZORPAY ORDER
+   Amount is ALWAYS recomputed server-side from the cart's real product
+   prices — the client cannot influence how much the Razorpay order is for.
 ═══════════════════════════════════ */
 export const createRazorpayOrder = async (req, res) => {
   try {
-    const { amount, currency = 'INR', receipt } = req.body;
+    const { items, shippingAddress } = req.body;
 
-    if (!amount || Number(amount) <= 0) {
-      return res.status(400).json({ success: false, message: 'Valid amount is required' });
+    const { billing } = await computeOrderTotals(items, shippingAddress);
+    const amountInPaise = Math.round(billing.grandTotal * 100);
+
+    if (amountInPaise < 100) {
+      return res.status(400).json({ success: false, message: 'Order amount too small' });
     }
 
     const razorpay = getRazorpayInstance();
 
     const order = await razorpay.orders.create({
-      amount: Math.round(Number(amount) * 100),
-      currency,
-      receipt: receipt || `sagona_${Date.now()}`
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: `sagona_${Date.now()}`,
+      notes: { userId: String(req.user._id) }
     });
 
     res.json({ success: true, data: order });
   } catch (err) {
     console.error('createRazorpayOrder:', err);
-    res.status(500).json({ success: false, message: 'Unable to create payment order' });
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Unable to create payment order' });
   }
 };
 
@@ -76,11 +92,23 @@ export const verifyPayment = async (req, res) => {
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
-    if (expected !== razorpaySignature) {
+    if (!safeCompareHex(expected, razorpaySignature)) {
+      console.warn('PAYMENT SIGNATURE MISMATCH:', { ip: req.ip, razorpayOrderId, razorpayPaymentId });
       return res.status(400).json({ success: false, message: 'Payment verification failed' });
     }
 
     if (orderId) {
+      // Ownership check — the order must belong to the requesting user.
+      const existing = await Order.findOne({ _id: orderId, 'customer.userId': req.user?._id });
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Order not found' });
+      }
+
+      // Idempotency — don't reprocess an already-paid order.
+      if (existing.payment?.status === 'paid') {
+        return res.json({ success: true, message: 'Already verified' });
+      }
+
       const order = await Order.findByIdAndUpdate(orderId, {
         'payment.razorpayOrderId': razorpayOrderId,
         'payment.razorpayPaymentId': razorpayPaymentId,
@@ -120,26 +148,40 @@ export const razorpayWebhook = async (req, res) => {
     }
 
     const signature = req.headers['x-razorpay-signature'];
-    const body      = JSON.stringify(req.body);
+    // req.body is a raw Buffer here (mounted with express.raw() ahead of express.json()
+    // in server.js) — the HMAC must be computed over the exact raw bytes Razorpay signed,
+    // not a re-serialised object, or every legitimate webhook call fails verification.
+    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : JSON.stringify(req.body);
 
     const expected = crypto
       .createHmac('sha256', webhookSecret)
-      .update(body)
+      .update(rawBody)
       .digest('hex');
 
-    if (expected !== signature) {
+    if (!safeCompareHex(expected, signature)) {
+      console.warn('WEBHOOK SIGNATURE MISMATCH:', { ip: req.ip });
       return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
     }
 
-    const { event, payload } = req.body;
+    const { event, payload } = JSON.parse(rawBody);
 
     if (event === 'payment.captured') {
       const rzpOrderId = payload?.payment?.entity?.order_id;
+      const capturedAmountPaise = payload?.payment?.entity?.amount;
       if (rzpOrderId) {
-        await Order.findOneAndUpdate(
-          { 'payment.razorpayOrderId': rzpOrderId },
-          { 'payment.status': 'paid', 'payment.paidAt': new Date(), status: 'confirmed' }
-        );
+        const order = await Order.findOne({ 'payment.razorpayOrderId': rzpOrderId });
+        // Idempotency + amount cross-check — never mark paid on amount mismatch or twice.
+        if (order && order.payment?.status !== 'paid') {
+          const expectedPaise = Math.round(order.billing.grandTotal * 100);
+          if (capturedAmountPaise === expectedPaise) {
+            order.payment.status = 'paid';
+            order.payment.paidAt = new Date();
+            order.status = 'confirmed';
+            await order.save();
+          } else {
+            console.error('WEBHOOK AMOUNT MISMATCH:', { orderId: order._id, expectedPaise, capturedAmountPaise });
+          }
+        }
       }
     }
 

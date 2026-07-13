@@ -241,11 +241,13 @@ form.addEventListener('submit', async (e) => {
     }
 
     /* ── Razorpay flow ── */
-    const grand = Number(totalEl.textContent);
+    // Amount is computed and verified server-side from the cart's real product
+    // prices — we only send items/shippingAddress, never a trusted amount.
+    const { items, shippingAddress } = buildPayload();
 
     const rzpOrder = await request('/payment/create-order', {
       method: 'POST',
-      body:   JSON.stringify({ amount: grand })
+      body:   JSON.stringify({ items, shippingAddress })
     });
 
     const keyData = await request('/payment/key');
@@ -269,7 +271,8 @@ form.addEventListener('submit', async (e) => {
           });
           await placeOrder('ONLINE', {
             razorpayOrderId:   response.razorpay_order_id,
-            razorpayPaymentId: response.razorpay_payment_id
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature
           });
         } catch (err) {
           alert(`Payment verified but order failed: ${err.message}. Contact care@sagona.in`);

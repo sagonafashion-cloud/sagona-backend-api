@@ -10,6 +10,7 @@ import hpp from 'hpp';
 import * as Sentry from '@sentry/node';
 
 import { connectDB } from './config/db.js';
+import { validateEnv } from './utils/validateEnv.js';
 
 // ── Customer routes ────────────────────────────────────────
 import authRoutes        from './routes/authRoutes.js';
@@ -33,6 +34,7 @@ import { adminChat }      from './controllers/chatController.js';
 import { adminProtect }  from './middleware/adminAuth.js';
 import homepageRoutes    from './routes/homepageRoutes.js';
 import sizingRoutes      from './routes/sizingRoutes.js';
+import tryOnRoutes       from './routes/tryOnRoutes.js';
 
 // ── Controllers (needed for raw-body webhook) ──────────────
 import { razorpayWebhook } from './controllers/paymentController.js';
@@ -41,6 +43,9 @@ import { razorpayWebhook } from './controllers/paymentController.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
+
+// ── Fail fast on missing/weak config (before anything touches env vars) ───
+validateEnv();
 
 // ── Sentry (init before everything else) ──────────────────
 if (process.env.SENTRY_DSN) {
@@ -53,6 +58,13 @@ if (process.env.SENTRY_DSN) {
 connectDB();
 
 const app = express();
+
+// Render (and most PaaS hosts) sit the app behind a single reverse-proxy
+// hop. Trusting exactly one hop makes req.ip / req.secure reflect the real
+// client (via X-Forwarded-For) instead of the proxy's own address — this is
+// required for rate limiting and logging to key on the actual caller rather
+// than the load balancer's IP for every request.
+app.set('trust proxy', 1);
 
 // ── Rate limiters ──────────────────────────────────────────
 const authLimiter = rateLimit({
@@ -167,6 +179,7 @@ app.use('/api/delivery', deliveryRoutes);
 app.use('/api/chat',     chatRoutes);
 app.use('/api/support',  supportRoutes);
 app.use('/api/sizing',   sizingRoutes);
+app.use('/api/tryon',   tryOnRoutes);
 
 // ── Admin API ──────────────────────────────────────────────
 app.use('/api/admin/auth',      adminAuthRoutes);

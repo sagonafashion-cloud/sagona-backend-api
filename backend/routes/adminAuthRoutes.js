@@ -10,11 +10,13 @@ import {
   createAdmin
 } from '../controllers/adminAuthController.js';
 import { adminProtect } from '../middleware/adminAuth.js';
+import { adminLoginLimiter } from '../middleware/rateLimiters.js';
+import { validate, adminLoginRules } from '../middleware/validate.js';
 
 const router = express.Router();
 
-router.post('/login', adminLogin);
-router.post('/verify-2fa', verifyTwoFactor);
+router.post('/login', adminLoginLimiter, adminLoginRules, validate, adminLogin);
+router.post('/verify-2fa', adminLoginLimiter, verifyTwoFactor);
 
 // Protected
 router.post('/setup-2fa', adminProtect, setupTwoFactor);

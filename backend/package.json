@@ -15,6 +15,7 @@
     "cloudinary": "^2.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.0.0",
@@ -27,14 +28,13 @@
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
     "node-cache": "^5.1.2",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^9.0.3",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.18.0",
     "qrcode": "^1.5.4",
     "razorpay": "^2.9.2",
     "sharp": "^0.34.5",
-    "speakeasy": "^2.0.0",
-    "xlsx": "^0.18.5"
+    "speakeasy": "^2.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

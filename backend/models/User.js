@@ -22,13 +22,16 @@ const userSchema = new mongoose.Schema(
     /* ── existing fields (unchanged) ── */
     name: { type: String, required: true, trim: true },
     email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
+    password: { type: String, required: true, select: false },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     birthday: { type: Date },
     loyaltyPoints: { type: Number, default: 0 },
 
     /* ── new fields ── */
     phone: { type: String, trim: true, unique: true, sparse: true },
+
+    loginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
 
     addresses: [addressSchema],
 
@@ -43,6 +46,20 @@ const userSchema = new mongoose.Schema(
     wishlist: [wishlistItemSchema],
 
     expoPushToken: { type: String, trim: true },
+
+    tryOnPhoto: {
+      url:        { type: String },
+      publicId:   { type: String },
+      uploadedAt: { type: Date },
+      approved:   { type: Boolean, default: true }
+    },
+
+    tryOnHistory: [{
+      garmentProductId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+      garmentName:      { type: String },
+      resultImageUrl:   { type: String },
+      createdAt:        { type: Date, default: Date.now }
+    }],
 
     childProfiles: [{
       name: String,

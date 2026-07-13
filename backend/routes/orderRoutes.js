@@ -2,10 +2,11 @@ import express from 'express';
 import { createOrder, getOrders, getMyOrders, getOrderById, updateOrder, cancelOrder, initiateReturn, getOrderTracking } from '../controllers/orderController.js';
 import { protect, admin, optionalAuth } from '../middleware/auth.js';
 import { validate, createOrderRules } from '../middleware/validate.js';
+import { orderCreateLimiter } from '../middleware/rateLimiters.js';
 
 const router = express.Router();
 
-router.post('/',                   protect,        createOrderRules, validate, createOrder);
+router.post('/',                   protect,        orderCreateLimiter, createOrderRules, validate, createOrder);
 router.get('/my',                  protect,        getMyOrders);
 router.get('/:id/tracking',        optionalAuth,   getOrderTracking);
 router.get('/:id',                 protect,        getOrderById);

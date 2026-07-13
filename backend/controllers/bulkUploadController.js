@@ -1,6 +1,7 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { Readable } from 'stream';
 import mammoth from 'mammoth';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
+import { PDFParse } from 'pdf-parse';
 import Product from '../models/Product.js';
 
 // ── MAIN PARSE ENDPOINT ───────────────────────────────────────
@@ -127,25 +128,64 @@ export const bulkUploadProducts = async (req, res) => {
   }
 };
 
-// ── EXCEL / CSV PARSER ────────────────────────────────────────
+// ── EXCEL / CSV PARSER (ExcelJS) ──────────────────────────────
+// Loads all worksheets for xlsx/xls, or a single synthetic worksheet for csv.
+async function loadWorkbookSheets(buffer, ext) {
+  const workbook = new ExcelJS.Workbook();
+  if (ext === 'csv') {
+    const stream = Readable.from(buffer);
+    const worksheet = await workbook.csv.read(stream);
+    return [worksheet];
+  }
+  await workbook.xlsx.load(buffer);
+  return workbook.worksheets;
+}
+
+// Normalizes an ExcelJS cell value (which may be a rich-text object, formula
+// result, native Date, etc.) down to a plain string, matching the plain
+// string/primitive values the previous `xlsx`-based parser produced.
+function cellToString(v) {
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === 'object') {
+    if (Array.isArray(v.richText)) return v.richText.map(t => t.text).join('');
+    if ('result' in v) return v.result === null || v.result === undefined ? '' : String(v.result);
+    if ('text' in v) return v.text;
+    if ('hyperlink' in v) return v.text || v.hyperlink || '';
+    return '';
+  }
+  return v;
+}
+
+// Converts a worksheet into an array-of-arrays of plain values, matching the
+// `header: 1` shape the previous XLSX.utils.sheet_to_json() call produced.
+// ExcelJS row.values is 1-indexed with index 0 empty, so we slice it off.
+function sheetToRows(worksheet) {
+  const rows = [];
+  if (!worksheet) return rows;
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    const values = Array.isArray(row.values) ? row.values.slice(1) : [];
+    rows.push(values.map(cellToString));
+  });
+  return rows;
+}
+
 async function parseExcel(buffer, ext) {
   const products    = [];
   const parseErrors = [];
 
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheets = await loadWorkbookSheets(buffer, ext);
 
-  const productSheetName = workbook.SheetNames.find(n =>
-    n.toLowerCase().includes('product')
-  ) || workbook.SheetNames[0];
+  const productSheet = sheets.find(s =>
+    (s.name || '').toLowerCase().includes('product')
+  ) || sheets[0];
 
-  const measureSheetName = workbook.SheetNames.find(n =>
-    n.toLowerCase().includes('measure') || n.toLowerCase().includes('size')
-  );
-
-  const productSheet = workbook.Sheets[productSheetName];
-  const rows = XLSX.utils.sheet_to_json(productSheet, {
-    header: 1, defval: '', blankrows: false
+  const measureSheet = sheets.find(s => {
+    const n = (s.name || '').toLowerCase();
+    return n.includes('measure') || n.includes('size');
   });
+
+  const rows = sheetToRows(productSheet);
 
   // Find header row (first row with 'product_name' or 'sku')
   let headerRowIdx = 0;
@@ -157,7 +197,7 @@ async function parseExcel(buffer, ext) {
     }
   }
 
-  const headers = rows[headerRowIdx].map(h =>
+  const headers = (rows[headerRowIdx] || []).map(h =>
     String(h).trim().toLowerCase().replace(/\s+/g, '_')
   );
 
@@ -178,12 +218,9 @@ async function parseExcel(buffer, ext) {
 
   // Parse measurements sheet
   const measurementsBySku = {};
-  if (measureSheetName) {
+  if (measureSheet) {
     try {
-      const measSheet = workbook.Sheets[measureSheetName];
-      const measRows  = XLSX.utils.sheet_to_json(measSheet, {
-        header: 1, defval: '', blankrows: false
-      });
+      const measRows = sheetToRows(measureSheet);
 
       let measHeaderIdx = 0;
       for (let i = 0; i < Math.min(measRows.length, 5); i++) {
@@ -193,7 +230,7 @@ async function parseExcel(buffer, ext) {
         }
       }
 
-      const measHeaders = measRows[measHeaderIdx].map(h =>
+      const measHeaders = (measRows[measHeaderIdx] || []).map(h =>
         String(h).trim().toLowerCase().replace(/[\s()*]+/g, '_').replace(/_+/g, '_').replace(/_$/, '')
       );
 
@@ -249,11 +286,14 @@ async function parseWord(buffer) {
 
 // ── PDF PARSER ────────────────────────────────────────────────
 async function parsePDF(buffer) {
+  const parser = new PDFParse({ data: buffer });
   try {
-    const data = await pdfParse(buffer);
-    return parseTextContent(data.text);
+    const result = await parser.getText();
+    return parseTextContent(result.text);
   } catch (err) {
     return { products: [], parseErrors: [`PDF parse failed: ${err.message}`] };
+  } finally {
+    await parser.destroy();
   }
 }
 

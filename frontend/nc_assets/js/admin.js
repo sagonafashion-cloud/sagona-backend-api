@@ -1,4 +1,4 @@
-import { API_BASE } from './config.js';
+import { API_BASE, escapeHtml } from './config.js';
 
 // Tracks Cloudinary URLs uploaded in the current product modal
 let _uploadedUrls = [];
@@ -123,11 +123,37 @@ document.getElementById('totp-code')?.addEventListener('keydown', (e) => {
 });
 
 /* ── logout ── */
-document.getElementById('logout-btn').addEventListener('click', async () => {
+async function doLogout() {
+  stopInactivityWatch();
   try { await api('/admin/auth/logout', { method: 'POST' }); } catch {}
   sessionStorage.removeItem('admin_token');
   location.reload();
-});
+}
+
+document.getElementById('logout-btn').addEventListener('click', doLogout);
+
+/* ── inactivity auto-logout ── */
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
+const INACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+let _inactivityTimer = null;
+
+function resetInactivityTimer() {
+  clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(() => {
+    toast('Session expired due to inactivity', 'error');
+    doLogout();
+  }, INACTIVITY_LIMIT_MS);
+}
+
+function startInactivityWatch() {
+  INACTIVITY_EVENTS.forEach((evt) => document.addEventListener(evt, resetInactivityTimer, { passive: true }));
+  resetInactivityTimer();
+}
+
+function stopInactivityWatch() {
+  clearTimeout(_inactivityTimer);
+  INACTIVITY_EVENTS.forEach((evt) => document.removeEventListener(evt, resetInactivityTimer));
+}
 
 /* ══════════════════════════════════════
    APP BOOT
@@ -139,6 +165,7 @@ async function startApp() {
     `${_adminUser?.name || ''} · ${_adminUser?.role || ''}`;
   initNav();
   showSection('dashboard');
+  startInactivityWatch();
 }
 
 /* ══════════════════════════════════════
@@ -330,7 +357,7 @@ function renderOrderRows(tbodyId, orders, showActions) {
   tbody.innerHTML = orders.map((o) => `
     <tr>
       <td><a href="#" style="color:var(--gold)">${o.orderNumber || o._id?.slice(-8)}</a></td>
-      <td>${o.customer?.name || '—'}<br><span style="font-size:11px;color:var(--gray)">${o.customer?.email || ''}</span></td>
+      <td>${escapeHtml(o.customer?.name) || '—'}<br><span style="font-size:11px;color:var(--gray)">${escapeHtml(o.customer?.email)}</span></td>
       ${showActions ? `<td>${(o.items || []).length} items</td>` : ''}
       <td>${INR(o.billing?.grandTotal)}</td>
       ${showActions ? `<td style="font-size:11px">${o.payment?.method || '—'}</td>` : ''}
@@ -356,7 +383,7 @@ window.openStatusModal = function(orderId) {
 function buildStatusUpdateModal(order) {
   return `
     <h2 style="font-size:16px;font-weight:500;margin-bottom:4px">Update Order Status</h2>
-    <p style="font-size:12px;color:var(--gray);margin-bottom:20px">${order.orderNumber} · ${order.customer?.name || ''}</p>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:20px">${escapeHtml(order.orderNumber)} · ${escapeHtml(order.customer?.name)}</p>
     <div style="padding:4px">
       <div class="form-group" style="margin-bottom:14px">
         <label style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#888;display:block;margin-bottom:6px">New Status *</label>
@@ -527,10 +554,10 @@ async function loadReturns() {
               const date = new Date(rr.requestedAt).toLocaleDateString('en-IN');
               return `
                 <tr>
-                  <td style="font-weight:500;color:var(--gold)">${order.orderNumber}</td>
+                  <td style="font-weight:500;color:var(--gold)">${escapeHtml(order.orderNumber)}</td>
                   <td>
-                    <div>${order.customer?.name || '—'}</div>
-                    <div style="font-size:11px;color:var(--gray)">${order.customer?.email || ''}</div>
+                    <div>${escapeHtml(order.customer?.name) || '—'}</div>
+                    <div style="font-size:11px;color:var(--gray)">${escapeHtml(order.customer?.email)}</div>
                   </td>
                   <td>
                     <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;
@@ -539,10 +566,10 @@ async function loadReturns() {
                       ${isReplace ? 'REPLACE' : 'RETURN'}
                     </span>
                   </td>
-                  <td style="font-size:13px;max-width:200px">${rr.reason || '—'}</td>
+                  <td style="font-size:13px;max-width:200px">${escapeHtml(rr.reason) || '—'}</td>
                   <td style="font-size:13px">
                     ${isReplace && rr.replacementProductName
-                      ? `<span style="color:var(--gold)">${rr.replacementProductName}</span>`
+                      ? `<span style="color:var(--gold)">${escapeHtml(rr.replacementProductName)}</span>`
                       : isReplace ? '<span style="color:var(--gray)">Not selected yet</span>' : '—'
                     }
                   </td>
@@ -624,15 +651,15 @@ function renderProducts(products) {
     return `
     <tr>
       <td><img src="${img}" style="width:44px;height:44px;object-fit:cover;border-radius:var(--radius)" onerror="this.style.display='none'"></td>
-      <td>${p.name}</td>
-      <td style="font-size:11px;color:var(--gray)">${p.sku || '—'}</td>
+      <td>${escapeHtml(p.name)}</td>
+      <td style="font-size:11px;color:var(--gray)">${escapeHtml(p.sku) || '—'}</td>
       <td>${INR(p.price)}${p.mrp && p.mrp > p.price ? ` <span style="font-size:11px;color:var(--light-gray);text-decoration:line-through">${INR(p.mrp)}</span>` : ''}</td>
-      <td><span style="font-size:11px;text-transform:capitalize">${p.category || '—'}</span></td>
-      <td><span class="pill ${p.status === 'active' ? 'pill-delivered' : 'pill-placed'}">${p.status || 'active'}</span></td>
+      <td><span style="font-size:11px;text-transform:capitalize">${escapeHtml(p.category) || '—'}</span></td>
+      <td><span class="pill ${p.status === 'active' ? 'pill-delivered' : 'pill-placed'}">${escapeHtml(p.status) || 'active'}</span></td>
       <td style="white-space:nowrap">
         <button class="btn ghost" style="padding:5px 10px;font-size:10px" onclick="editProduct('${p._id}')">Edit</button>
         <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#C9A84C" onclick="window.openSizingConfig('${p._id}')">Sizing</button>
-        <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#dc2626" onclick="archiveProduct('${p._id}','${p.name}')">Archive</button>
+        <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#dc2626" onclick="archiveProduct('${p._id}','${encodeURIComponent(p.name)}')">Archive</button>
       </td>
     </tr>`;
   }).join('');
@@ -822,7 +849,7 @@ window.editProduct = async (id) => {
 };
 
 window.archiveProduct = async (id, name) => {
-  if (!confirm(`Archive "${name}"? It will be hidden from the shop.`)) return;
+  if (!confirm(`Archive "${decodeURIComponent(name)}"? It will be hidden from the shop.`)) return;
   try {
     await api(`/admin/products/${id}`, { method: 'DELETE' });
     toast('Product archived', 'success');
@@ -1404,11 +1431,11 @@ async function loadStores() {
     }
     tbody.innerHTML = stores.map((s) => `
       <tr>
-        <td>${s.name}</td>
-        <td>${s.city || '—'}</td>
-        <td>${s.state || '—'}</td>
-        <td>${s.pincode || '—'}</td>
-        <td style="font-size:11px">${s.gstin || '—'}</td>
+        <td>${escapeHtml(s.name)}</td>
+        <td>${escapeHtml(s.city) || '—'}</td>
+        <td>${escapeHtml(s.state) || '—'}</td>
+        <td>${escapeHtml(s.pincode) || '—'}</td>
+        <td style="font-size:11px">${escapeHtml(s.gstin) || '—'}</td>
         <td>
           <span class="pill ${s.isActive !== false ? 'pill-delivered' : 'pill-cancelled'}"
                 style="cursor:pointer" title="Click to toggle active status"
@@ -1558,7 +1585,7 @@ async function loadAnalytics() {
     const alerts = invData.value?.data || [];
     const invBody = document.getElementById('inventory-body');
     invBody.innerHTML = alerts.length
-      ? alerts.map((p) => `<tr><td>${p.name}</td><td style="font-size:11px;color:var(--gray)">${p.sku || '—'}</td><td><span style="color:#dc2626;font-weight:600">${p.stock ?? '?'}</span></td></tr>`).join('')
+      ? alerts.map((p) => `<tr><td>${escapeHtml(p.name)}</td><td style="font-size:11px;color:var(--gray)">${escapeHtml(p.sku) || '—'}</td><td><span style="color:#dc2626;font-weight:600">${p.stock ?? '?'}</span></td></tr>`).join('')
       : `<tr><td colspan="3" class="loading">All products well-stocked.</td></tr>`;
 
   } catch (err) { console.error('loadAnalytics:', err); }
@@ -1628,9 +1655,9 @@ async function loadAdminUsers() {
     tbody.innerHTML = users.length
       ? users.map((u) => `
         <tr>
-          <td>${u.name}</td>
-          <td>${u.email}</td>
-          <td><span class="pill pill-confirmed">${u.role}</span></td>
+          <td>${escapeHtml(u.name)}</td>
+          <td>${escapeHtml(u.email)}</td>
+          <td><span class="pill pill-confirmed">${escapeHtml(u.role)}</span></td>
           <td>${fmt(u.lastLogin)}</td>
           <td><span class="pill ${u.isActive !== false ? 'pill-delivered' : 'pill-cancelled'}">${u.isActive !== false ? 'Active' : 'Inactive'}</span></td>
         </tr>`).join('')

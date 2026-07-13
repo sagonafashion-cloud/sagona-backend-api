@@ -1,10 +1,25 @@
 import Order from '../models/Order.js';
 import Store from '../models/Store.js';
-import XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 
 /* ── helpers ── */
 const INR = (n) => Number(n || 0).toFixed(2);
+
+// Builds an .xlsx buffer from an array of plain row objects (replaces the
+// previous XLSX.utils.book_new/json_to_sheet/write flow, using ExcelJS).
+async function rowsToXlsxBuffer(rows, sheetName) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
+
+  const headers = Object.keys(rows[0] || {});
+  if (headers.length) {
+    worksheet.addRow(headers);
+    rows.forEach((r) => worksheet.addRow(headers.map((h) => r[h])));
+  }
+
+  return workbook.xlsx.writeBuffer();
+}
 
 const parseDates = (query) => ({
   from: query.from ? new Date(query.from) : new Date(new Date().setDate(1)),   // 1st of current month
@@ -260,10 +275,7 @@ export const exportGstReport = async (req, res) => {
     }
 
     if (format === 'xlsx') {
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, type.toUpperCase());
-      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      const buffer = await rowsToXlsxBuffer(rows, type.toUpperCase());
 
       res.setHeader('Content-Disposition', `attachment; filename="${fname}.xlsx"`);
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -373,10 +385,7 @@ export const getConsolidated = async (req, res) => {
       'Grand Total':    Number(INR(r.grandTotal))
     }));
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, 'Consolidated');
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await rowsToXlsxBuffer(rows, 'Consolidated');
     const fname  = `sagona_consolidated_${new Date(from).toISOString().slice(0, 10)}_${new Date(to).toISOString().slice(0, 10)}`;
 
     res.setHeader('Content-Disposition', `attachment; filename="${fname}.xlsx"`);

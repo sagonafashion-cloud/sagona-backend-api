@@ -43,7 +43,26 @@ export const createStore = async (req, res) => {
 
 export const updateStore = async (req, res) => {
   try {
-    const store = await Store.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    // Explicit field whitelist — never pass raw req.body into an update
+    // (prevents mass assignment of fields not intended to be client-settable,
+    // e.g. isActive/deletedAt which have their own dedicated endpoints).
+    const { name, address, city, state, pincode, lat, lng, gstin, phone,
+            dispatchEnabled, dispatchCutoffTime, priority } = req.body;
+    const update = {};
+    if (name               !== undefined) update.name               = name;
+    if (address            !== undefined) update.address            = address;
+    if (city               !== undefined) update.city               = city;
+    if (state              !== undefined) update.state              = state;
+    if (pincode            !== undefined) update.pincode            = pincode;
+    if (lat                !== undefined) update.lat                = lat;
+    if (lng                !== undefined) update.lng                = lng;
+    if (gstin              !== undefined) update.gstin              = gstin;
+    if (phone              !== undefined) update.phone              = phone;
+    if (dispatchEnabled    !== undefined) update.dispatchEnabled    = dispatchEnabled;
+    if (dispatchCutoffTime !== undefined) update.dispatchCutoffTime = dispatchCutoffTime;
+    if (priority           !== undefined) update.priority           = priority;
+
+    const store = await Store.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
     res.json({ success: true, data: store });
   } catch (err) {

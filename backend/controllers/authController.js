@@ -69,6 +69,9 @@ export const registerUser = async (req, res) => {
   }
 };
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
 export const loginUser = async (req, res) => {
   try {
     const { password } = req.body;
@@ -80,10 +83,29 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Email or phone required' });
     }
 
-    const user = await User.findOne(query);
+    const user = await User.findOne(query).select('+password');
+
+    if (user?.lockUntil && user.lockUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.lockUntil - new Date()) / 60000);
+      return res.status(423).json({ message: `Account locked. Try again in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}.` });
+    }
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
+      if (user) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+          user.lockUntil = new Date(Date.now() + LOCK_DURATION_MS);
+          user.loginAttempts = 0;
+        }
+        await user.save();
+      }
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    if (user.loginAttempts > 0 || user.lockUntil) {
+      user.loginAttempts = 0;
+      user.lockUntil = undefined;
+      await user.save();
     }
 
     return res.json({

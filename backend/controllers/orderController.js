@@ -1,10 +1,10 @@
 import Order from '../models/Order.js';
-import Product from '../models/Product.js';
 import User from '../models/User.js';
-import { calculateTax } from '../utils/taxCalculator.js';
-import { generateInvoiceForOrder } from './paymentController.js';
+import { generateInvoiceForOrder, getRazorpayInstance, safeCompareHex } from './paymentController.js';
 import { sendOrderConfirmation, sendStatusUpdate, sendOrderStatusEmail } from '../utils/emailService.js';
 import { buildTimelineEntry, calcEstimatedDelivery } from '../utils/orderTimeline.js';
+import { computeOrderTotals } from '../utils/orderCalculator.js';
+import crypto from 'crypto';
 
 /* ═══════════════════════════════════
    CREATE ORDER (customer)
@@ -19,56 +19,55 @@ export const createOrder = async (req, res) => {
       notes
     } = req.body;
 
-    if (!items.length) {
-      return res.status(400).json({ success: false, message: 'Order items required' });
-    }
-
-    let subtotal = 0;
-    const enrichedItems = [];
-
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        return res.status(400).json({ success: false, message: `Product ${item.productId} not found` });
-      }
-
-      const unitPrice = product.price;
-      const qty = Number(item.qty || item.quantity || 1);
-      subtotal += unitPrice * qty;
-
-      enrichedItems.push({
-        productId: product._id,
-        name: product.name,
-        sku: item.sku || product.sku,
-        colour: item.colour,
-        size: item.size,
-        qty,
-        unitPrice,
-        mrp: product.mrp || unitPrice,
-        gstSlab: product.gstSlab || 0,
-        hsnCode: product.hsnCode,
-        storeId: item.storeId
-      });
-    }
-
-    const shippingCharge = subtotal >= (Number(process.env.FREE_SHIPPING_THRESHOLD) || 999) ? 0 : 99;
-
-    // GST calculation
-    const storeState    = enrichedItems[0]?.storeState || '';
-    const customerState = shippingAddress?.state || '';
-    const tax = calculateTax(enrichedItems, storeState, customerState);
-
-    const billing = {
-      subtotal:      tax.subtotal,
-      shippingCharge,
-      taxableAmount: tax.taxableAmount,
-      cgst:          tax.cgst,
-      sgst:          tax.sgst,
-      igst:          tax.igst,
-      grandTotal:    tax.grandTotal + shippingCharge
-    };
+    const { enrichedItems, billing, taxType } = await computeOrderTotals(items, shippingAddress);
 
     const paymentMethod = payment?.method || 'COD';
+    let paymentSubdoc = { method: 'COD', status: 'pending' };
+
+    if (paymentMethod === 'ONLINE') {
+      const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = payment || {};
+      if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+        return res.status(400).json({ success: false, message: 'Payment verification details required' });
+      }
+
+      // 1. Verify the signature ties this payment to this Razorpay order.
+      const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest('hex');
+      if (!safeCompareHex(expectedSignature, razorpaySignature)) {
+        console.warn('ORDER PAYMENT SIGNATURE MISMATCH:', { userId: req.user._id, razorpayOrderId, razorpayPaymentId });
+        return res.status(400).json({ success: false, message: 'Payment verification failed' });
+      }
+
+      // 2. Reject replay — this payment must not already be attached to another order.
+      const alreadyUsed = await Order.findOne({ 'payment.razorpayPaymentId': razorpayPaymentId });
+      if (alreadyUsed) {
+        return res.status(409).json({ success: false, message: 'This payment has already been used for an order' });
+      }
+
+      // 3. Fetch what was actually captured from Razorpay and cross-check the amount —
+      // never trust a client-supplied amount for what the order is "worth".
+      const razorpay = getRazorpayInstance();
+      const captured = await razorpay.payments.fetch(razorpayPaymentId);
+      const expectedPaise = Math.round(billing.grandTotal * 100);
+
+      if (captured.order_id !== razorpayOrderId || captured.status !== 'captured' || captured.amount !== expectedPaise) {
+        console.error('ORDER PAYMENT AMOUNT MISMATCH:', {
+          userId: req.user._id, expectedPaise, capturedAmount: captured.amount, capturedStatus: captured.status
+        });
+        return res.status(400).json({ success: false, message: 'Payment amount could not be verified' });
+      }
+
+      paymentSubdoc = {
+        method: 'ONLINE',
+        razorpayOrderId,
+        razorpayPaymentId,
+        status: 'paid',
+        paidAt: new Date()
+      };
+    }
+
     const order = await Order.create({
       customer: {
         userId: req.user._id,
@@ -79,8 +78,9 @@ export const createOrder = async (req, res) => {
       items: enrichedItems,
       shippingAddress,
       billing,
-      taxType: tax.taxType,
-      payment: payment || { method: 'COD', status: 'pending' },
+      taxType,
+      payment: paymentSubdoc,
+      status: paymentMethod === 'ONLINE' ? 'confirmed' : 'placed',
       couponCode,
       notes
     });
@@ -94,22 +94,21 @@ export const createOrder = async (req, res) => {
     order.estimatedDelivery = calcEstimatedDelivery(new Date(), 5);
     await order.save();
 
-    // COD: generate invoice + send confirmation (non-blocking)
-    if (paymentMethod === 'COD') {
-      generateInvoiceForOrder(order)
-        .then((invoiceUrl) => {
-          const orderWithInvoice = { ...order.toObject(), invoiceUrl };
-          sendOrderConfirmation(orderWithInvoice).catch((err) =>
-            console.error('sendOrderConfirmation failed:', err.message)
-          );
-        })
-        .catch((err) => console.error('COD invoice generation failed:', err.message));
-    }
+    // Generate invoice + send confirmation (non-blocking). Safe for both COD and
+    // ONLINE here since an ONLINE order only reaches this point once payment is verified.
+    generateInvoiceForOrder(order)
+      .then((invoiceUrl) => {
+        const orderWithInvoice = { ...order.toObject(), invoiceUrl };
+        sendOrderConfirmation(orderWithInvoice).catch((err) =>
+          console.error('sendOrderConfirmation failed:', err.message)
+        );
+      })
+      .catch((err) => console.error('Invoice generation failed:', err.message));
 
     res.status(201).json({ success: true, data: order });
   } catch (err) {
     console.error('createOrder:', err);
-    res.status(500).json({ success: false, message: 'Create order failed' });
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Create order failed' });
   }
 };
 

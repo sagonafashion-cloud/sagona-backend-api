@@ -22,10 +22,27 @@ export const getAllSections = async (req, res) => {
   }
 };
 
+const SECTION_FIELDS = [
+  'type', 'title', 'label', 'subtitle', 'cta', 'ctaLink', 'textPosition', 'textColor', 'overlay',
+  'mediaType', 'mediaUrl', 'posterUrl', 'mediaPublicId',
+  'text', 'bgColor', 'textColorStrip',
+  'leftMedia', 'rightMedia',
+  'category', 'featured', 'limit', 'viewAllLink',
+  'order', 'isActive'
+];
+
+function pickSectionFields(body = {}) {
+  const picked = {};
+  for (const key of SECTION_FIELDS) {
+    if (body[key] !== undefined) picked[key] = body[key];
+  }
+  return picked;
+}
+
 // POST /api/admin/homepage/sections
 export const createSection = async (req, res) => {
   try {
-    const section = await HomepageSection.create(req.body);
+    const section = await HomepageSection.create(pickSectionFields(req.body));
     res.json({ success: true, data: section });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -35,7 +52,7 @@ export const createSection = async (req, res) => {
 // PUT /api/admin/homepage/sections/:id
 export const updateSection = async (req, res) => {
   try {
-    const section = await HomepageSection.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const section = await HomepageSection.findByIdAndUpdate(req.params.id, pickSectionFields(req.body), { new: true });
     if (!section) return res.status(404).json({ success: false, message: 'Section not found' });
     res.json({ success: true, data: section });
   } catch (err) {

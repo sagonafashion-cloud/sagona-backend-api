@@ -145,9 +145,43 @@ export const adminCreateProduct = async (req, res) => {
 
 export const adminUpdateProduct = async (req, res) => {
   try {
+    // Explicit field whitelist (mirrors adminCreateProduct) — never pass raw
+    // req.body into an update to prevent mass assignment of fields the admin
+    // UI doesn't intend to expose.
+    const {
+      name, price, mrp, image, images, description, featured,
+      sku, category, subcategory, gender, ageGroup, tags,
+      gstSlab, hsnCode, fabric, careInstructions, weight,
+      status, publishAt, variants, stores
+    } = req.body;
+
+    const update = {};
+    if (name             !== undefined) update.name             = name;
+    if (price             !== undefined) update.price             = price;
+    if (mrp               !== undefined) update.mrp               = mrp;
+    if (image             !== undefined) update.image             = image;
+    if (images            !== undefined) update.images            = images;
+    if (description       !== undefined) update.description       = description;
+    if (featured          !== undefined) update.featured          = !!featured;
+    if (sku               !== undefined) update.sku               = sku;
+    if (category          !== undefined) update.category          = category;
+    if (subcategory       !== undefined) update.subcategory       = subcategory;
+    if (gender            !== undefined) update.gender            = gender;
+    if (ageGroup          !== undefined) update.ageGroup          = ageGroup;
+    if (tags              !== undefined) update.tags              = tags;
+    if (gstSlab           !== undefined) update.gstSlab           = gstSlab;
+    if (hsnCode           !== undefined) update.hsnCode           = hsnCode;
+    if (fabric            !== undefined) update.fabric            = fabric;
+    if (careInstructions  !== undefined) update.careInstructions  = careInstructions;
+    if (weight            !== undefined) update.weight            = weight;
+    if (status            !== undefined) update.status            = status;
+    if (publishAt         !== undefined) update.publishAt         = publishAt;
+    if (variants          !== undefined) update.variants          = variants;
+    if (stores            !== undefined) update.stores            = stores;
+
     const product = await Product.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      update,
       { new: true, runValidators: true }
     );
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });

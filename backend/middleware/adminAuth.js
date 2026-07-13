@@ -11,7 +11,7 @@ export const adminProtect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_ADMIN_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_ADMIN_SECRET, { algorithms: ['HS256'] });
 
     if (decoded.type !== 'admin') {
       return res.status(401).json({ success: false, message: 'Invalid token type' });

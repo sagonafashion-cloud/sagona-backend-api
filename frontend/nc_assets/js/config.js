@@ -12,6 +12,13 @@ export const API_BASE = isLocalhost
 // Update this value after regenerating your key pair in Step 1 of the security checklist.
 export const RAZORPAY_KEY_ID = 'rzp_live_SnTOdSqnhxjlWr';
 
+export function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
 export async function fetchPincodeData(pincode, cityFieldId, stateFieldId, statusElementId) {
   const statusEl = statusElementId ? document.getElementById(statusElementId) : null;
 

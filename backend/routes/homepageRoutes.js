@@ -5,11 +5,18 @@ import {
   updateSection, deleteSection, reorderSections, uploadMedia
 } from '../controllers/homepageController.js';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
+import { verifyImageOrVideoSignature } from '../utils/fileValidation.js';
 
 const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 200 * 1024 * 1024 }
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/') && !file.mimetype.startsWith('video/')) {
+      return cb(new Error('Only image or video files allowed'));
+    }
+    cb(null, true);
+  }
 });
 
 // Public
@@ -22,6 +29,6 @@ router.put('/admin/homepage/reorder',     adminProtect, requireRole('super_admin
 router.put('/admin/homepage/sections/:id',    adminProtect, requireRole('super_admin', 'content_editor'), updateSection);
 router.delete('/admin/homepage/sections/:id', adminProtect, requireRole('super_admin'), deleteSection);
 router.post('/admin/homepage/upload',     adminProtect, requireRole('super_admin', 'content_editor'),
-  upload.single('media'), uploadMedia);
+  upload.single('media'), verifyImageOrVideoSignature({ field: 'media' }), uploadMedia);
 
 export default router;

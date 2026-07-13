@@ -1,5 +1,16 @@
-import { API_BASE } from './config.js';
+import { API_BASE, escapeHtml } from './config.js';
 import { getCart, getToken, getUser } from './storage.js';
+
+// Homepage sections/products are admin-authored (and some are ingested from
+// bulk-uploaded Excel/Word/PDF files), so their text/URLs are not fully
+// trusted — escape before interpolating into innerHTML, and reject
+// javascript:/data:/vbscript: URIs in any href/src-bound field.
+function sanitizeUrl(url, fallback = '#') {
+  const trimmed = String(url ?? '').trim();
+  if (!trimmed) return fallback;
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return fallback;
+  return escapeHtml(trimmed);
+}
 
 // ── INIT ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -108,7 +119,7 @@ function buildSection(s) {
       div.innerHTML = buildMediaSection(s);
       break;
     case 'strip':
-      div.innerHTML = `<div class="s-strip-text">${s.text || 'SAGONA — NEW COLLECTION'}</div>`;
+      div.innerHTML = `<div class="s-strip-text">${escapeHtml(s.text) || 'SAGONA — NEW COLLECTION'}</div>`;
       break;
     case 'split':
       div.innerHTML = buildSplitSection(s);
@@ -140,17 +151,17 @@ function buildSplitSection(s) {
     <div class="s-split-col">
       <div class="s-media-wrap split-col">${buildMediaItem(s.leftMedia)}</div>
       ${s.leftMedia?.text ? `<div class="s-content">
-        <div class="s-content-label">${s.leftMedia.label || ''}</div>
-        <div class="s-content-title">${s.leftMedia.text}</div>
-        ${s.leftMedia.cta ? `<a href="${s.leftMedia.ctaLink || 'shop.html'}" class="s-cta">${s.leftMedia.cta}</a>` : ''}
+        <div class="s-content-label">${escapeHtml(s.leftMedia.label)}</div>
+        <div class="s-content-title">${escapeHtml(s.leftMedia.text)}</div>
+        ${s.leftMedia.cta ? `<a href="${sanitizeUrl(s.leftMedia.ctaLink || 'shop.html')}" class="s-cta">${escapeHtml(s.leftMedia.cta)}</a>` : ''}
       </div>` : ''}
     </div>
     <div class="s-split-col">
       <div class="s-media-wrap split-col">${buildMediaItem(s.rightMedia)}</div>
       ${s.rightMedia?.text ? `<div class="s-content">
-        <div class="s-content-label">${s.rightMedia.label || ''}</div>
-        <div class="s-content-title">${s.rightMedia.text}</div>
-        ${s.rightMedia.cta ? `<a href="${s.rightMedia.ctaLink || 'shop.html'}" class="s-cta">${s.rightMedia.cta}</a>` : ''}
+        <div class="s-content-label">${escapeHtml(s.rightMedia.label)}</div>
+        <div class="s-content-title">${escapeHtml(s.rightMedia.text)}</div>
+        ${s.rightMedia.cta ? `<a href="${sanitizeUrl(s.rightMedia.ctaLink || 'shop.html')}" class="s-cta">${escapeHtml(s.rightMedia.cta)}</a>` : ''}
       </div>` : ''}
     </div>
   `;
@@ -160,8 +171,8 @@ function buildSplitSection(s) {
 function buildProductsSection(s) {
   return `
     <div class="s-products-header">
-      <div class="s-products-title">${s.title || 'NEW ARRIVALS'}</div>
-      <a href="${s.viewAllLink || 'shop.html'}" class="s-products-viewall">VIEW ALL &#8594;</a>
+      <div class="s-products-title">${escapeHtml(s.title) || 'NEW ARRIVALS'}</div>
+      <a href="${sanitizeUrl(s.viewAllLink || 'shop.html')}" class="s-products-viewall">VIEW ALL &#8594;</a>
     </div>
     <div class="s-products-grid" id="pgrid-${s._id}">
       ${Array(4).fill('<div class="s-product-card"><div class="s-product-img" style="background:#F0EDE8"></div></div>').join('')}
@@ -188,14 +199,16 @@ function buildProductCard(p) {
   const img1 = p.images?.[0] || p.image || '';
   const img2 = p.images?.[1] || img1;
   const hasDiscount = p.mrp && p.mrp > p.price;
+  const id = encodeURIComponent(p._id || '');
+  const name = escapeHtml(p.name);
   return `
-    <div class="s-product-card" onclick="location.href='product.html?id=${p._id}'">
+    <div class="s-product-card" onclick="location.href='product.html?id=${id}'">
       <div class="s-product-img">
-        ${img1 ? `<img class="img-primary" src="${img1}" alt="${p.name}" loading="lazy">` : ''}
-        ${img2 && img2 !== img1 ? `<img class="img-hover" src="${img2}" alt="${p.name}" loading="lazy">` : ''}
+        ${img1 ? `<img class="img-primary" src="${sanitizeUrl(img1)}" alt="${name}" loading="lazy">` : ''}
+        ${img2 && img2 !== img1 ? `<img class="img-hover" src="${sanitizeUrl(img2)}" alt="${name}" loading="lazy">` : ''}
       </div>
       <div class="s-product-info">
-        <div class="s-product-name">${p.name}</div>
+        <div class="s-product-name">${name}</div>
         <div class="s-product-price">
           &#8377;${Number(p.price).toLocaleString('en-IN')}
           ${hasDiscount ? `<span class="s-product-mrp">&#8377;${Number(p.mrp).toLocaleString('en-IN')}</span>` : ''}
@@ -208,10 +221,10 @@ function buildProductCard(p) {
 // ── MEDIA HELPERS ─────────────────────────────────────────────
 function buildMedia(s) {
   if (s.mediaType === 'video' && s.mediaUrl) {
-    return `<video src="${s.mediaUrl}" autoplay muted loop playsinline preload="metadata" poster="${s.posterUrl || ''}"></video>`;
+    return `<video src="${sanitizeUrl(s.mediaUrl)}" autoplay muted loop playsinline preload="metadata" poster="${sanitizeUrl(s.posterUrl, '')}"></video>`;
   }
   if (s.mediaUrl) {
-    return `<img src="${s.mediaUrl}" alt="${s.title || 'Sagona'}" loading="${s.type === 'hero' ? 'eager' : 'lazy'}">`;
+    return `<img src="${sanitizeUrl(s.mediaUrl)}" alt="${escapeHtml(s.title) || 'Sagona'}" loading="${s.type === 'hero' ? 'eager' : 'lazy'}">`;
   }
   return '<div style="width:100%;height:100%;background:#0A0A0A"></div>';
 }
@@ -219,9 +232,9 @@ function buildMedia(s) {
 function buildMediaItem(m) {
   if (!m) return '<div style="width:100%;height:100%;background:#F8F6F3"></div>';
   if (m.type === 'video' && m.url) {
-    return `<video src="${m.url}" autoplay muted loop playsinline preload="metadata" poster="${m.poster || ''}"></video>`;
+    return `<video src="${sanitizeUrl(m.url)}" autoplay muted loop playsinline preload="metadata" poster="${sanitizeUrl(m.poster, '')}"></video>`;
   }
-  if (m.url) return `<img src="${m.url}" alt="${m.text || ''}" loading="lazy">`;
+  if (m.url) return `<img src="${sanitizeUrl(m.url)}" alt="${escapeHtml(m.text)}" loading="lazy">`;
   return '<div style="width:100%;height:100%;background:#F8F6F3"></div>';
 }
 
@@ -231,10 +244,10 @@ function buildContent(s) {
   const ctaClass  = s.textColor === 'dark' ? 'dark' : '';
   return `
     <div class="s-content ${textClass}">
-      ${s.label    ? `<div class="s-content-label">${s.label}</div>` : ''}
-      ${s.title    ? `<div class="s-content-title">${s.title}</div>` : ''}
-      ${s.subtitle ? `<div class="s-content-sub">${s.subtitle}</div>` : ''}
-      ${s.cta      ? `<a href="${s.ctaLink || 'shop.html'}" class="s-cta ${ctaClass}">${s.cta}</a>` : ''}
+      ${s.label    ? `<div class="s-content-label">${escapeHtml(s.label)}</div>` : ''}
+      ${s.title    ? `<div class="s-content-title">${escapeHtml(s.title)}</div>` : ''}
+      ${s.subtitle ? `<div class="s-content-sub">${escapeHtml(s.subtitle)}</div>` : ''}
+      ${s.cta      ? `<a href="${sanitizeUrl(s.ctaLink || 'shop.html')}" class="s-cta ${ctaClass}">${escapeHtml(s.cta)}</a>` : ''}
     </div>
   `;
 }
