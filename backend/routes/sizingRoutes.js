@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
-import { adminProtect } from '../middleware/adminAuth.js';
+import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import * as C from '../controllers/sizingController.js';
 
 const router = express.Router();
@@ -16,7 +16,7 @@ router.delete('/profiles/:id', protect, C.deleteChildProfile);
 router.post('/feedback',     protect, C.submitFitFeedback);
 
 // Admin
-router.get('/admin/analytics', adminProtect, C.getSizingAnalytics);
-router.get('/admin/feedback',  adminProtect, C.getAllFeedback);
+router.get('/admin/analytics', adminProtect, requireRole('super_admin', 'finance_manager', 'store_manager'), C.getSizingAnalytics);
+router.get('/admin/feedback',  adminProtect, requireRole('super_admin', 'store_manager'), C.getAllFeedback);
 
 export default router;

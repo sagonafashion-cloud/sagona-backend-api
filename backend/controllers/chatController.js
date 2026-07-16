@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import Product    from '../models/Product.js';
 import Order      from '../models/Order.js';
 import ChatSession from '../models/ChatSession.js';
+import crypto from 'crypto';
 
 const client = () => {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
@@ -297,11 +298,16 @@ async function streamWithTools({ messages, systemPrompt, tools, userId, res, dep
 export const customerChat = async (req, res) => {
   try {
     const { message, sessionId } = req.body;
-    if (!message?.trim()) return res.status(400).json({ success: false, message: 'message required' });
+    if (!message?.trim() || message.trim().length > 2000) return res.status(400).json({ success: false, message: 'message must be 1–2000 characters' });
 
     // Load or create session
-    const sid = sessionId || `anon_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const sid = sessionId || `chat_${crypto.randomUUID()}`;
     let session = await ChatSession.findOne({ sessionId: sid });
+    // A session is private state, not a bearer capability. Logged-in sessions
+    // are always tied to their owner; anonymous clients get unguessable IDs.
+    if (session && (session.userId ? String(session.userId) !== String(req.user?._id) : !!req.user)) {
+      return res.status(403).json({ success: false, message: 'Chat session not available' });
+    }
     if (!session) {
       session = await ChatSession.create({
         sessionId: sid,
@@ -361,12 +367,15 @@ export const customerChat = async (req, res) => {
 export const adminChat = async (req, res) => {
   try {
     const { message, sessionId } = req.body;
-    if (!message?.trim()) return res.status(400).json({ success: false, message: 'message required' });
+    if (!message?.trim() || message.trim().length > 2000) return res.status(400).json({ success: false, message: 'message must be 1–2000 characters' });
 
     const sid = sessionId || `admin_${req.adminUser._id}_${Date.now()}`;
     let session = await ChatSession.findOne({ sessionId: sid });
+    if (session && String(session.adminUserId || '') !== String(req.adminUser._id)) {
+      return res.status(403).json({ success: false, message: 'Chat session not available' });
+    }
     if (!session) {
-      session = await ChatSession.create({ sessionId: sid, messages: [] });
+      session = await ChatSession.create({ sessionId: sid, adminUserId: req.adminUser._id, messages: [] });
     }
 
     const history = session.messages.slice(-20).map((m) => ({

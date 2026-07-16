@@ -9,7 +9,7 @@ import {
   listAdmins,
   createAdmin
 } from '../controllers/adminAuthController.js';
-import { adminProtect } from '../middleware/adminAuth.js';
+import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import { adminLoginLimiter } from '../middleware/rateLimiters.js';
 import { validate, adminLoginRules } from '../middleware/validate.js';
 
@@ -23,7 +23,9 @@ router.post('/setup-2fa', adminProtect, setupTwoFactor);
 router.post('/confirm-2fa', adminProtect, confirmTwoFactorSetup);
 router.get('/me', adminProtect, getMe);
 router.post('/logout', adminProtect, adminLogout);
-router.get('/users',  adminProtect, listAdmins);
-router.post('/users', adminProtect, createAdmin);
+// User administration is a privilege boundary: never let a lower-privilege
+// admin create (or enumerate) accounts with more access than their own.
+router.get('/users',  adminProtect, requireRole('super_admin'), listAdmins);
+router.post('/users', adminProtect, requireRole('super_admin'), createAdmin);
 
 export default router;

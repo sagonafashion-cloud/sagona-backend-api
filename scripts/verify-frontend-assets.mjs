@@ -10,18 +10,17 @@ for (const fileName of htmlFiles) {
   const filePath = path.join(frontendDir, fileName);
   const html = readFileSync(filePath, 'utf8');
 
-  if (/href=["']style\.css["']/.test(html)) {
-    errors.push(`${fileName}: uses style.css (must use styles.css)`);
-  }
-
-  if (fileName !== 'returns.html' && !/href=["']styles\.css["']/.test(html)) {
-    errors.push(`${fileName}: missing styles.css reference`);
+  // drawer.html is an injected fragment and intentionally inherits the host page's CSS.
+  if (fileName !== 'drawer.html' && !/href=["']\/?nc_assets\/CCS\/style\.css["']/.test(html)) {
+    errors.push(`${fileName}: missing nc_assets/CCS/style.css reference`);
   }
 
   const refs = [...html.matchAll(/(?:src|href)=['"]([^'"]+)['"]/g)].map((m) => m[1]);
   for (const ref of refs) {
-    if (/^(https?:|mailto:|#)/.test(ref)) continue;
-    const target = path.join(frontendDir, ref);
+    if (/^(https?:|mailto:|#|javascript:|data:)/i.test(ref) || ref.includes('${')) continue;
+    const localRef = ref.split(/[?#]/, 1)[0];
+    if (!localRef) continue;
+    const target = path.join(frontendDir, localRef.replace(/^\//, ''));
     if (!existsSync(target)) {
       errors.push(`${fileName}: missing local asset ${ref}`);
     }

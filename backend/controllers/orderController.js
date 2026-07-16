@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import User from '../models/User.js';
+import Product from '../models/Product.js';
 import { generateInvoiceForOrder, getRazorpayInstance, safeCompareHex } from './paymentController.js';
 import { sendOrderConfirmation, sendStatusUpdate, sendOrderStatusEmail } from '../utils/emailService.js';
 import { buildTimelineEntry, calcEstimatedDelivery } from '../utils/orderTimeline.js';
@@ -116,6 +117,20 @@ export const createOrder = async (req, res) => {
       couponCode,
       notes
     });
+
+    // Reserve inventory only after the order is persisted. Conditional updates
+    // make concurrent checkouts fail safely instead of driving stock negative.
+    for (const item of enrichedItems) {
+      if (!item.size && !item.colour) continue;
+      const reserved = await Product.updateOne(
+        { _id: item.productId, variants: { $elemMatch: { size: item.size, colour: item.colour, stock: { $gte: item.qty } } } },
+        { $inc: { 'variants.$.stock': -item.qty } }
+      );
+      if (!reserved.modifiedCount) {
+        await Order.findByIdAndDelete(order._id);
+        return res.status(409).json({ success: false, message: 'Selected product variant is no longer available' });
+      }
+    }
 
     // Loyalty: 1 point per ₹100
     const loyaltyEarned = Math.floor(billing.grandTotal / 100);
@@ -322,11 +337,9 @@ export const updateOrderStatus = async (req, res) => {
 ═══════════════════════════════════ */
 export const getOrderTracking = async (req, res) => {
   try {
-    const order = await Order.findOne({
-      _id: req.params.id,
-      ...(req.user ? { 'customer.userId': req.user._id } : {})
-    })
-    .select('orderNumber status timeline shipments estimatedDelivery createdAt customer billing items')
+    const order = await Order.findOne({ _id: req.params.id, 'customer.userId': req.user._id })
+    // Do not return checkout contact details or billing data from a tracking view.
+    .select('orderNumber status timeline shipments estimatedDelivery createdAt items.name items.qty')
     .lean();
 
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });

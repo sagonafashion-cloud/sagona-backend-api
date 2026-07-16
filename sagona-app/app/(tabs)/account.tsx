@@ -109,7 +109,7 @@ export default function AccountScreen() {
                 </View>
               </View>
               <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
-              <Text style={styles.orderTotal}>₹{order.total?.toLocaleString('en-IN')} · {order.items.length} item{order.items.length > 1 ? 's' : ''}</Text>
+              <Text style={styles.orderTotal}>₹{(order.billing?.grandTotal ?? order.total ?? 0).toLocaleString('en-IN')} · {order.items.length} item{order.items.length > 1 ? 's' : ''}</Text>
             </TouchableOpacity>
           );
         }}

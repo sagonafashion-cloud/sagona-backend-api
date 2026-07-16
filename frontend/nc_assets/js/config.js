@@ -19,6 +19,15 @@ export function escapeHtml(str) {
   }[ch]));
 }
 
+export function sanitizeUrl(url, fallback = '') {
+  const value = String(url ?? '').trim();
+  if (!value || /^(?:javascript|data|vbscript):/i.test(value)) return fallback;
+  try {
+    const parsed = new URL(value, window.location.origin);
+    return ['http:', 'https:'].includes(parsed.protocol) ? escapeHtml(value) : fallback;
+  } catch { return fallback; }
+}
+
 export async function fetchPincodeData(pincode, cityFieldId, stateFieldId, statusElementId) {
   const statusEl = statusElementId ? document.getElementById(statusElementId) : null;
 

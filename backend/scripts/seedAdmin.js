@@ -14,7 +14,11 @@ const seed = async () => {
     process.exit(0);
   }
 
-  const password = await bcrypt.hash('Admin@2026#Sagona', 10);
+  const passwordValue = process.env.SEED_ADMIN_PASSWORD;
+  if (!passwordValue || passwordValue.length < 12) {
+    throw new Error('Set a unique SEED_ADMIN_PASSWORD of at least 12 characters before seeding an admin');
+  }
+  const password = await bcrypt.hash(passwordValue, 10);
   await AdminUser.create({
     name: 'Super Admin',
     email: 'admin@sagona.in',
@@ -24,7 +28,7 @@ const seed = async () => {
     twoFactorEnabled: false,
   });
 
-  console.log('✅ Admin created: admin@sagona.in / Admin@2026#Sagona');
+  console.log('✅ Admin created: admin@sagona.in');
   process.exit(0);
 };
 

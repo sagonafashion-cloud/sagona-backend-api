@@ -38,7 +38,7 @@ export default function ProductDetailScreen() {
   }
 
   const images = product.images?.length ? product.images : [product.image ?? ''];
-  const price = product.salePrice ?? product.basePrice ?? product.variants?.[0]?.price ?? 0;
+  const price = product.price ?? product.salePrice ?? product.basePrice ?? product.variants?.[0]?.price ?? 0;
   const sizes = [...new Set(product.variants?.map((v) => v.size) ?? [])];
   const colours = [...new Set(product.variants?.map((v) => v.colour) ?? [])];
 
@@ -94,8 +94,8 @@ export default function ProductDetailScreen() {
             <Text style={styles.name} numberOfLines={3}>{product.name}</Text>
             <Text style={styles.price}>₹{price.toLocaleString('en-IN')}</Text>
           </View>
-          {product.salePrice && product.basePrice && (
-            <Text style={styles.original}>MRP ₹{product.basePrice.toLocaleString('en-IN')}</Text>
+          {product.mrp && product.mrp > price && (
+            <Text style={styles.original}>MRP ₹{product.mrp.toLocaleString('en-IN')}</Text>
           )}
 
           {/* Sizes */}

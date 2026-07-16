@@ -58,7 +58,7 @@ export default function OrderDetailScreen() {
             <View key={i} style={styles.itemRow}>
               <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
               <Text style={styles.itemMeta}>{item.size} · {item.colour} · ×{item.qty}</Text>
-              <Text style={styles.itemPrice}>₹{(item.price * item.qty).toLocaleString('en-IN')}</Text>
+              <Text style={styles.itemPrice}>₹{((item.unitPrice ?? item.price ?? 0) * item.qty).toLocaleString('en-IN')}</Text>
             </View>
           ))}
         </View>
@@ -75,12 +75,12 @@ export default function OrderDetailScreen() {
         {/* Pricing */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Payment</Text>
-          <View style={styles.row}><Text style={styles.label}>Method</Text><Text style={styles.value}>{order.paymentMethod}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Status</Text><Text style={styles.value}>{order.paymentStatus}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Subtotal</Text><Text style={styles.value}>₹{order.subtotal?.toLocaleString('en-IN')}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Shipping</Text><Text style={styles.value}>{order.shippingCharge === 0 ? 'FREE' : `₹${order.shippingCharge}`}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>GST</Text><Text style={styles.value}>₹{order.gstAmount?.toLocaleString('en-IN')}</Text></View>
-          <View style={[styles.row, styles.totalRow]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalValue}>₹{order.total?.toLocaleString('en-IN')}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Method</Text><Text style={styles.value}>{order.payment?.method ?? order.paymentMethod}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Status</Text><Text style={styles.value}>{order.payment?.status ?? order.paymentStatus}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Subtotal</Text><Text style={styles.value}>₹{(order.billing?.subtotal ?? order.subtotal ?? 0).toLocaleString('en-IN')}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Shipping</Text><Text style={styles.value}>{(order.billing?.shippingCharge ?? order.shippingCharge ?? 0) === 0 ? 'FREE' : `₹${order.billing?.shippingCharge ?? order.shippingCharge}`}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>GST</Text><Text style={styles.value}>₹{((order.billing?.cgst ?? 0) + (order.billing?.sgst ?? 0) + (order.billing?.igst ?? order.gstAmount ?? 0)).toLocaleString('en-IN')}</Text></View>
+          <View style={[styles.row, styles.totalRow]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalValue}>₹{(order.billing?.grandTotal ?? order.total ?? 0).toLocaleString('en-IN')}</Text></View>
         </View>
 
         {order.invoiceUrl && (

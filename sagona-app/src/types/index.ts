@@ -24,6 +24,8 @@ export interface Product {
   image?: string;
   variants: ProductVariant[];
   basePrice: number;
+  price: number;
+  mrp?: number;
   salePrice?: number;
   isNew?: boolean;
   isSale?: boolean;
@@ -48,6 +50,7 @@ export interface OrderItem {
   size: string;
   colour: string;
   price: number;
+  unitPrice?: number;
   qty: number;
 }
 
@@ -73,6 +76,8 @@ export interface Order {
   shippingCharge: number;
   gstAmount: number;
   total: number;
+  billing?: { subtotal: number; shippingCharge: number; cgst: number; sgst: number; igst: number; grandTotal: number };
+  payment?: { method: 'COD' | 'ONLINE' | 'MANUAL'; status: 'pending' | 'paid' | 'failed' | 'refunded' };
   invoiceUrl?: string;
   createdAt: string;
 }

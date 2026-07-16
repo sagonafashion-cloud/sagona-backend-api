@@ -196,6 +196,12 @@ export const createAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'name, email, password and role required' });
     }
 
+    if (!['super_admin', 'finance_manager', 'store_manager', 'content_editor', 'viewer'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid admin role' });
+    }
+    if (password.length < 12) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 12 characters' });
+    }
     const exists = await AdminUser.findOne({ email: email.toLowerCase().trim() });
     if (exists) {
       return res.status(400).json({ success: false, message: 'Admin with this email already exists' });

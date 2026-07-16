@@ -1,6 +1,6 @@
 import { request }  from './api.js';
 import { getCart, saveCart, getWishlist, saveWishlist } from './storage.js';
-import { escapeHtml } from './config.js';
+import { escapeHtml, sanitizeUrl } from './config.js';
 
 /* ── toast helper ── */
 function toast(msg, type = '') {
@@ -111,8 +111,8 @@ function render(products) {
       ${badge}
       <div class="product-card-media">
         <a href="product.html?id=${p._id}" tabindex="-1" aria-hidden="true">
-          <img class="img-main"  src="${img}"  alt="${escapeHtml(p.name)}" loading="lazy">
-          <img class="img-hover" src="${img2}" alt="${escapeHtml(p.name)}" loading="lazy">
+          <img class="img-main"  src="${sanitizeUrl(img)}"  alt="${escapeHtml(p.name)}" loading="lazy">
+          <img class="img-hover" src="${sanitizeUrl(img2)}" alt="${escapeHtml(p.name)}" loading="lazy">
         </a>
         <div class="product-card-actions">
           <button class="btn-quick add" data-id="${p._id}">Add to Bag</button>

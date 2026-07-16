@@ -175,7 +175,7 @@ async function runGeneration(productId, garmentImageUrl, productName) {
     const res = await fetch(`${API_BASE}/tryon/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ productId, garmentImageUrl })
+      body: JSON.stringify({ productId })
     });
 
     const data = await res.json();

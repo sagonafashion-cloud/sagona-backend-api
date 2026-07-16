@@ -51,7 +51,7 @@ export default function TryOnModal({ visible, onClose, productId, garmentImageUr
   async function generate() {
     try {
       setPhase('generating');
-      const res = await api.post('/tryon/generate', { productId, garmentImageUrl });
+      const res = await api.post('/tryon/generate', { productId });
       if (res.data.success) {
         setResultUrl(res.data.data.resultUrl);
         setPhase('result');

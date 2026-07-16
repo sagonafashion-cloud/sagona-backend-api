@@ -85,26 +85,20 @@ export const getUserPhoto = async (req, res) => {
 // POST /api/tryon/generate
 export const generateTryOn = async (req, res) => {
   try {
-    const { productId, garmentImageUrl } = req.body;
+    const { productId } = req.body;
 
     const user = await User.findById(req.user.id).select('tryOnPhoto').lean();
     if (!user?.tryOnPhoto?.url) {
       return res.status(400).json({ success: false, message: 'NO_PHOTO', data: null });
     }
 
-    let garmentUrl = garmentImageUrl;
-    if (!garmentUrl && productId) {
-      const product = await Product.findById(productId).select('images image name').lean();
-      if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-      garmentUrl = product.images?.[0] || product.image;
-      if (!garmentUrl) {
-        return res.status(400).json({ success: false, message: 'This product has no image available for try-on' });
-      }
-    }
-
-    if (!garmentUrl) {
-      return res.status(400).json({ success: false, message: 'No garment image provided' });
-    }
+    if (!productId) return res.status(400).json({ success: false, message: 'Product required for try-on' });
+    // The server, not the client, selects the source image. This blocks use of
+    // the AI provider as an arbitrary remote-URL fetcher.
+    const product = await Product.findOne({ _id: productId, status: 'active' }).select('images image').lean();
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    const garmentUrl = product.images?.[0] || product.image;
+    if (!garmentUrl) return res.status(400).json({ success: false, message: 'This product has no image available for try-on' });
 
     const modelPhotoUrl = user.tryOnPhoto.url;
 
@@ -212,6 +206,11 @@ async function callReplicate(modelImageUrl, garmentImageUrl) {
 export const saveTryOnResult = async (req, res) => {
   try {
     const { resultImageUrl, garmentProductId, garmentName } = req.body;
+    if (!garmentProductId || !/^https:\/\//i.test(resultImageUrl || '')) {
+      return res.status(400).json({ success: false, message: 'Invalid try-on result' });
+    }
+    const product = await Product.findOne({ _id: garmentProductId, status: 'active' }).select('_id').lean();
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
     await User.findByIdAndUpdate(req.user.id, {
       $push: {
         tryOnHistory: {

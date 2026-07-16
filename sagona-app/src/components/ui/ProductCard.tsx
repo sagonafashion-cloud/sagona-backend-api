@@ -12,7 +12,7 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const router = useRouter();
   const image = product.images?.[0] ?? product.image ?? '';
-  const price = product.salePrice ?? product.basePrice ?? product.variants?.[0]?.price ?? 0;
+  const price = product.price ?? product.salePrice ?? product.basePrice ?? product.variants?.[0]?.price ?? 0;
 
   return (
     <TouchableOpacity style={styles.card} onPress={() => router.push(`/product/${product._id}` as any)} activeOpacity={0.85}>

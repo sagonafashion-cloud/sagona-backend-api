@@ -1,5 +1,7 @@
 import Product from '../models/Product.js';
 
+const escapeRegex = (value = '') => String(value).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /* ── helpers ── */
 const buildListQuery = (query) => {
   const filter = {};
@@ -24,15 +26,15 @@ const buildListQuery = (query) => {
     if (query.maxPrice) filter.price.$lte = Number(query.maxPrice);
   }
 
-  if (query.colour) filter['variants.colour'] = { $regex: query.colour, $options: 'i' };
+  if (query.colour) filter['variants.colour'] = { $regex: escapeRegex(query.colour), $options: 'i' };
   if (query.size)   filter['variants.size']   = query.size;
   if (query.storeId) filter['stores.storeId'] = query.storeId;
 
   if (query.search) {
     filter.$or = [
-      { name: { $regex: query.search, $options: 'i' } },
-      { description: { $regex: query.search, $options: 'i' } },
-      { sku: { $regex: query.search, $options: 'i' } }
+      { name: { $regex: escapeRegex(query.search), $options: 'i' } },
+      { description: { $regex: escapeRegex(query.search), $options: 'i' } },
+      { sku: { $regex: escapeRegex(query.search), $options: 'i' } }
     ];
   }
 
@@ -49,10 +51,9 @@ export const getProducts = async (req, res) => {
     const limit = Math.min(100, parseInt(req.query.limit) || 20);
     const skip  = (page - 1) * limit;
 
-    // Allow admins to see non-active products
-    const filter = req.query.status
-      ? buildListQuery(req.query)
-      : { ...buildListQuery(req.query), status: { $ne: 'archived' } };
+    // This is a public route. Admin inventory/content views use the dedicated
+    // /api/admin/products routes, so query parameters must not expose drafts.
+    const filter = { ...buildListQuery({ ...req.query, status: 'active' }), status: 'active' };
 
     const sort = req.query.sort === 'price_asc'  ? { price: 1 }
                : req.query.sort === 'price_desc' ? { price: -1 }
@@ -72,7 +73,7 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate('stores.storeId', 'name city state');
+    const product = await Product.findOne({ _id: req.params.id, status: 'active' }).populate('stores.storeId', 'name city state');
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
     res.json({ success: true, data: product });
   } catch {

@@ -9,6 +9,7 @@ const messageSchema = new mongoose.Schema({
 const chatSessionSchema = new mongoose.Schema({
   sessionId: { type: String, required: true, unique: true },
   userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  adminUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' },
   messages:  [messageSchema]
 }, { timestamps: true });
 

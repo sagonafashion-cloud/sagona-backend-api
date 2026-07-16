@@ -1,5 +1,5 @@
 import { request }  from './api.js';
-import { API_BASE, escapeHtml } from './config.js';
+import { API_BASE, escapeHtml, sanitizeUrl } from './config.js';
 import { getCart, saveCart } from './storage.js';
 import { initSizingTool } from './sizing.js';
 
@@ -114,7 +114,7 @@ async function checkPincode(pincode) {
   // Meta line
   const metaParts = [p.category, p.ageGroup, p.gender].filter(Boolean);
   const metaHtml  = metaParts.length
-    ? `<p class="pdp-meta">${metaParts.join(' · ')}</p>` : '';
+    ? `<p class="pdp-meta">${metaParts.map(escapeHtml).join(' · ')}</p>` : '';
 
   // Accordion sections
   const accordionItems = [
@@ -129,11 +129,11 @@ async function checkPincode(pincode) {
 
       <!-- GALLERY -->
       <div class="pdp-gallery">
-        <img src="${images[0]}" class="main-img" id="main-img" alt="${escapeHtml(p.name)}">
+        <img src="${sanitizeUrl(images[0])}" class="main-img" id="main-img" alt="${escapeHtml(p.name)}">
         ${images.length > 1 ? `
         <div class="pdp-thumbs">
           ${images.map((img, i) => `
-            <img src="${img}" alt="${escapeHtml(p.name)}" class="${i === 0 ? 'active' : ''}" data-thumb="${img}">
+            <img src="${sanitizeUrl(img)}" alt="${escapeHtml(p.name)}" class="${i === 0 ? 'active' : ''}" data-thumb="${sanitizeUrl(img)}">
           `).join('')}
         </div>` : ''}
       </div>
@@ -148,7 +148,7 @@ async function checkPincode(pincode) {
         ${hasSizes ? `
         <div class="size-label">Select Size</div>
         <div class="size-options">
-          ${sizes.map((s) => `<button class="size-btn" data-size="${s}">${s}</button>`).join('')}
+          ${sizes.map((s) => `<button class="size-btn" data-size="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
         </div>` : ''}
 
         <button id="add-btn" class="btn gold">Add to Bag</button>

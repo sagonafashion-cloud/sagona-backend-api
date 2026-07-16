@@ -14,7 +14,7 @@ const GST_RATE = 0.05;
 const FREE_SHIP = 999;
 const SHIP_CHARGE = 99;
 
-type PaymentMethod = 'COD' | 'Razorpay';
+type PaymentMethod = 'COD';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function CheckoutScreen() {
       }));
 
       if (payment === 'COD') {
-        await api.post('/orders', { items: orderItems, shippingAddress, paymentMethod: 'COD' });
+        await api.post('/orders', { items: orderItems, shippingAddress, payment: { method: 'COD' } });
         clear();
         Alert.alert('Order placed!', 'Your order has been confirmed.', [
           { text: 'View orders', onPress: () => router.replace('/(tabs)/account' as any) }
@@ -104,7 +104,7 @@ export default function CheckoutScreen() {
         <Input label="Pincode *" value={pincode} onChangeText={setPincode} keyboardType="number-pad" placeholder="6-digit" />
 
         <Text style={styles.sectionTitle}>Payment Method</Text>
-        {(['COD', 'Razorpay'] as PaymentMethod[]).map((m) => (
+        {(['COD'] as PaymentMethod[]).map((m) => (
           <TouchableOpacity key={m} style={styles.payOption} onPress={() => setPayment(m)}>
             <View style={[styles.radio, payment === m && styles.radioActive]} />
             <Text style={styles.payLabel}>{m === 'COD' ? 'Cash on Delivery' : 'Pay Online (Razorpay)'}</Text>
