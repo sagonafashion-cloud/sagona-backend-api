@@ -22,7 +22,10 @@ const userSchema = new mongoose.Schema(
     /* ── existing fields (unchanged) ── */
     name: { type: String, required: true, trim: true },
     email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
-    password: { type: String, required: true, select: false },
+    // Not required: guest-checkout auto-creates a passwordless account (the
+    // shopper sets a password later via the email-OTP reset flow). Registration
+    // always supplies a password, so normal sign-ups are unaffected.
+    password: { type: String, select: false },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     birthday: { type: Date },
     loyaltyPoints: { type: Number, default: 0 },

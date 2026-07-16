@@ -36,7 +36,7 @@ export const createOrder = async (req, res) => {
         .update(`${razorpayOrderId}|${razorpayPaymentId}`)
         .digest('hex');
       if (!safeCompareHex(expectedSignature, razorpaySignature)) {
-        console.warn('ORDER PAYMENT SIGNATURE MISMATCH:', { userId: req.user._id, razorpayOrderId, razorpayPaymentId });
+        console.warn('ORDER PAYMENT SIGNATURE MISMATCH:', { userId: req.user?._id || 'guest', razorpayOrderId, razorpayPaymentId });
         return res.status(400).json({ success: false, message: 'Payment verification failed' });
       }
 
@@ -54,7 +54,7 @@ export const createOrder = async (req, res) => {
 
       if (captured.order_id !== razorpayOrderId || captured.status !== 'captured' || captured.amount !== expectedPaise) {
         console.error('ORDER PAYMENT AMOUNT MISMATCH:', {
-          userId: req.user._id, expectedPaise, capturedAmount: captured.amount, capturedStatus: captured.status
+          userId: req.user?._id || 'guest', expectedPaise, capturedAmount: captured.amount, capturedStatus: captured.status
         });
         return res.status(400).json({ success: false, message: 'Payment amount could not be verified' });
       }
@@ -68,12 +68,44 @@ export const createOrder = async (req, res) => {
       };
     }
 
+    // Resolve the account this order belongs to. Logged-in shoppers keep the
+    // exact prior behaviour (orderUser === req.user). Guests (no token) get an
+    // account resolved from their checkout contact details: if the email/phone
+    // already belongs to an account it is linked to that account; otherwise a
+    // new passwordless account is auto-created so the shopper can sign in later
+    // (via the email-OTP reset flow) to track this order.
+    let orderUser = req.user;
+    if (!orderUser) {
+      const gEmail = String(req.body.email || shippingAddress?.email || '').toLowerCase().trim();
+      const gPhone = String(shippingAddress?.phone || req.body.phone || '').trim();
+      const gName  = String(shippingAddress?.name || req.body.name || '').trim();
+
+      if (!gEmail || !gPhone) {
+        return res.status(400).json({ success: false, message: 'Email and phone are required to place a guest order' });
+      }
+
+      const orConds = [{ email: gEmail }, { phone: gPhone }];
+      orderUser = await User.findOne({ $or: orConds });
+      if (!orderUser) {
+        try {
+          orderUser = await User.create({ name: gName || 'Guest', email: gEmail, phone: gPhone });
+        } catch (e) {
+          // A concurrent guest order (or double-submit) may have just created the
+          // same account — re-fetch instead of failing this order.
+          if (e?.code === 11000) {
+            orderUser = await User.findOne({ $or: orConds });
+          }
+          if (!orderUser) throw e;
+        }
+      }
+    }
+
     const order = await Order.create({
       customer: {
-        userId: req.user._id,
-        name:   req.user.name,
-        email:  req.user.email,
-        phone:  req.user.phone
+        userId: orderUser._id,
+        name:   orderUser.name,
+        email:  orderUser.email,
+        phone:  orderUser.phone
       },
       items: enrichedItems,
       shippingAddress,
@@ -87,7 +119,7 @@ export const createOrder = async (req, res) => {
 
     // Loyalty: 1 point per ₹100
     const loyaltyEarned = Math.floor(billing.grandTotal / 100);
-    await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: loyaltyEarned } });
+    await User.findByIdAndUpdate(orderUser._id, { $inc: { loyaltyPoints: loyaltyEarned } });
 
     // Add initial timeline entry and estimated delivery
     order.timeline = [buildTimelineEntry('placed', '', 'system')];

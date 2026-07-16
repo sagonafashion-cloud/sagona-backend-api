@@ -45,7 +45,7 @@ export const createRazorpayOrder = async (req, res) => {
       amount: amountInPaise,
       currency: 'INR',
       receipt: `sagona_${Date.now()}`,
-      notes: { userId: String(req.user._id) }
+      notes: { userId: req.user ? String(req.user._id) : 'guest' }
     });
 
     res.json({ success: true, data: order });
