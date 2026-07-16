@@ -18,15 +18,33 @@ const SHIP_CHARGE = 99;
 
 const cart = getCart();
 const auth = getAuth();
+const isGuest = !auth?.token;
 
 /* ── guards ── */
-if (!auth?.token) {
-  alert('Please sign in to continue');
-  location.href = 'login.html';
-}
+// Guests are allowed to check out (they enter their contact details below and
+// an account is auto-created on order). Only an empty bag blocks checkout.
 if (!cart.length) {
   alert('Your bag is empty');
   location.href = 'shop.html';
+}
+
+/* ── guest notice ── */
+// Non-blocking nudge: guests can order right away, but signing in unlocks
+// saved addresses, order history and loyalty offers.
+if (isGuest) {
+  const notice = document.getElementById('guest-notice');
+  if (notice) {
+    notice.style.display = 'block';
+    notice.innerHTML =
+      '🎁 <strong>Checking out as a guest.</strong> ' +
+      '<a href="login.html?next=checkout.html" style="color:var(--gold);text-decoration:underline">Sign in</a> ' +
+      'for better offers, faster checkout and easy order tracking in future — or continue below, we\'ll set up your account automatically.';
+  }
+  // Reveal the email field for guests (they must supply it) and mark it required.
+  const emailGroup = document.getElementById('email-group');
+  const emailInput = document.getElementById('email');
+  if (emailGroup) emailGroup.style.display = 'block';
+  if (emailInput) emailInput.setAttribute('required', 'required');
 }
 
 /* ── init ── */
@@ -163,8 +181,13 @@ function buildPayload() {
   const discount = getBirthdayDiscount(document.querySelector('#birthday')?.value);
   const method   = document.querySelector('[name="payment"]:checked')?.value || 'COD';
 
+  // `email` is used by the backend only for guest orders (to auto-create/link an
+  // account). Logged-in orders ignore it and key off the authenticated user.
+  const email = getVal(['email']) || auth?.user?.email || '';
+
   return {
     items,
+    email,
     shippingAddress,
     payment: { method },
     discount
@@ -214,6 +237,25 @@ async function placeOrder(paymentMethod, razorpayIds = {}) {
     }
   }
 
+  // Hand a small order summary to the confirmation page so the shopper sees
+  // their real order details immediately. sessionStorage is per-tab and clears
+  // when the tab closes, so nothing stale lingers. Read BEFORE saveCart([]).
+  try {
+    const o = data.data || {};
+    sessionStorage.setItem('sagona_last_order', JSON.stringify({
+      orderNumber: o.orderNumber || '',
+      status:      o.status || '',
+      grandTotal:  o.billing?.grandTotal ?? Number(totalEl?.textContent || 0),
+      paymentMethod: o.payment?.method || paymentMethod,
+      estimatedDelivery: o.estimatedDelivery || '',
+      email:       o.customer?.email || '',
+      items: cart.map((i) => ({
+        name: i.name, size: i.size || '', quantity: i.quantity
+      })),
+      isGuest
+    }));
+  } catch { /* non-fatal — success page falls back to its static message */ }
+
   saveCart([]);
 
   // GA4 — purchase
@@ -236,6 +278,24 @@ async function placeOrder(paymentMethod, razorpayIds = {}) {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const submitBtn = form.querySelector('[type="submit"]');
+
+  // Guests must supply a valid email + 10-digit phone so their order can be
+  // linked to an auto-created account they can sign into later.
+  if (isGuest) {
+    const gEmail = document.getElementById('email')?.value.trim() || '';
+    const gPhone = document.getElementById('phone')?.value.trim() || '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gEmail)) {
+      alert('Please enter a valid email so we can send your order confirmation and let you track it later.');
+      document.getElementById('email')?.focus();
+      return;
+    }
+    if (!/^\d{10}$/.test(gPhone)) {
+      alert('Please enter a valid 10-digit phone number.');
+      document.getElementById('phone')?.focus();
+      return;
+    }
+  }
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Placing order…';
 

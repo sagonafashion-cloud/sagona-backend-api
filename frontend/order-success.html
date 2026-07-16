@@ -30,6 +30,13 @@
         Your order has been successfully placed.
       </p>
 
+      <!-- Order details (populated from sessionStorage by the inline script below;
+           stays hidden if a shopper lands here directly with no order data). -->
+      <div id="order-details" style="display:none;text-align:left;margin:1.5rem 0;padding:1.25rem;background:#f9f8f6;border-radius:8px;font-size:14px;color:#4a4438"></div>
+
+      <!-- Guest-only nudge to secure the auto-created account -->
+      <div id="guest-cta" style="display:none;text-align:left;margin:1.5rem 0;padding:1.25rem;background:#FAEEDA;border:0.5px solid #E7D3A1;border-radius:8px;font-size:13px;color:#6b5a2e;line-height:1.6"></div>
+
       <div style="margin:2rem 0;">
         <a href="shop.html" class="btn gold">Continue Shopping</a>
       </div>
@@ -37,6 +44,76 @@
     </div>
 
   </main>
+
+  <script>
+    (function () {
+      var raw;
+      try { raw = sessionStorage.getItem('sagona_last_order'); } catch (e) { raw = null; }
+      if (!raw) return;
+
+      var o;
+      try { o = JSON.parse(raw); } catch (e) { return; }
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      var itemsHtml = (o.items || []).map(function (i) {
+        var size = i.size ? ' · ' + esc(i.size) : '';
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0">' +
+               '<span>' + esc(i.name) + size + '</span>' +
+               '<span style="color:#6e665c">×' + esc(i.quantity) + '</span></div>';
+      }).join('');
+
+      var delivery = '';
+      if (o.estimatedDelivery) {
+        var d = new Date(o.estimatedDelivery);
+        if (!isNaN(d)) {
+          delivery = '<div style="margin-top:10px;color:#6e665c">Estimated delivery: <strong>' +
+                     esc(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })) +
+                     '</strong></div>';
+        }
+      }
+
+      var payLabel = o.paymentMethod === 'ONLINE' ? 'Paid online' :
+                     (o.paymentMethod === 'COD' ? 'Cash on Delivery' : esc(o.paymentMethod || ''));
+
+      var details = '';
+      if (o.orderNumber) {
+        details += '<div style="display:flex;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e6e2d9">' +
+                   '<span style="color:#6e665c">Order number</span>' +
+                   '<strong>' + esc(o.orderNumber) + '</strong></div>';
+      }
+      details += itemsHtml;
+      details += '<div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #e6e2d9">' +
+                 '<strong>Total</strong>' +
+                 '<strong>₹' + esc(o.grandTotal) + '</strong></div>';
+      if (payLabel) {
+        details += '<div style="margin-top:6px;color:#6e665c">' + payLabel + '</div>';
+      }
+      details += delivery;
+
+      var box = document.getElementById('order-details');
+      box.innerHTML = details;
+      box.style.display = 'block';
+
+      if (o.isGuest) {
+        var cta = document.getElementById('guest-cta');
+        var emailNote = o.email
+          ? 'We\'ve set up an account for <strong>' + esc(o.email) + '</strong> and emailed your confirmation.'
+          : 'We\'ve set up an account for you and emailed your confirmation.';
+        cta.innerHTML =
+          '🎁 ' + emailNote +
+          '<br><br>To track this order later, set a password: go to ' +
+          '<a href="login.html" style="color:#6b5a2e;font-weight:600">Sign in</a> → ' +
+          '“Forgot password?” → enter your email → we\'ll send a one-time code → choose a password. ' +
+          'After that you can log in any time to see your orders and unlock member offers.';
+        cta.style.display = 'block';
+      }
+    })();
+  </script>
 
 </body>
 

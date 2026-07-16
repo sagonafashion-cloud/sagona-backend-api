@@ -30,6 +30,9 @@
       <!-- SHIPPING + PAYMENT FORM -->
       <form id="checkout-form">
 
+        <!-- Guest checkout notice (revealed by checkout.js only for guests) -->
+        <div id="guest-notice" style="display:none;background:#FAEEDA;border:0.5px solid #E7D3A1;border-radius:6px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#6b5a2e;line-height:1.6"></div>
+
         <h3 class="checkout-form-section">Shipping Address</h3>
 
         <!-- Saved addresses dropdown (populated by JS if logged in) -->
@@ -43,6 +46,14 @@
         <div class="form-group">
           <label>Phone</label>
           <input id="phone" class="field" type="tel" placeholder="10-digit mobile number" inputmode="numeric" maxlength="10" />
+        </div>
+
+        <!-- Email: shown & required for guests (checkout.js), used to create/link
+             their account so they can track the order later. Hidden for logged-in
+             users, whose account email is used automatically. -->
+        <div class="form-group" id="email-group" style="display:none">
+          <label>Email *</label>
+          <input id="email" class="field" type="email" placeholder="you@example.com" autocomplete="email" />
         </div>
 
         <div class="form-group">
