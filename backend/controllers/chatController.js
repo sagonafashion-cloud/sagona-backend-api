@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import Product    from '../models/Product.js';
+import { escapeRegex } from './productController.js';
 import Order      from '../models/Order.js';
 import ChatSession from '../models/ChatSession.js';
 import crypto from 'crypto';
@@ -97,11 +98,12 @@ async function executeTool(name, input, userId) {
         if (input.maxPrice != null) filter.price.$lte = input.maxPrice;
       }
       if (input.query) {
+        const q = escapeRegex(input.query);
         filter.$or = [
-          { name:        { $regex: input.query, $options: 'i' } },
-          { description: { $regex: input.query, $options: 'i' } },
-          { tags:        { $regex: input.query, $options: 'i' } },
-          { fabric:      { $regex: input.query, $options: 'i' } }
+          { name:        { $regex: q, $options: 'i' } },
+          { description: { $regex: q, $options: 'i' } },
+          { tags:        { $regex: q, $options: 'i' } },
+          { fabric:      { $regex: q, $options: 'i' } }
         ];
       }
       const products = await Product.find(filter)

@@ -1,3 +1,8 @@
+// Same escaping pattern used in routes/supportRoutes.js — user/admin-entered
+// free text (names, addresses, item/product names) is interpolated straight
+// into these HTML email templates, so it needs escaping before insertion.
+const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 /* ── shared layout ── */
 const layout = (title, body) => `<!DOCTYPE html>
 <html lang="en">
@@ -68,9 +73,9 @@ const itemsTable = (items = []) => `
     ${items.map((item) => `
     <tr>
       <td style="padding:12px;border-bottom:1px solid #E8E5E0;color:#0A0A0A;">
-        ${item.name}
-        ${item.size   ? `<span style="color:#999990;font-size:12px;"> · ${item.size}</span>` : ''}
-        ${item.colour ? `<span style="color:#999990;font-size:12px;"> / ${item.colour}</span>` : ''}
+        ${escapeHtml(item.name)}
+        ${item.size   ? `<span style="color:#999990;font-size:12px;"> · ${escapeHtml(item.size)}</span>` : ''}
+        ${item.colour ? `<span style="color:#999990;font-size:12px;"> / ${escapeHtml(item.colour)}</span>` : ''}
       </td>
       <td style="padding:12px;border-bottom:1px solid #E8E5E0;text-align:center;">${item.qty}</td>
       <td style="padding:12px;border-bottom:1px solid #E8E5E0;text-align:right;color:#C9A84C;">
@@ -127,13 +132,13 @@ export const orderConfirmationTemplate = (order) => {
 
   const body = `
     ${h2('Order Confirmed')}
-    ${p(`Thank you, ${order.customer?.name || 'Valued Customer'}! Your order has been placed successfully.`)}
+    ${p(`Thank you, ${escapeHtml(order.customer?.name) || 'Valued Customer'}! Your order has been placed successfully.`)}
 
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
            style="background:#F8F6F3;border-radius:4px;padding:16px 20px;margin-bottom:24px;font-size:13px;">
       <tr>
         <td style="color:#555550;padding:4px 0;">Order Number</td>
-        <td style="text-align:right;font-weight:600;color:#0A0A0A;">${order.orderNumber}</td>
+        <td style="text-align:right;font-weight:600;color:#0A0A0A;">${escapeHtml(order.orderNumber)}</td>
       </tr>
       <tr>
         <td style="color:#555550;padding:4px 0;">Payment</td>
@@ -141,7 +146,7 @@ export const orderConfirmationTemplate = (order) => {
       </tr>
       <tr>
         <td style="color:#555550;padding:4px 0;">Deliver to</td>
-        <td style="text-align:right;">${addrLine || '—'}</td>
+        <td style="text-align:right;">${escapeHtml(addrLine) || '—'}</td>
       </tr>
     </table>
 
@@ -156,7 +161,7 @@ export const orderConfirmationTemplate = (order) => {
     ${p('We will notify you when your order is dispatched. Questions? Reply to this email or visit <a href="https://sagona.in" style="color:#C9A84C;">sagona.in</a>.')}
   `;
 
-  return layout(`Order ${order.orderNumber} Confirmed — SAGONA`, body);
+  return layout(`Order ${escapeHtml(order.orderNumber)} Confirmed — SAGONA`, body);
 };
 
 /* ══════════════════════════════════════════════════════════
@@ -187,13 +192,13 @@ export const statusUpdateTemplate = (order) => {
 
   const body = `
     ${h2(`${icon} ${statusLabel}`)}
-    ${p(`Your order <strong>${order.orderNumber}</strong> has been updated.`)}
+    ${p(`Your order <strong>${escapeHtml(order.orderNumber)}</strong> has been updated.`)}
 
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
            style="background:#F8F6F3;border-radius:4px;padding:16px 20px;margin-bottom:24px;font-size:13px;">
       <tr>
         <td style="color:#555550;padding:4px 0;">Order</td>
-        <td style="text-align:right;font-weight:600;">${order.orderNumber}</td>
+        <td style="text-align:right;font-weight:600;">${escapeHtml(order.orderNumber)}</td>
       </tr>
       <tr>
         <td style="color:#555550;padding:4px 0;">Status</td>
@@ -202,7 +207,7 @@ export const statusUpdateTemplate = (order) => {
       ${trackingInfo ? `
       <tr>
         <td style="color:#555550;padding:4px 0;">Tracking ID</td>
-        <td style="text-align:right;">${trackingInfo.trackingId} (${trackingInfo.courier || ''})</td>
+        <td style="text-align:right;">${escapeHtml(trackingInfo.trackingId)} (${escapeHtml(trackingInfo.courier) || ''})</td>
       </tr>` : ''}
     </table>
 
@@ -217,7 +222,7 @@ export const statusUpdateTemplate = (order) => {
     ${p('Need help? Contact us at <a href="mailto:care@sagona.in" style="color:#C9A84C;">care@sagona.in</a>')}
   `;
 
-  return layout(`Order Update: ${statusLabel} — SAGONA`, body);
+  return layout(`Order Update: ${escapeHtml(statusLabel)} — SAGONA`, body);
 };
 
 /* ══════════════════════════════════════════════════════════
@@ -225,7 +230,7 @@ export const statusUpdateTemplate = (order) => {
 ══════════════════════════════════════════════════════════ */
 export const welcomeTemplate = (user) => {
   const body = `
-    ${h2(`Welcome to SAGONA, ${user.name}!`)}
+    ${h2(`Welcome to SAGONA, ${escapeHtml(user.name)}!`)}
     ${p('We\'re delighted to have you. SAGONA is a premium Indian kidswear and lifestyle brand, crafted with care for modern families.')}
 
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
@@ -259,7 +264,7 @@ export const welcomeTemplate = (user) => {
 export const passwordResetTemplate = (user, otp) => {
   const body = `
     ${h2('Reset Your Password')}
-    ${p(`Hi ${user.name}, we received a request to reset your SAGONA account password.`)}
+    ${p(`Hi ${escapeHtml(user.name)}, we received a request to reset your SAGONA account password.`)}
 
     <div style="background:#F8F6F3;border-radius:4px;padding:28px;text-align:center;margin:24px 0;">
       <p style="font-size:12px;color:#999990;margin:0 0 8px;letter-spacing:1px;text-transform:uppercase;">
@@ -289,16 +294,16 @@ export const restockAlertTemplate = (user, product) => {
 
   const body = `
     ${h2('Back in Stock!')}
-    ${p(`Good news, ${user.name}! An item on your wishlist is available again.`)}
+    ${p(`Good news, ${escapeHtml(user.name)}! An item on your wishlist is available again.`)}
 
-    ${image ? `<img src="${image}" alt="${product.name}"
+    ${image ? `<img src="${image}" alt="${escapeHtml(product.name)}"
       style="width:100%;max-height:300px;object-fit:cover;border-radius:4px;margin:0 0 24px;">` : ''}
 
-    <h3 style="font-size:17px;font-weight:600;margin:0 0 6px;">${product.name}</h3>
+    <h3 style="font-size:17px;font-weight:600;margin:0 0 6px;">${escapeHtml(product.name)}</h3>
     <p style="font-size:15px;margin:0 0 4px;color:#C9A84C;font-weight:600;">${price}
       ${mrp ? `<span style="font-size:12px;color:#999990;text-decoration:line-through;margin-left:6px;">${mrp}</span>` : ''}
     </p>
-    ${product.category ? `<p style="font-size:12px;color:#999990;margin:0 0 24px;text-transform:capitalize;">${product.category}</p>` : ''}
+    ${product.category ? `<p style="font-size:12px;color:#999990;margin:0 0 24px;text-transform:capitalize;">${escapeHtml(product.category)}</p>` : ''}
 
     ${btn('Shop Now', `https://sagona.in/product.html?id=${product._id}`)}
 
@@ -306,5 +311,5 @@ export const restockAlertTemplate = (user, product) => {
     ${p('<span style="font-size:12px;color:#999990;">Popular items sell out quickly. Order soon to avoid disappointment.</span>')}
   `;
 
-  return layout(`Back in Stock: ${product.name} — SAGONA`, body);
+  return layout(`Back in Stock: ${escapeHtml(product.name)} — SAGONA`, body);
 };

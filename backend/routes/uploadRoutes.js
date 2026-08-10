@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
-import { adminProtect } from '../middleware/adminAuth.js';
+import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import { verifyImageSignature } from '../utils/fileValidation.js';
 
 const router = express.Router();
@@ -34,7 +34,7 @@ const uploadToCloudinary = (buffer, options) =>
   });
 
 /* POST /api/admin/upload/image */
-router.post('/image', adminProtect, upload.single('image'), verifyImageSignature({ field: 'image' }), async (req, res) => {
+router.post('/image', adminProtect, requireRole('super_admin', 'content_editor'), upload.single('image'), verifyImageSignature({ field: 'image' }), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No image file provided' });
@@ -62,7 +62,7 @@ router.post('/image', adminProtect, upload.single('image'), verifyImageSignature
 });
 
 /* DELETE /api/admin/upload/image */
-router.delete('/image', adminProtect, async (req, res) => {
+router.delete('/image', adminProtect, requireRole('super_admin', 'content_editor'), async (req, res) => {
   try {
     const { publicId } = req.body;
     if (!publicId) return res.status(400).json({ success: false, message: 'publicId required' });

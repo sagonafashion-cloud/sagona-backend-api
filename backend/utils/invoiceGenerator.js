@@ -67,8 +67,8 @@ export async function generateInvoice(order, store) {
      .text('TAX INVOICE', 360, 40, { width: 195, align: 'right' });
   doc.fontSize(8).font('Helvetica').fillColor('#555555');
   doc.text(`Invoice No: ${order.orderNumber}`,          360, 62, { width: 195, align: 'right' });
-  doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, 360, 74, { width: 195, align: 'right' });
-  doc.text(`Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, 360, 86, { width: 195, align: 'right' });
+  doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`, 360, 74, { width: 195, align: 'right' });
+  doc.text(`Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`, 360, 86, { width: 195, align: 'right' });
 
   const hdrBottom = 115;
   drawHLine(doc, hdrBottom);

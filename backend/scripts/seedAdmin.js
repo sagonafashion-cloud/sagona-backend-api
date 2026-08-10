@@ -18,7 +18,7 @@ const seed = async () => {
   if (!passwordValue || passwordValue.length < 12) {
     throw new Error('Set a unique SEED_ADMIN_PASSWORD of at least 12 characters before seeding an admin');
   }
-  const password = await bcrypt.hash(passwordValue, 10);
+  const password = await bcrypt.hash(passwordValue, 12);
   await AdminUser.create({
     name: 'Super Admin',
     email: 'admin@sagona.in',

@@ -2,6 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { validate } from '../middleware/validate.js';
 import { sendEmail } from '../utils/emailService.js';
+import { contactLimiter } from '../middleware/rateLimiters.js';
 
 const router = express.Router();
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -12,7 +13,7 @@ const contactRules = [
   body('message').trim().isLength({ min: 10, max: 2000 }).withMessage('Message must be 10–2000 characters'),
 ];
 
-router.post('/contact', contactRules, validate, async (req, res) => {
+router.post('/contact', contactLimiter, contactRules, validate, async (req, res) => {
   try {
     const { name, email, orderNumber, subject, message } = req.body;
     const supportEmail = process.env.SUPPORT_EMAIL || 'care@sagona.in';

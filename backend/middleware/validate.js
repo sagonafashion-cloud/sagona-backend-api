@@ -23,7 +23,7 @@ export const registerRules = [
   // Accept email or identifier (email OR phone) — both are optional individually
   body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail().withMessage('Valid email required'),
   body('identifier').optional({ checkFalsy: true }),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
 ];
 
 export const loginRules = [
@@ -36,7 +36,7 @@ export const loginRules = [
 export const resetPasswordRules = [
   body('email').isEmail().normalizeEmail(),
   body('otp').isLength({ min: 6, max: 6 }).isNumeric().withMessage('OTP must be 6 digits'),
-  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('newPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
 ];
 
 // ── Orders ────────────────────────────────────────────────
@@ -96,7 +96,7 @@ export const verifyPaymentRules = [
 
 // ── Admin auth ────────────────────────────────────────────
 export const adminLoginRules = [
-  body('email').trim().notEmpty().withMessage('Email required'),
+  body('email').trim().notEmpty().withMessage('Email required').isEmail().withMessage('Invalid email'),
   body('password').notEmpty().withMessage('Password required'),
 ];
 

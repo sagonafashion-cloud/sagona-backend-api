@@ -109,6 +109,33 @@ export const verifyPayment = async (req, res) => {
         return res.json({ success: true, message: 'Already verified' });
       }
 
+      // Reject replay — this payment must not already be attached to a
+      // different order (mirrors the same check in orderController.createOrder).
+      const alreadyUsed = await Order.findOne({
+        _id: { $ne: existing._id },
+        'payment.razorpayPaymentId': razorpayPaymentId
+      });
+      if (alreadyUsed) {
+        return res.status(409).json({ success: false, message: 'This payment has already been used for an order' });
+      }
+
+      // Fetch what was actually captured from Razorpay and cross-check it
+      // against THIS order's amount — a genuine signature only proves the
+      // payment is real, not that it was meant for this order. Without this,
+      // a real (cheap) payment could be replayed via `orderId` to mark an
+      // unrelated, more expensive pending order as paid.
+      const razorpay = getRazorpayInstance();
+      const captured = await razorpay.payments.fetch(razorpayPaymentId);
+      const expectedPaise = Math.round(existing.billing.grandTotal * 100);
+
+      if (captured.order_id !== razorpayOrderId || captured.status !== 'captured' || captured.amount !== expectedPaise) {
+        console.error('PAYMENT VERIFY AMOUNT MISMATCH:', {
+          orderId: existing._id, userId: req.user?._id, expectedPaise,
+          capturedAmount: captured.amount, capturedStatus: captured.status
+        });
+        return res.status(400).json({ success: false, message: 'Payment amount could not be verified' });
+      }
+
       const order = await Order.findByIdAndUpdate(orderId, {
         'payment.razorpayOrderId': razorpayOrderId,
         'payment.razorpayPaymentId': razorpayPaymentId,

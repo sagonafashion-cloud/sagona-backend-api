@@ -9,7 +9,6 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.98.0",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",

@@ -1,6 +1,6 @@
-import { API_BASE, fetchPincodeData, escapeHtml } from './config.js';
+import { API_BASE, fetchPincodeData, escapeHtml, encodeJsArg } from './config.js';
 import { getToken, getUser, saveUser, clearAuth } from './storage.js';
-import { handleSessionExpired } from './api.js';
+import { handleSessionExpired, request } from './api.js';
 
 const token = getToken();
 if (!token) {
@@ -60,10 +60,15 @@ document.querySelectorAll('.acct-tab').forEach((el) => {
   el.addEventListener('click', () => activateTab(el.dataset.tab));
 });
 
-// Support #tryon deep-link (e.g. from modal "Manage in My Account")
-if (location.hash === '#tryon') activateTab('tryon');
-
-activateTab('profile');
+// Support #tryon / #orders deep-links (e.g. #tryon from modal "Manage in My
+// Account"; #orders from returns.html, which routes here since returns/
+// exchanges must be tied to a real, verified order + logged-in user).
+// Falls back to the profile tab when there's no matching hash — note this
+// must come after the hash checks, otherwise activateTab('profile') below
+// would immediately override whichever tab the hash selected.
+if (location.hash === '#tryon')       activateTab('tryon');
+else if (location.hash === '#orders') activateTab('orders');
+else                                   activateTab('profile');
 
 /* ══════════════════════════════════════════
    PROFILE
@@ -81,11 +86,7 @@ renderProfile();
 // Verify the stored token is still valid on every account page load — if the
 // backend's JWT secret was rotated since this token was issued, this 401s
 // and we bounce to login instead of silently rendering a stale/empty profile.
-fetch(`${API_BASE}/auth/me`, { headers: authHeader() })
-  .then((r) => {
-    if (r.status === 401) { handleSessionExpired(); return null; }
-    return r.json();
-  })
+request('/auth/me')
   .then((d) => { if (d?.user) { user = d.user; saveUser(user); renderProfile(); } })
   .catch(() => {});
 
@@ -108,13 +109,10 @@ document.getElementById('prof-save-btn').addEventListener('click', async () => {
   if (!name) { alert('Name is required'); return; }
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
-    const res  = await fetch(`${API_BASE}/auth/me`, {
+    const data = await request('/auth/me', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify({ name, phone })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Update failed');
     user = { ...user, ...data.user };
     saveUser(user);
     renderProfile();
@@ -201,17 +199,9 @@ function getOrderActions(order) {
 window.cancelOrder = async function(orderId, orderNumber) {
   if (!confirm(`Cancel order ${orderNumber}? This cannot be undone.`)) return;
   try {
-    const res  = await fetch(`${API_BASE}/orders/${orderId}/cancel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() }
-    });
-    const data = await res.json();
-    if (data.success) {
-      showToast('Order cancelled successfully');
-      loadOrders();
-    } else {
-      alert(data.message || 'Could not cancel order');
-    }
+    await request(`/orders/${orderId}/cancel`, { method: 'POST' });
+    showToast('Order cancelled successfully');
+    loadOrders();
   } catch (err) {
     alert('Failed: ' + err.message);
   }
@@ -273,20 +263,14 @@ window.openFitFeedback = function(orderId, productId, chosenSize) {
 
 window.submitFitFeedbackForm = async function(orderId, productId, chosenSize, fitFeedback) {
   try {
-    const res  = await fetch(`${API_BASE}/sizing/feedback`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
-      body:    JSON.stringify({ productId, orderId, chosenSize, fitFeedback })
+    const data = await request('/sizing/feedback', {
+      method: 'POST',
+      body:   JSON.stringify({ productId, orderId, chosenSize, fitFeedback })
     });
-    const data = await res.json();
-    if (data.success) {
-      localStorage.setItem(`sz_fb_${orderId}`, '1');
-      document.getElementById('fit-feedback-modal')?.remove();
-      showToast(data.message || 'Thank you for your feedback!');
-      loadOrders();
-    } else {
-      alert(data.message || 'Failed to submit feedback');
-    }
+    localStorage.setItem(`sz_fb_${orderId}`, '1');
+    document.getElementById('fit-feedback-modal')?.remove();
+    showToast(data.message || 'Thank you for your feedback!');
+    loadOrders();
   } catch (err) {
     alert('Failed: ' + err.message);
   }
@@ -365,17 +349,20 @@ async function loadReplacementProducts(query) {
 
     grid.innerHTML = products.map((p) => {
       const img = p.images?.[0] || p.image || '';
-      const safeName = p.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      const safeImg  = img.replace(/'/g, '%27');
+      // encodeJsArg neutralizes quotes/HTML metacharacters for the onclick(...)
+      // string-argument context — plain encodeURIComponent leaves ' unescaped,
+      // which can still break out of the surrounding '...' JS string literal.
+      const safeName = encodeJsArg(p.name);
+      const safeImg  = encodeJsArg(img);
       return `
         <div onclick="window.selectReplacement('${p._id}','${safeName}','${safeImg}')"
              id="rp-${p._id}"
              style="border:0.5px solid #E8E5E0;border-radius:6px;overflow:hidden;cursor:pointer;transition:border 0.15s,background 0.15s">
           <div style="aspect-ratio:1;overflow:hidden;background:#F8F6F3">
-            ${img ? `<img src="${img}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;background:#F0EDE8"></div>'}
+            ${img ? `<img src="${img}" alt="${escapeHtml(p.name)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;background:#F0EDE8"></div>'}
           </div>
           <div style="padding:8px">
-            <div style="font-size:12px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+            <div style="font-size:12px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.name)}</div>
             <div style="font-size:12px;color:#555">&#8377;${Number(p.price).toLocaleString('en-IN')}</div>
           </div>
         </div>`;
@@ -392,6 +379,10 @@ window.searchReplacementProducts = (query) => {
 };
 
 window.selectReplacement = (id, name, img) => {
+  // name/img arrive encodeURIComponent-encoded from the onclick(...) string
+  // args (see loadReplacementProducts) — decode before storing/displaying.
+  name = decodeURIComponent(name);
+  img  = decodeURIComponent(img);
   _selectedReplacement = { id, name, img };
   document.querySelectorAll('[id^="rp-"]').forEach((el) => {
     el.style.border = '0.5px solid #E8E5E0';
@@ -422,9 +413,8 @@ window.submitReplacement = async (orderId) => {
 
 async function submitReturnRequest(orderId, type, reason, replacementProductId, replacementProductName) {
   try {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/return-request`, {
+    const data = await request(`/orders/${orderId}/return-request`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify({
         returnType: type,
         reason,
@@ -432,13 +422,8 @@ async function submitReturnRequest(orderId, type, reason, replacementProductId, 
         replacementProductName: replacementProductName || ''
       })
     });
-    const data = await res.json();
-    if (data.success) {
-      showToast(data.message || 'Request submitted successfully');
-      loadOrders();
-    } else {
-      alert(data.message || 'Request failed');
-    }
+    showToast(data.message || 'Request submitted successfully');
+    loadOrders();
   } catch (err) {
     alert('Failed to submit: ' + err.message);
   }
@@ -585,8 +570,7 @@ async function loadOrders() {
   container.innerHTML = '<p style="color:var(--gray)">Loading orders…</p>';
 
   try {
-    const res    = await fetch(`${API_BASE}/orders/my`, { headers: authHeader() });
-    const data   = await res.json();
+    const data   = await request('/orders/my');
     const orders = data.data || [];
 
     if (!orders.length) {
@@ -621,8 +605,7 @@ async function loadAddresses() {
   const container = document.getElementById('addresses-list');
   container.innerHTML = '<p style="color:var(--gray)">Loading…</p>';
   try {
-    const res = await fetch(`${API_BASE}/auth/addresses`, { headers: authHeader() });
-    const data = await res.json();
+    const data = await request('/auth/addresses');
     savedAddresses = data.data || [];
     window._userAddresses = savedAddresses;
     renderAddresses();
@@ -661,10 +644,7 @@ function renderAddresses() {
 window.deleteAddress = async function(id) {
   if (!confirm('Remove this address?')) return;
   try {
-    const res = await fetch(`${API_BASE}/auth/addresses/${id}`, {
-      method: 'DELETE', headers: authHeader()
-    });
-    if (!res.ok) throw new Error();
+    await request(`/auth/addresses/${id}`, { method: 'DELETE' });
     savedAddresses = savedAddresses.filter((a) => a._id !== id);
     window._userAddresses = savedAddresses;
     renderAddresses();
@@ -768,16 +748,10 @@ window.saveAddressForm = async function(editId) {
 
   try {
     const isEdit = editId && editId !== 'null';
-    const url    = isEdit ? `${API_BASE}/auth/addresses/${editId}` : `${API_BASE}/auth/addresses`;
+    const url    = isEdit ? `/auth/addresses/${editId}` : `/auth/addresses`;
     const method = isEdit ? 'PUT' : 'POST';
 
-    const res  = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
-      body: JSON.stringify(addr)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to save');
+    const data = await request(url, { method, body: JSON.stringify(addr) });
 
     savedAddresses = data.data || savedAddresses;
     window._userAddresses = savedAddresses;
@@ -821,15 +795,15 @@ function loadWishlist() {
   container.innerHTML = `<div class="acct-wishlist-grid">
     ${wishlist.map((item) => `
       <div class="acct-wish-card">
-        <a href="product.html?id=${item.id}">
-          <img src="${item.image || 'https://via.placeholder.com/200x260?text=SAGONA'}" alt="${item.name}" loading="lazy">
+        <a href="product.html?id=${encodeURIComponent(item.id)}">
+          <img src="${escapeHtml(item.image || 'https://via.placeholder.com/200x260?text=SAGONA')}" alt="${escapeHtml(item.name)}" loading="lazy">
         </a>
         <div class="acct-wish-info">
-          <p class="acct-wish-name"><a href="product.html?id=${item.id}" style="color:inherit;text-decoration:none">${item.name}</a></p>
+          <p class="acct-wish-name"><a href="product.html?id=${encodeURIComponent(item.id)}" style="color:inherit;text-decoration:none">${escapeHtml(item.name)}</a></p>
           <p class="acct-wish-price">${INR(item.price)}</p>
           <div style="display:flex;gap:8px;margin-top:8px">
-            <a href="product.html?id=${item.id}" class="btn gold" style="flex:1;text-align:center;font-size:12px;padding:8px">View</a>
-            <button onclick="removeWishlistItem('${item.id}')" class="btn ghost" style="font-size:12px;padding:8px">Remove</button>
+            <a href="product.html?id=${encodeURIComponent(item.id)}" class="btn gold" style="flex:1;text-align:center;font-size:12px;padding:8px">View</a>
+            <button onclick="removeWishlistItem('${encodeJsArg(item.id)}')" class="btn ghost" style="font-size:12px;padding:8px">Remove</button>
           </div>
         </div>
       </div>`).join('')}
@@ -837,6 +811,7 @@ function loadWishlist() {
 }
 
 window.removeWishlistItem = function(id) {
+  id = decodeURIComponent(id);
   let wishlist = [];
   try { wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]'); } catch {}
   wishlist = wishlist.filter((i) => i.id !== id);
@@ -941,8 +916,7 @@ async function loadTryOnSection() {
 
 async function loadCurrentTryOnPhoto() {
   try {
-    const res = await fetch(`${API_BASE}/tryon/photo`, { headers: authHeader() });
-    const data = await res.json();
+    const data = await request('/tryon/photo');
     if (data.success && data.data.hasPhoto) {
       renderTryOnPhotoCard(data.data.url, data.data.uploadedAt);
     }
@@ -993,6 +967,7 @@ window.handleTryOnPhotoUpload = async function(input) {
     const res = await fetch(`${API_BASE}/tryon/upload-photo`, {
       method: 'POST', headers: authHeader(), body: formData
     });
+    if (res.status === 401) { handleSessionExpired(); return; }
     if (bar) bar.style.width = '100%';
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
@@ -1011,7 +986,7 @@ window.handleTryOnPhotoUpload = async function(input) {
 window.deleteTryOnPhoto = async function() {
   if (!confirm('Delete your try-on photo? You can upload a new one anytime.')) return;
   try {
-    await fetch(`${API_BASE}/tryon/photo`, { method: 'DELETE', headers: authHeader() });
+    await request('/tryon/photo', { method: 'DELETE' });
     window._tryOnPhotoUrl = null;
     loadTryOnSection();
     showToast('Photo deleted successfully');

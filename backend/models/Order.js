@@ -120,7 +120,6 @@ const orderSchema = new mongoose.Schema(
     returnRequest:     returnRequestSchema,
 
     invoiceUrl: { type: String },
-    couponCode: { type: String },
     notes: { type: String }
   },
   { timestamps: true }

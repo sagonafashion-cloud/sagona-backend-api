@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../models/User.js";
 import { sendWelcome, sendPasswordReset, storeOtp, verifyOtp } from '../utils/emailService.js';
 
@@ -47,7 +48,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'An account with that email/phone already exists' });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 12);
     const userData = {
       name,
       password: hashed,
@@ -163,7 +164,9 @@ export const forgotPassword = async (req, res) => {
       return res.json({ success: true, message: 'If that account exists, an OTP has been sent.' });
     }
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    // CSPRNG — Math.random() is not cryptographically secure and its output
+    // is predictable enough to make OTP brute-forcing/guessing easier.
+    const otp = String(crypto.randomInt(100000, 1000000));
     storeOtp(user.email, otp);
     sendPasswordReset(user, otp).catch((err) => console.error('sendPasswordReset failed:', err.message));
 
@@ -255,7 +258,10 @@ export const updateAddress = async (req, res) => {
 export const updatePushToken = async (req, res) => {
   try {
     const { expoPushToken } = req.body;
-    if (!expoPushToken) return res.status(400).json({ success: false, message: 'expoPushToken required' });
+    // Allow an explicit empty string through (used on logout, to unregister
+    // the device so it stops receiving this user's push notifications) —
+    // only reject when the field is missing entirely.
+    if (expoPushToken === undefined) return res.status(400).json({ success: false, message: 'expoPushToken required' });
     await User.findByIdAndUpdate(req.user._id, { expoPushToken });
     res.json({ success: true });
   } catch (err) {
@@ -270,14 +276,14 @@ export const resetPassword = async (req, res) => {
     if (!email || !otp || !newPassword) {
       return res.status(400).json({ success: false, message: 'email, otp and newPassword required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
     }
 
     const valid = verifyOtp(email.toLowerCase().trim(), otp);
     if (!valid) return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 12);
     await User.findOneAndUpdate({ email: email.toLowerCase().trim() }, { password: hashed });
 
     res.json({ success: true, message: 'Password updated successfully' });

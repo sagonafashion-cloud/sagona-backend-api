@@ -49,26 +49,15 @@
 
         <section class="panel">
 
-            <form id="return-form">
+            <p style="color: #6e665c; margin-bottom: 1.5rem;">
+                Returns and exchanges are filed against a specific order, so we handle
+                requests from <strong>My Orders</strong> — this lets us verify the order
+                is yours and still within the return window before anything is submitted.
+            </p>
 
-                <label>Order ID</label>
-                <input type="text" id="orderId" class="field" placeholder="Enter your Order ID" required />
-
-                <label>Reason</label>
-                <select id="reason" class="field">
-                    <option value="Size Issue">Size Issue</option>
-                    <option value="Defective Item">Defective Item</option>
-                    <option value="Wrong Product">Wrong Product</option>
-                    <option value="Other">Other</option>
-                </select>
-
-                <button type="submit" class="btn gold">
-                    Submit Request
-                </button>
-
-                <p id="status" style="margin-top: 10px;"></p>
-
-            </form>
+            <a id="return-cta" href="account.html#orders" class="btn gold">
+                Go to My Orders
+            </a>
 
         </section>
 
@@ -90,27 +79,12 @@
 
     <!-- SCRIPT -->
     <script>
-        document.getElementById("return-form").addEventListener("submit", function (e) {
-            e.preventDefault();
-
-            const orderId = document.getElementById("orderId").value;
-            const reason = document.getElementById("reason").value;
-            const status = document.getElementById("status");
-
-            if (!orderId) {
-                status.style.color = "red";
-                status.textContent = "Please enter Order ID";
-                return;
-            }
-
-            // 🔹 For now (no backend yet)
-            console.log("Return Request:", { orderId, reason });
-
-            status.style.color = "green";
-            status.textContent = "Return request submitted successfully!";
-
-            this.reset();
-        });
+        // Send logged-out visitors to login first — account.html#orders would
+        // just bounce them anyway, and this avoids a confusing dead end.
+        if (!localStorage.getItem('token')) {
+            document.getElementById('return-cta').href = 'login.html';
+            document.getElementById('return-cta').textContent = 'Log In to Request a Return';
+        }
     </script>
 
 </body>

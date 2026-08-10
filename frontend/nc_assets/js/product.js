@@ -1,5 +1,5 @@
 import { request }  from './api.js';
-import { API_BASE, escapeHtml, sanitizeUrl } from './config.js';
+import { API_BASE, escapeHtml, sanitizeUrl, encodeJsArg } from './config.js';
 import { getCart, saveCart } from './storage.js';
 import { initSizingTool } from './sizing.js';
 
@@ -291,12 +291,12 @@ function injectTryOnButton(product, garmentUrl) {
   if (!addBtn) return;
   const wrapper = document.createElement('div');
   wrapper.style.marginTop = '10px';
-  const safeId   = (product._id   || '').replace(/'/g, "\\'");
-  const safeUrl  = (garmentUrl    || '').replace(/'/g, "\\'");
-  const safeName = (product.name  || '').replace(/'/g, "\\'");
+  const safeId   = encodeJsArg(product._id);
+  const safeUrl  = encodeJsArg(garmentUrl);
+  const safeName = encodeJsArg(product.name);
   wrapper.innerHTML = `
     <button id="product-tryon-btn"
-            onclick="openTryOnModal('${safeId}','${safeUrl}','${safeName}')"
+            onclick="openTryOnModal(decodeURIComponent('${safeId}'),decodeURIComponent('${safeUrl}'),decodeURIComponent('${safeName}'))"
             style="width:100%;padding:13px;background:transparent;border:1px solid #0A0A0A;
                    color:#0A0A0A;cursor:pointer;font-size:11px;letter-spacing:0.14em;
                    font-family:inherit;border-radius:3px;display:flex;align-items:center;

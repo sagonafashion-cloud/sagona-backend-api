@@ -39,6 +39,7 @@
 
   <script type="module">
     import { getCart, saveCart } from '/nc_assets/js/storage.js';
+    import { escapeHtml, sanitizeUrl } from '/nc_assets/js/config.js';
 
     const INR      = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
     const GST_RATE = 0.05; // 5% display estimate (actual calculated server-side)
@@ -77,28 +78,28 @@
           </thead>
           <tbody>
             ${cart.map((item) => `
-            <tr data-id="${item.id}" data-key="${item.key || item.id}">
+            <tr data-id="${escapeHtml(item.id)}" data-key="${escapeHtml(item.key || item.id)}">
               <td>
                 <div style="display:flex;align-items:center;gap:14px">
-                  <img src="${item.image || ''}" class="item-img" alt="${item.name}"
+                  <img src="${sanitizeUrl(item.image)}" class="item-img" alt="${escapeHtml(item.name)}"
                     onerror="this.style.display='none'">
                   <div class="item-info">
-                    <h4>${item.name}</h4>
-                    ${item.colour ? `<p>${item.colour}</p>` : ''}
+                    <h4>${escapeHtml(item.name)}</h4>
+                    ${item.colour ? `<p>${escapeHtml(item.colour)}</p>` : ''}
                   </div>
                 </div>
               </td>
-              <td><span style="font-size:13px">${item.size || '—'}</span></td>
+              <td><span style="font-size:13px">${escapeHtml(item.size) || '—'}</span></td>
               <td>
                 <div class="cart-qty">
-                  <button class="qty-btn" data-key="${item.key || item.id}" data-type="minus">−</button>
+                  <button class="qty-btn" data-key="${escapeHtml(item.key || item.id)}" data-type="minus">−</button>
                   <span style="font-size:13px;min-width:20px;text-align:center">${item.quantity}</span>
-                  <button class="qty-btn" data-key="${item.key || item.id}" data-type="plus">+</button>
+                  <button class="qty-btn" data-key="${escapeHtml(item.key || item.id)}" data-type="plus">+</button>
                 </div>
               </td>
               <td style="text-align:right;font-size:13px;color:var(--gold)">${INR(item.price * item.quantity)}</td>
               <td style="text-align:right">
-                <button class="cart-remove" data-key="${item.key || item.id}">Remove</button>
+                <button class="cart-remove" data-key="${escapeHtml(item.key || item.id)}">Remove</button>
               </td>
             </tr>`).join('')}
           </tbody>
@@ -114,26 +115,30 @@
           <a href="checkout.html" class="btn gold" style="display:block;text-align:center;margin-top:20px">Proceed to Checkout</a>
           <a href="shop.html" class="btn ghost" style="display:block;text-align:center;margin-top:8px">Continue Shopping</a>
         </div>`;
-
-      // qty / remove events
-      root.addEventListener('click', (e) => {
-        const key = e.target.dataset.key;
-        let cart = getCart();
-
-        if (e.target.dataset.type === 'plus') {
-          cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: i.quantity + 1 } : i);
-        }
-        if (e.target.dataset.type === 'minus') {
-          cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i);
-        }
-        if (e.target.classList.contains('cart-remove')) {
-          cart = cart.filter((i) => (i.key || i.id) !== key);
-        }
-
-        saveCart(cart);
-        render();
-      }, { once: true }); // re-attach on each render
     }
+
+    // qty / remove events — delegated once on the persistent #cart-root element.
+    // (Previously re-attached with `{ once: true }` inside render(), which meant
+    // a single click anywhere in the cart — even a non-actionable one — silently
+    // disarmed all further clicks until the page was reloaded.)
+    document.getElementById('cart-root').addEventListener('click', (e) => {
+      const key = e.target.dataset.key;
+      if (!key) return;
+      let cart = getCart();
+
+      if (e.target.dataset.type === 'plus') {
+        cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      if (e.target.dataset.type === 'minus') {
+        cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i);
+      }
+      if (e.target.classList.contains('cart-remove')) {
+        cart = cart.filter((i) => (i.key || i.id) !== key);
+      }
+
+      saveCart(cart);
+      render();
+    });
 
     render();
   </script>

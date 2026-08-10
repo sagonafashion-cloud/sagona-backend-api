@@ -19,7 +19,15 @@ const adminUserSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date },
-    lastLoginIP: { type: String }
+    lastLoginIP: { type: String },
+
+    // Account-level brute-force lockout — mirrors User.js's customer lockout.
+    loginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+
+    // Bumped on logout to invalidate any outstanding admin JWTs server-side
+    // (JWTs are otherwise stateless/unrevocable for their full lifetime).
+    tokenVersion: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

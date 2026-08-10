@@ -58,13 +58,19 @@ export function buildTimelineEntry(status, location = '', updatedBy = 'admin') {
   };
 }
 
-// Calculate estimated delivery skipping Sundays
+// Calculate estimated delivery skipping Sundays. Uses UTC-based day
+// increments plus an IST-anchored day-of-week check (instead of
+// setDate()/getDay(), which read the host's local timezone) so the result
+// doesn't shift depending on whether the server runs UTC or IST.
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 export function calcEstimatedDelivery(fromDate, days = 5) {
-  const d = new Date(fromDate);
+  let d = new Date(fromDate);
   let added = 0;
   while (added < days) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() !== 0) added++;
+    d = new Date(d.getTime() + DAY_MS);
+    const istDayOfWeek = new Date(d.getTime() + IST_OFFSET_MS).getUTCDay();
+    if (istDayOfWeek !== 0) added++;
   }
   return d;
 }

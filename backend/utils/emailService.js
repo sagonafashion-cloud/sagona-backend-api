@@ -127,7 +127,7 @@ export const sendOrderStatusEmail = async (order, newStatus) => {
     </div>` : '';
 
   const estDelivery = order.estimatedDelivery
-    ? new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
+    ? new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' })
     : null;
 
   await sendEmail({

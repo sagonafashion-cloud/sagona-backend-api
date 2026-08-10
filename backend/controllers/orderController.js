@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
@@ -5,6 +6,7 @@ import { generateInvoiceForOrder, getRazorpayInstance, safeCompareHex } from './
 import { sendOrderConfirmation, sendStatusUpdate, sendOrderStatusEmail } from '../utils/emailService.js';
 import { buildTimelineEntry, calcEstimatedDelivery } from '../utils/orderTimeline.js';
 import { computeOrderTotals } from '../utils/orderCalculator.js';
+import { escapeRegex } from './productController.js';
 import crypto from 'crypto';
 
 /* ═══════════════════════════════════
@@ -16,7 +18,6 @@ export const createOrder = async (req, res) => {
       items = [],
       shippingAddress,
       payment,
-      couponCode,
       notes
     } = req.body;
 
@@ -101,45 +102,70 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    const order = await Order.create({
-      customer: {
-        userId: orderUser._id,
-        name:   orderUser.name,
-        email:  orderUser.email,
-        phone:  orderUser.phone
-      },
-      items: enrichedItems,
-      shippingAddress,
-      billing,
-      taxType,
-      payment: paymentSubdoc,
-      status: paymentMethod === 'ONLINE' ? 'confirmed' : 'placed',
-      couponCode,
-      notes
-    });
+    // Order creation, stock reservation, and loyalty-point award all happen
+    // inside one transaction so a failure at any step (e.g. a later item's
+    // stock unavailable, or a transient DB error on the loyalty update)
+    // rolls back everything already applied — no stuck/decremented stock,
+    // no order left without its timeline/ETA (mirrors createOrder's own
+    // payment checks above, which already treat correctness as non-negotiable).
+    const session = await mongoose.startSession();
+    let order;
+    try {
+      await session.withTransaction(async () => {
+        const created = await Order.create([{
+          customer: {
+            userId: orderUser._id,
+            name:   orderUser.name,
+            email:  orderUser.email,
+            phone:  orderUser.phone
+          },
+          items: enrichedItems,
+          shippingAddress,
+          billing,
+          taxType,
+          payment: paymentSubdoc,
+          status: paymentMethod === 'ONLINE' ? 'confirmed' : 'placed',
+          notes
+        }], { session });
+        order = created[0];
 
-    // Reserve inventory only after the order is persisted. Conditional updates
-    // make concurrent checkouts fail safely instead of driving stock negative.
-    for (const item of enrichedItems) {
-      if (!item.size && !item.colour) continue;
-      const reserved = await Product.updateOne(
-        { _id: item.productId, variants: { $elemMatch: { size: item.size, colour: item.colour, stock: { $gte: item.qty } } } },
-        { $inc: { 'variants.$.stock': -item.qty } }
-      );
-      if (!reserved.modifiedCount) {
-        await Order.findByIdAndDelete(order._id);
-        return res.status(409).json({ success: false, message: 'Selected product variant is no longer available' });
-      }
+        // Reserve inventory. Conditional updates make concurrent checkouts
+        // fail safely instead of driving stock negative.
+        for (const item of enrichedItems) {
+          if (!item.size && !item.colour) {
+            // Non-variant product — atomic top-level stock decrement.
+            const reserved = await Product.updateOne(
+              { _id: item.productId, stock: { $gte: item.qty } },
+              { $inc: { stock: -item.qty } },
+              { session }
+            );
+            if (!reserved.modifiedCount) {
+              throw Object.assign(new Error('Selected product is no longer available'), { statusCode: 409 });
+            }
+            continue;
+          }
+          const reserved = await Product.updateOne(
+            { _id: item.productId, variants: { $elemMatch: { size: item.size, colour: item.colour, stock: { $gte: item.qty } } } },
+            { $inc: { 'variants.$.stock': -item.qty } },
+            { session }
+          );
+          if (!reserved.modifiedCount) {
+            throw Object.assign(new Error('Selected product variant is no longer available'), { statusCode: 409 });
+          }
+        }
+
+        // Loyalty: 1 point per ₹100
+        const loyaltyEarned = Math.floor(billing.grandTotal / 100);
+        await User.findByIdAndUpdate(orderUser._id, { $inc: { loyaltyPoints: loyaltyEarned } }, { session });
+
+        // Add initial timeline entry and estimated delivery
+        order.timeline = [buildTimelineEntry('placed', '', 'system')];
+        order.estimatedDelivery = calcEstimatedDelivery(new Date(), 5);
+        await order.save({ session });
+      });
+    } finally {
+      session.endSession();
     }
-
-    // Loyalty: 1 point per ₹100
-    const loyaltyEarned = Math.floor(billing.grandTotal / 100);
-    await User.findByIdAndUpdate(orderUser._id, { $inc: { loyaltyPoints: loyaltyEarned } });
-
-    // Add initial timeline entry and estimated delivery
-    order.timeline = [buildTimelineEntry('placed', '', 'system')];
-    order.estimatedDelivery = calcEstimatedDelivery(new Date(), 5);
-    await order.save();
 
     // Generate invoice + send confirmation (non-blocking). Safe for both COD and
     // ONLINE here since an ONLINE order only reaches this point once payment is verified.
@@ -214,13 +240,14 @@ export const getOrders = async (req, res) => {
     const skip  = (page - 1) * limit;
 
     const filter = {};
-    if (req.query.status)  filter.status = { $regex: new RegExp(`^${req.query.status}$`, 'i') };
+    if (req.query.status)  filter.status = { $regex: new RegExp(`^${escapeRegex(req.query.status)}$`, 'i') };
     if (req.query.storeId) filter['items.storeId'] = req.query.storeId;
     if (req.query.search) {
+      const q = escapeRegex(req.query.search);
       filter.$or = [
-        { orderNumber: { $regex: req.query.search, $options: 'i' } },
-        { 'customer.name': { $regex: req.query.search, $options: 'i' } },
-        { 'customer.email': { $regex: req.query.search, $options: 'i' } }
+        { orderNumber: { $regex: q, $options: 'i' } },
+        { 'customer.name': { $regex: q, $options: 'i' } },
+        { 'customer.email': { $regex: q, $options: 'i' } }
       ];
     }
     if (req.query.from || req.query.to) {
@@ -244,30 +271,6 @@ export const getOrders = async (req, res) => {
 /* ═══════════════════════════════════
    ADMIN — UPDATE ORDER STATUS
 ═══════════════════════════════════ */
-export const updateOrder = async (req, res) => {
-  try {
-    const { status } = req.body;
-
-    const validStatuses = ['placed', 'confirmed', 'packed', 'shipped', 'delivered', 'returned', 'cancelled'];
-    // Legacy statuses for backward compatibility
-    const legacyMap = { PENDING: 'placed', DELIVERED: 'delivered' };
-    const normalised = legacyMap[status] || status;
-
-    if (!validStatuses.includes(normalised)) {
-      return res.status(400).json({ success: false, message: 'Invalid status' });
-    }
-
-    const order = await Order.findByIdAndUpdate(req.params.id, { status: normalised }, { new: true });
-    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-
-    sendStatusUpdate(order).catch((err) => console.error('sendStatusUpdate failed:', err.message));
-
-    res.json({ success: true, data: order });
-  } catch {
-    res.status(400).json({ success: false, message: 'Update failed' });
-  }
-};
-
 /* ═══════════════════════════════════
    ADMIN — UPDATE ORDER STATUS (enhanced: tracking + timeline)
 ═══════════════════════════════════ */

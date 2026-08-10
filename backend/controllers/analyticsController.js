@@ -69,24 +69,36 @@ export const getOrderAnalytics = async (req, res) => {
     const groupBy = req.query.groupBy || 'status';
     const match = { createdAt: { $gte: from, $lte: to } };
 
-    const groupId = groupBy === 'status'   ? '$status'
-                  : groupBy === 'store'    ? '$items.storeId'
-                  : groupBy === 'category' ? '$items.sku'
-                  : '$status';
-
-    const pipeline = groupBy === 'store'
-      ? [
-          { $match: match },
-          { $unwind: '$items' },
-          { $group: { _id: '$items.storeId', count: { $sum: 1 }, revenue: { $sum: { $multiply: ['$items.unitPrice', '$items.qty'] } } } },
-          { $lookup: { from: 'stores', localField: '_id', foreignField: '_id', as: 'store' } },
-          { $project: { store: { $arrayElemAt: ['$store.name', 0] }, count: 1, revenue: 1 } }
-        ]
-      : [
-          { $match: match },
-          { $group: { _id: groupId, count: { $sum: 1 } } },
-          { $project: { label: '$_id', count: 1, _id: 0 } }
-        ];
+    // 'category' isn't a field on the order item subdocument (only
+    // productId/sku/name/etc — see models/Order.js), so it's resolved via a
+    // $lookup into products, mirroring the 'store' branch's lookup pattern
+    // below rather than grouping by the wrong field (items.sku, which also
+    // wasn't $unwind-ed and so grouped on the whole items array).
+    let pipeline;
+    if (groupBy === 'store') {
+      pipeline = [
+        { $match: match },
+        { $unwind: '$items' },
+        { $group: { _id: '$items.storeId', count: { $sum: 1 }, revenue: { $sum: { $multiply: ['$items.unitPrice', '$items.qty'] } } } },
+        { $lookup: { from: 'stores', localField: '_id', foreignField: '_id', as: 'store' } },
+        { $project: { store: { $arrayElemAt: ['$store.name', 0] }, count: 1, revenue: 1 } }
+      ];
+    } else if (groupBy === 'category') {
+      pipeline = [
+        { $match: match },
+        { $unwind: '$items' },
+        { $lookup: { from: 'products', localField: 'items.productId', foreignField: '_id', as: 'product' } },
+        { $group: { _id: { $ifNull: [{ $arrayElemAt: ['$product.category', 0] }, 'Unknown'] }, count: { $sum: 1 } } },
+        { $project: { label: '$_id', count: 1, _id: 0 } }
+      ];
+    } else {
+      const groupId = groupBy === 'status' ? '$status' : '$status';
+      pipeline = [
+        { $match: match },
+        { $group: { _id: groupId, count: { $sum: 1 } } },
+        { $project: { label: '$_id', count: 1, _id: 0 } }
+      ];
+    }
 
     const data = await Order.aggregate(pipeline);
     res.json({ success: true, data, from, to });
@@ -172,6 +184,10 @@ export const getCustomerMetrics = async (req, res) => {
 export const getInventoryAlerts = async (req, res) => {
   try {
     const threshold = parseInt(req.query.threshold) || 5;
+    // Capped the same way getTopProducts caps its result set — an unbounded
+    // find() here could return the entire catalog on a store with widespread
+    // low stock, risking slow responses/large payloads.
+    const limit = Math.min(200, parseInt(req.query.limit) || 100);
 
     const data = await Product.find({
       status: 'active',
@@ -181,6 +197,7 @@ export const getInventoryAlerts = async (req, res) => {
       ]
     })
     .select('name sku category variants stores status')
+    .limit(limit)
     .lean();
 
     res.json({ success: true, data, threshold });

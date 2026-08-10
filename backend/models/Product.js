@@ -60,6 +60,9 @@ const productSchema = new mongoose.Schema(
     publishAt: { type: Date },
 
     /* ── inventory ── */
+    // Top-level stock — used only for products sold without a size/colour
+    // selection (no variants). Variant products track stock per-variant above.
+    stock: { type: Number, default: 0, min: 0 },
     variants: [variantSchema],
     stores: [storeStockSchema],
 
@@ -112,6 +115,9 @@ const productSchema = new mongoose.Schema(
 
 productSchema.index({ category: 1, status: 1 });
 productSchema.index({ tags: 1 });
+// Backs the name/description/sku $regex search in productController — without
+// this, every search query was a full collection scan.
+productSchema.index({ name: 'text', description: 'text', tags: 'text', fabric: 'text' });
 
 const Product = mongoose.model('Product', productSchema);
 

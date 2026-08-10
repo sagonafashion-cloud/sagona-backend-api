@@ -130,7 +130,10 @@ app.use(cors({
 app.use(compression({ threshold: 1024 }));
 
 // ── Body parsing ───────────────────────────────────────────
-app.use(express.json());
+// Explicit cap (defense-in-depth) instead of Express's implicit default —
+// file/image uploads go through multipart routes handled separately, so no
+// legitimate JSON request body needs to exceed this.
+app.use(express.json({ limit: '1mb' }));
 
 // ── Input sanitisation ─────────────────────────────────────
 app.use(mongoSanitize());   // strips $ and . from user input → prevents NoSQL injection

@@ -47,6 +47,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    // Unregister this device's push token before dropping the session —
+    // otherwise the next person to use this device (or this user on a new
+    // device) keeps receiving the previous account's order-update pushes.
+    // Best-effort: must not block logout if it fails (e.g. token already expired).
+    try {
+      await api.patch('/auth/push-token', { expoPushToken: '' });
+    } catch {}
     await SecureStore.deleteItemAsync('token');
     await SecureStore.deleteItemAsync('user');
     set({ token: null, user: null });

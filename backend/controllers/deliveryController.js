@@ -25,9 +25,12 @@ function distanceToEta(km) {
   return 6;
 }
 
+// IST-anchored (see utils/orderTimeline.js for the same pattern) so the
+// returned date doesn't shift depending on whether the host runs UTC or IST.
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 function etaDate(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
+  const d = new Date(Date.now() + IST_OFFSET_MS);
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 

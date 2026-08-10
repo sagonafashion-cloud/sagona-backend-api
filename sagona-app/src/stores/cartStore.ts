@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sentry from '@sentry/react-native';
 import { CartItem } from '../types';
 
 interface CartState {
@@ -17,7 +18,12 @@ const cartKey = (item: CartItem) => `${item.productId}_${item.size}_${item.colou
 const persist = async (items: CartItem[]) => {
   try {
     await AsyncStorage.setItem('cart', JSON.stringify(items));
-  } catch {}
+  } catch (err) {
+    // Silently swallowing this meant a full disk / storage failure looked
+    // identical to a successful save — the cart would appear to update in
+    // memory but never survive an app restart, with no signal to debug it.
+    Sentry.captureException(err);
+  }
 };
 
 export const useCartStore = create<CartState>((set, get) => ({

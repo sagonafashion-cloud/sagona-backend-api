@@ -19,6 +19,17 @@ export function escapeHtml(str) {
   }[ch]));
 }
 
+// Safe for passing a string as a single-quoted argument inside an inline
+// onclick="fn('...')" handler. encodeURIComponent alone is NOT enough here —
+// per its spec it leaves ' ( ) ! ~ * unescaped, so a value containing an
+// apostrophe (e.g. a product/customer name like "O'Neil") can still break out
+// of the JS string literal (e.g. `x'-alert(1)-'`  survives encodeURIComponent
+// unchanged). The extra replace closes that gap; decodeURIComponent on the
+// receiving end still decodes %27 back to ' correctly.
+export function encodeJsArg(str) {
+  return encodeURIComponent(str ?? '').replace(/'/g, '%27');
+}
+
 export function sanitizeUrl(url, fallback = '') {
   const value = String(url ?? '').trim();
   if (!value || /^(?:javascript|data|vbscript):/i.test(value)) return fallback;

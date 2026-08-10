@@ -21,8 +21,18 @@ async function rowsToXlsxBuffer(rows, sheetName) {
   return workbook.xlsx.writeBuffer();
 }
 
+// GST return periods follow the Indian financial calendar (IST), regardless
+// of the host server's system timezone — so "1st of current month" must be
+// computed relative to IST midnight, not server-local midnight.
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const startOfCurrentMonthIST = () => {
+  const nowIST = new Date(Date.now() + IST_OFFSET_MS); // wall-clock IST time, UTC-tagged
+  const startIST = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), 1, 0, 0, 0));
+  return new Date(startIST.getTime() - IST_OFFSET_MS);  // back to a real UTC instant
+};
+
 const parseDates = (query) => ({
-  from: query.from ? new Date(query.from) : new Date(new Date().setDate(1)),   // 1st of current month
+  from: query.from ? new Date(query.from) : startOfCurrentMonthIST(),
   to:   query.to   ? new Date(query.to)   : new Date()
 });
 
@@ -244,7 +254,7 @@ export const exportGstReport = async (req, res) => {
 
       rows = invoices.map((o) => ({
         'Invoice No':      o.orderNumber,
-        'Date':            new Date(o.createdAt).toLocaleDateString('en-IN'),
+        'Date':            new Date(o.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }),
         'Customer':        o.customer?.name || '',
         'State':           o.shippingAddress?.state || '',
         'Tax Type':        o.taxType,

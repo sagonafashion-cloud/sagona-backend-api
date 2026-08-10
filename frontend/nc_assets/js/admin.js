@@ -1,4 +1,4 @@
-import { API_BASE, escapeHtml } from './config.js';
+import { API_BASE, escapeHtml, encodeJsArg } from './config.js';
 
 // Tracks Cloudinary URLs uploaded in the current product modal
 let _uploadedUrls = [];
@@ -35,7 +35,15 @@ async function api(path, opts = {}) {
 
   const ct   = res.headers.get('content-type') || '';
   const data = ct.includes('application/json') ? await res.json() : await res.text();
-  if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+  if (!res.ok) {
+    // A 401 only means "session expired/revoked" when we actually sent a
+    // token — clear it here specifically, rather than in every caller's
+    // catch block, so a transient network error or unrelated 4xx/5xx from
+    // one request doesn't log the admin out (matches the pattern already
+    // used by the customer-facing api.js).
+    if (res.status === 401 && token) sessionStorage.removeItem('admin_token');
+    throw new Error(data?.message || `HTTP ${res.status}`);
+  }
   return data;
 }
 
@@ -53,7 +61,9 @@ async function checkAuth() {
     _adminUser = data.data;
     return true;
   } catch {
-    sessionStorage.removeItem('admin_token');
+    // Don't blindly clear the token here — a transient network error or a
+    // 5xx would otherwise force a re-login even though the session is still
+    // valid. api() already clears admin_token itself for an actual 401.
     return false;
   }
 }
@@ -659,7 +669,7 @@ function renderProducts(products) {
       <td style="white-space:nowrap">
         <button class="btn ghost" style="padding:5px 10px;font-size:10px" onclick="editProduct('${p._id}')">Edit</button>
         <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#C9A84C" onclick="window.openSizingConfig('${p._id}')">Sizing</button>
-        <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#dc2626" onclick="archiveProduct('${p._id}','${encodeURIComponent(p.name)}')">Archive</button>
+        <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#dc2626" onclick="archiveProduct('${p._id}','${encodeJsArg(p.name)}')">Archive</button>
       </td>
     </tr>`;
   }).join('');
@@ -883,7 +893,7 @@ window.openSizingConfig = async function(productId) {
 
     openModal(`
       <h2 style="font-size:18px;margin-bottom:4px">Sizing Config</h2>
-      <p style="font-size:12px;color:#888;margin-bottom:20px">${p.name}</p>
+      <p style="font-size:12px;color:#888;margin-bottom:20px">${escapeHtml(p.name)}</p>
 
       <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
                   color:#888;margin-bottom:12px">FIT CONFIGURATION</div>
@@ -1475,7 +1485,7 @@ function showStoreModal(s = null) {
       <button type="button" class="btn-toggle-store" onclick="toggleStoreActive('${s._id}', ${s.isActive !== false})">
         ${s.isActive !== false ? 'DEACTIVATE' : 'ACTIVATE'}
       </button>
-      <button type="button" class="btn-delete-store" onclick="confirmDeleteStore('${s._id}', '${s.name.replace(/'/g, "\\'")}')">
+      <button type="button" class="btn-delete-store" onclick="confirmDeleteStore('${s._id}', '${encodeJsArg(s.name)}')">
         DELETE
       </button>` : ''}
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -1526,7 +1536,7 @@ window.toggleStoreActive = async (storeId, currentlyActive) => {
 };
 
 window.confirmDeleteStore = async (storeId, storeName) => {
-  if (!confirm(`Delete store "${storeName}"? This cannot be undone.`)) return;
+  if (!confirm(`Delete store "${decodeURIComponent(storeName)}"? This cannot be undone.`)) return;
   try {
     await api(`/admin/stores/${storeId}`, { method: 'DELETE' });
     toast('Store deleted', 'success');

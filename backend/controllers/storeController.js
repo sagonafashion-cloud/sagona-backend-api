@@ -1,10 +1,37 @@
+import jwt from 'jsonwebtoken';
 import Store from '../models/Store.js';
+
+// These endpoints are public (store-locator UI needs no login), but
+// includeInactive and GSTIN/phone should only be visible to a real admin —
+// so we opportunistically check for a valid admin bearer token without
+// making the route itself require one.
+const isAdminRequest = (req) => {
+  const token = req.headers.authorization?.startsWith('Bearer')
+    ? req.headers.authorization.split(' ')[1] : null;
+  if (!token) return false;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_ADMIN_SECRET, { algorithms: ['HS256'] });
+    return decoded.type === 'admin';
+  } catch {
+    return false;
+  }
+};
 
 export const getStores = async (req, res) => {
   try {
     const includeInactive = req.query.includeInactive === 'true';
+    const isAdmin = isAdminRequest(req);
+
+    if (includeInactive && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Admin access required to view inactive stores' });
+    }
+
     const query = includeInactive ? {} : { isActive: true };
-    const stores = await Store.find(query).sort({ priority: -1, name: 1 });
+    // Store count is small and admin-managed, but cap the query so an
+    // unbounded find() can't become a problem if the list ever grows.
+    let q = Store.find(query).sort({ priority: -1, name: 1 }).limit(200);
+    if (!isAdmin) q = q.select('-gstin -phone');
+    const stores = await q;
     res.json({ success: true, data: stores });
   } catch (err) {
     console.error('getStores:', err);
@@ -14,7 +41,9 @@ export const getStores = async (req, res) => {
 
 export const getStoreById = async (req, res) => {
   try {
-    const store = await Store.findById(req.params.id);
+    let q = Store.findById(req.params.id);
+    if (!isAdminRequest(req)) q = q.select('-gstin -phone');
+    const store = await q;
     if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
     res.json({ success: true, data: store });
   } catch {

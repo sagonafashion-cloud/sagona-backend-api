@@ -5,7 +5,9 @@ import HomepageSection from '../models/HomepageSection.js';
 // GET /api/homepage/sections — public
 export const getSections = async (req, res) => {
   try {
-    const sections = await HomepageSection.find({ isActive: true }).sort({ order: 1 }).lean();
+    // Homepage section count is small and admin-managed, but cap the query
+    // so an unbounded find() can't become a problem if the list ever grows.
+    const sections = await HomepageSection.find({ isActive: true }).sort({ order: 1 }).limit(200).lean();
     res.json({ success: true, data: sections });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -15,7 +17,7 @@ export const getSections = async (req, res) => {
 // GET /api/admin/homepage/sections — admin, all
 export const getAllSections = async (req, res) => {
   try {
-    const sections = await HomepageSection.find({}).sort({ order: 1 }).lean();
+    const sections = await HomepageSection.find({}).sort({ order: 1 }).limit(200).lean();
     res.json({ success: true, data: sections });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -82,9 +84,13 @@ export const deleteSection = async (req, res) => {
 export const reorderSections = async (req, res) => {
   try {
     const { order } = req.body; // [{ id, order }, ...]
-    await Promise.all(order.map(item =>
-      HomepageSection.findByIdAndUpdate(item.id, { order: item.order })
-    ));
+    if (Array.isArray(order) && order.length) {
+      await HomepageSection.bulkWrite(
+        order.map(item => ({
+          updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
+        }))
+      );
+    }
     res.json({ success: true, message: 'Order saved' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -1,6 +1,6 @@
 import Product from '../models/Product.js';
 
-const escapeRegex = (value = '') => String(value).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const escapeRegex = (value = '') => String(value).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /* ── helpers ── */
 const buildListQuery = (query) => {

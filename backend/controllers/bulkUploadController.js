@@ -82,38 +82,64 @@ export const bulkUploadProducts = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No product data provided' });
     }
 
-    const valid = products.filter(p => p.valid !== false);
-    if (!valid.length) {
-      return res.status(400).json({ success: false, message: 'No valid products to upload' });
-    }
+    // Re-run the real server-side validation instead of trusting the
+    // client-echoed `valid` flag from the preview step — a modified request
+    // could otherwise mark any row valid and persist price:0/missing SKU/etc.
+    const revalidated = products.map(p => validateProduct(p));
+    const valid        = revalidated.filter(p => p.valid);
 
     const results = { created: [], updated: [], failed: [], skipped: [] };
+    revalidated.filter(p => !p.valid).forEach(p => {
+      results.failed.push({
+        sku: p.sku, name: p.product_name,
+        reason: (p._errors || []).join('; ') || 'Validation failed'
+      });
+    });
 
+    if (!valid.length) {
+      return res.json({
+        success: true,
+        message: `Upload complete: 0 created, 0 updated`,
+        data: results
+      });
+    }
+
+    // Pre-fetch existing products in one query and commit via a single
+    // bulkWrite instead of a sequential findOne+create/update per row —
+    // avoids an N+1 round-trip pattern that risks request timeouts on large
+    // spreadsheets (the preview step already does the efficient $in lookup;
+    // this mirrors it for the commit step).
+    const skus = valid.map(p => p.sku).filter(Boolean);
+    const existingProducts = await Product.find({ sku: { $in: skus } }).select('_id sku').lean();
+    const existingBySku = {};
+    existingProducts.forEach(p => { existingBySku[p.sku] = p; });
+
+    const bulkOps = [];
     for (const product of valid) {
-      try {
-        const productData = buildProductData(product);
-        const existing    = product.sku ? await Product.findOne({ sku: product.sku }) : null;
+      const productData = buildProductData(product);
+      const existing = product.sku ? existingBySku[product.sku] : null;
 
-        if (existing) {
-          if (mode === 'create_only') {
-            results.skipped.push({ sku: product.sku, reason: 'Already exists (create_only mode)' });
-            continue;
-          }
-          // Preserve images when updating
-          const { images, image, ...updateData } = productData;
-          await Product.findByIdAndUpdate(existing._id, { $set: updateData });
-          results.updated.push({ sku: product.sku, name: product.product_name });
-        } else {
-          if (mode === 'update_only') {
-            results.skipped.push({ sku: product.sku, reason: 'Does not exist (update_only mode)' });
-            continue;
-          }
-          const created = await Product.create(productData);
-          results.created.push({ sku: product.sku, name: product.product_name, id: created._id });
+      if (existing) {
+        if (mode === 'create_only') {
+          results.skipped.push({ sku: product.sku, reason: 'Already exists (create_only mode)' });
+          continue;
         }
-      } catch (err) {
-        results.failed.push({ sku: product.sku, name: product.product_name, reason: err.message });
+        // Preserve images when updating
+        const { images, image, ...updateData } = productData;
+        bulkOps.push({ updateOne: { filter: { _id: existing._id }, update: { $set: updateData } } });
+        results.updated.push({ sku: product.sku, name: product.product_name });
+      } else {
+        if (mode === 'update_only') {
+          results.skipped.push({ sku: product.sku, reason: 'Does not exist (update_only mode)' });
+          continue;
+        }
+        bulkOps.push({ insertOne: { document: productData } });
+        results.created.push({ sku: product.sku, name: product.product_name });
       }
+    }
+
+    if (bulkOps.length) {
+      await Product.bulkWrite(bulkOps, { ordered: false });
     }
 
     res.json({
@@ -127,6 +153,14 @@ export const bulkUploadProducts = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// Upper bound on rows/products a single bulk upload can produce. The 20MB
+// multer limit (adminProductRoutes.js) caps the compressed upload, but xlsx/docx
+// are zip archives — a pathological file can still expand to far more rows
+// than any real product catalog would ever have. This caps the resulting
+// in-memory work (and downstream DB writes) regardless of how much the
+// archive decompressed to.
+const MAX_ROWS = 5000;
 
 // ── EXCEL / CSV PARSER (ExcelJS) ──────────────────────────────
 // Loads all worksheets for xlsx/xls, or a single synthetic worksheet for csv.
@@ -185,7 +219,11 @@ async function parseExcel(buffer, ext) {
     return n.includes('measure') || n.includes('size');
   });
 
-  const rows = sheetToRows(productSheet);
+  let rows = sheetToRows(productSheet);
+  if (rows.length > MAX_ROWS) {
+    rows = rows.slice(0, MAX_ROWS);
+    parseErrors.push(`File exceeds ${MAX_ROWS} rows — only the first ${MAX_ROWS} were processed.`);
+  }
 
   // Find header row (first row with 'product_name' or 'sku')
   let headerRowIdx = 0;
@@ -220,7 +258,11 @@ async function parseExcel(buffer, ext) {
   const measurementsBySku = {};
   if (measureSheet) {
     try {
-      const measRows = sheetToRows(measureSheet);
+      let measRows = sheetToRows(measureSheet);
+      if (measRows.length > MAX_ROWS) {
+        measRows = measRows.slice(0, MAX_ROWS);
+        parseErrors.push(`Measurements sheet exceeds ${MAX_ROWS} rows — only the first ${MAX_ROWS} were processed.`);
+      }
 
       let measHeaderIdx = 0;
       for (let i = 0; i < Math.min(measRows.length, 5); i++) {
@@ -302,7 +344,11 @@ function parseTextContent(text) {
   const products    = [];
   const parseErrors = [];
 
-  const sections = text.split(/\n[-=]{3,}\n/);
+  let sections = text.split(/\n[-=]{3,}\n/);
+  if (sections.length > MAX_ROWS) {
+    sections = sections.slice(0, MAX_ROWS);
+    parseErrors.push(`Document exceeds ${MAX_ROWS} product sections — only the first ${MAX_ROWS} were processed.`);
+  }
 
   for (const section of sections) {
     if (!section.trim()) continue;

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getOrders, createManualOrder, updateOrder, updateOrderStatus, adminInitiateReturn, getPendingReturns, actionReturn } from '../controllers/orderController.js';
+import { getOrders, createManualOrder, updateOrderStatus, adminInitiateReturn, getPendingReturns, actionReturn } from '../controllers/orderController.js';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import { validate, mongoIdParam } from '../middleware/validate.js';
 

@@ -5,6 +5,7 @@ import EventSource from 'react-native-sse';
 import * as SecureStore from 'expo-secure-store';
 import { colors, fonts, spacing, radius } from '../../src/lib/theme';
 import { API_BASE } from '../../src/lib/api';
+import { useAuthStore } from '../../src/stores/authStore';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Message {
@@ -40,7 +41,9 @@ export default function ChatScreen() {
     setMessages((prev) => [...prev, userMsg, botMsg]);
 
     try {
-      const token = await SecureStore.getItemAsync('token');
+      // Reuse the same auth token source as the rest of the app (authStore)
+      // instead of reading SecureStore independently.
+      const token = useAuthStore.getState().token;
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 

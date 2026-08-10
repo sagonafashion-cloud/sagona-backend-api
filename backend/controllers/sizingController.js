@@ -163,6 +163,23 @@ export const getRecommendation = async (req, res) => {
 };
 
 // ── CHILD PROFILES ─────────────────────────────────────────────────────────────
+// Explicit allowlist of client-settable fields (models/User.js childProfiles
+// schema) — never spread/assign req.body directly onto the subdocument, which
+// would let a request set server-managed fields like purchaseHistory/createdAt.
+const CHILD_PROFILE_FIELDS = [
+  'name', 'gender', 'dateOfBirth', 'height', 'weight',
+  'chestCircumference', 'waistCircumference', 'hipCircumference',
+  'shoulderWidth', 'inseamLength', 'measurementMethod'
+];
+
+function pickChildProfileFields(body = {}) {
+  const picked = {};
+  for (const key of CHILD_PROFILE_FIELDS) {
+    if (body[key] !== undefined) picked[key] = body[key];
+  }
+  return picked;
+}
+
 export const getChildProfiles = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('childProfiles').lean();
@@ -181,7 +198,7 @@ export const saveChildProfile = async (req, res) => {
         message: 'Maximum 5 child profiles allowed per account'
       });
     }
-    const profile = { ...req.body, lastMeasuredAt: new Date() };
+    const profile = { ...pickChildProfileFields(req.body), lastMeasuredAt: new Date() };
     user.childProfiles.push(profile);
     await user.save();
     const saved = user.childProfiles[user.childProfiles.length - 1];
@@ -198,7 +215,7 @@ export const updateChildProfile = async (req, res) => {
     if (!profile) {
       return res.status(404).json({ success: false, message: 'Profile not found' });
     }
-    Object.assign(profile, req.body, { lastMeasuredAt: new Date() });
+    Object.assign(profile, pickChildProfileFields(req.body), { lastMeasuredAt: new Date() });
     await user.save();
     res.json({ success: true, data: profile });
   } catch (err) {

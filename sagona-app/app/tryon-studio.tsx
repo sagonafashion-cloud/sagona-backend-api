@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import api from '../src/lib/api';
 
 const C = {
@@ -26,7 +27,11 @@ export default function TryOnStudioScreen() {
     try {
       const res = await api.get('/tryon/photo');
       if (res.data.data?.hasPhoto) setMyPhoto(res.data.data.url);
-    } catch {}
+    } catch (err) {
+      // Silently failing here made a network error indistinguishable from
+      // "no photo uploaded yet" — report it so real failures are visible.
+      Sentry.captureException(err);
+    }
     finally { setLoading(false); }
   }
 
@@ -77,7 +82,14 @@ export default function TryOnStudioScreen() {
     Alert.alert('Delete photo?', 'You can upload a new one anytime.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await api.delete('/tryon/photo'); setMyPhoto(null); } catch {}
+        try {
+          await api.delete('/tryon/photo');
+          setMyPhoto(null);
+        } catch (err: any) {
+          // Previously silent — a failed delete left the photo in place with
+          // no explanation, so the user couldn't tell the tap had failed.
+          Alert.alert('Delete failed', err.response?.data?.message || err.message || 'Could not delete this photo. Please try again.');
+        }
       }}
     ]);
   }

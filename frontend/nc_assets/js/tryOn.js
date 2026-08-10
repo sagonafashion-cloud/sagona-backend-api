@@ -1,4 +1,4 @@
-import { API_BASE } from './config.js';
+import { API_BASE, escapeHtml, encodeJsArg } from './config.js';
 import { getToken } from './storage.js';
 
 // ── OPEN TRY-ON MODAL ─────────────────────────────────────────
@@ -91,7 +91,7 @@ window.openTryOnModal = async function(productId, garmentImageUrl, productName) 
           <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
                       color:#888;margin-bottom:8px">GARMENT</div>
           <div style="aspect-ratio:3/4;border-radius:8px;overflow:hidden;background:#F0EDE8">
-            <img src="${garmentImageUrl}" alt="${productName}"
+            <img src="${escapeHtml(garmentImageUrl)}" alt="${escapeHtml(productName)}"
                  style="width:100%;height:100%;object-fit:cover">
           </div>
         </div>
@@ -155,7 +155,7 @@ function buildShell(productName, content) {
         <div>
           <div style="font-family:'Playfair Display',serif;font-size:18px;
                       font-weight:500;color:#0A0A0A">Try-On Studio</div>
-          <div style="font-size:12px;color:#888;margin-top:2px">${productName}</div>
+          <div style="font-size:12px;color:#888;margin-top:2px">${escapeHtml(productName)}</div>
         </div>
         <button onclick="closeTryOnModal()"
                 style="width:36px;height:36px;border-radius:50%;background:#F8F6F3;
@@ -244,6 +244,10 @@ async function runGeneration(productId, garmentImageUrl, productName) {
 }
 
 window.quickTryOnUpload = async function(input, productId, garmentUrl, productName) {
+  // Args arrive encodeURIComponent-encoded from the onchange(...) string args (see esc()).
+  productId = decodeURIComponent(productId);
+  garmentUrl = decodeURIComponent(garmentUrl);
+  productName = decodeURIComponent(productName);
   const file = input.files[0];
   if (!file) return;
   const label = input.closest('label');
@@ -270,11 +274,18 @@ window.quickTryOnUpload = async function(input, productId, garmentUrl, productNa
 };
 
 window.retryTryOn = function(productId, garmentUrl, productName) {
+  // Guard: the error-state "TRY AGAIN" button calls retryTryOn() with no args.
+  if (productId !== undefined) productId = decodeURIComponent(productId);
+  if (garmentUrl !== undefined) garmentUrl = decodeURIComponent(garmentUrl);
+  if (productName !== undefined) productName = decodeURIComponent(productName);
   closeTryOnModal();
   setTimeout(() => openTryOnModal(productId, garmentUrl, productName), 200);
 };
 
 window.saveTryOnResultFn = async function(productId, productName, resultUrl) {
+  productId = decodeURIComponent(productId);
+  productName = decodeURIComponent(productName);
+  resultUrl = decodeURIComponent(resultUrl);
   try {
     const token = getToken();
     await fetch(`${API_BASE}/tryon/save-result`, {
@@ -305,6 +316,11 @@ function noPhotoMessage() {
   `;
 }
 
+// encodeJsArg (encodeURIComponent + extra ' escaping) neutralizes quotes/HTML
+// metacharacters for the onclick(...)/onchange(...) string-argument context —
+// plain encodeURIComponent leaves ' unescaped, which can still break out of
+// the surrounding '...' JS string literal on a crafted product name.
+// Receiving handlers decodeURIComponent it back.
 function esc(str) {
-  return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  return encodeJsArg(str || '');
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, View, Text, Image, StyleSheet, TouchableOpacity,
-  ActivityIndicator, ScrollView, Dimensions
+  ActivityIndicator, ScrollView, Dimensions, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,7 +72,11 @@ export default function TryOnModal({ visible, onClose, productId, garmentImageUr
         resultImageUrl: resultUrl
       });
       setSaved(true);
-    } catch {}
+    } catch (err: any) {
+      // Previously silent — a failed save left the button stuck on
+      // "SAVE RESULT" with no explanation, so a retry looked like a no-op.
+      Alert.alert('Save failed', err.response?.data?.message || err.message || 'Could not save this result. Please try again.');
+    }
   }
 
   return (

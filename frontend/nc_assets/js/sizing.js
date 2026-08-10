@@ -1,4 +1,4 @@
-import { API_BASE } from './config.js';
+import { API_BASE, escapeHtml } from './config.js';
 
 let _productId       = null;
 let _selectedProfile = null;
@@ -741,7 +741,7 @@ async function _loadSavedProfiles() {
                            font-family:inherit;transition:all 0.15s;min-width:100px"
                     onmouseover="this.style.borderColor='#C9A84C'"
                     onmouseout="this.style.borderColor='#E8E5E0'">
-              <div style="font-weight:500">&#128100; ${p.name}</div>
+              <div style="font-weight:500">&#128100; ${escapeHtml(p.name)}</div>
               <div style="font-size:11px;color:#888;margin-top:2px">
                 ${p.height ? `${p.height}cm` : ''}${p.chestCircumference ? ` · ${p.chestCircumference}cm` : ''}
               </div>

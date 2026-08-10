@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getOrders, getMyOrders, getOrderById, updateOrder, cancelOrder, initiateReturn, getOrderTracking } from '../controllers/orderController.js';
+import { createOrder, getOrders, getMyOrders, getOrderById, cancelOrder, initiateReturn, getOrderTracking } from '../controllers/orderController.js';
 import { protect, admin, guestOrAuth } from '../middleware/auth.js';
 import { validate, createOrderRules } from '../middleware/validate.js';
 import { orderCreateLimiter } from '../middleware/rateLimiters.js';
@@ -13,7 +13,10 @@ router.get('/my',                  protect,        getMyOrders);
 router.get('/:id/tracking',        protect,        getOrderTracking);
 router.get('/:id',                 protect,        getOrderById);
 router.get('/',                    protect, admin, getOrders);
-router.put('/:id',                 protect, admin, updateOrder);
+// Order status updates go through /api/admin/orders/:id/status (adminOrderRoutes.js,
+// updateOrderStatus) — this is the only status-transition path admin.js calls, and
+// the one with full timeline/shipment-tracking support. A second, unused, more
+// limited status-update path used to live here — removed rather than left to drift.
 router.post('/:id/cancel',         protect,        cancelOrder);
 router.post('/:id/return-request', protect,        initiateReturn);
 

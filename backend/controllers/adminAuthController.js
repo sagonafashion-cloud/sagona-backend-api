@@ -4,9 +4,18 @@ import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import AdminUser from '../models/AdminUser.js';
 
-const generateAdminToken = (admin, expiresIn = '7d') =>
+// Shorter-lived than before (was 7d) to shrink the exposure window for a
+// stolen token; combined with the tokenVersion check in adminProtect, logout
+// now actually revokes outstanding tokens instead of only being client-side.
+const generateAdminToken = (admin, expiresIn = '8h') =>
   jwt.sign(
-    { id: admin._id, role: admin.role, assignedStores: admin.assignedStores, type: 'admin' },
+    {
+      id: admin._id,
+      role: admin.role,
+      assignedStores: admin.assignedStores,
+      type: 'admin',
+      tokenVersion: admin.tokenVersion || 0
+    },
     process.env.JWT_ADMIN_SECRET,
     { expiresIn }
   );
@@ -28,6 +37,9 @@ const formatAdmin = (admin) => ({
   lastLogin: admin.lastLogin
 });
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -40,9 +52,27 @@ export const adminLogin = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Account-level lockout — IP-based rate limiting alone can be bypassed by
+    // rotating source IPs; this stops brute force regardless of source.
+    if (admin.lockUntil && admin.lockUntil > new Date()) {
+      const minutesLeft = Math.ceil((admin.lockUntil - new Date()) / 60000);
+      return res.status(423).json({ success: false, message: `Account locked. Try again in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}.` });
+    }
+
     const match = await bcrypt.compare(password, admin.password);
     if (!match) {
+      admin.loginAttempts = (admin.loginAttempts || 0) + 1;
+      if (admin.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        admin.lockUntil = new Date(Date.now() + LOCK_DURATION_MS);
+        admin.loginAttempts = 0;
+      }
+      await admin.save();
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (admin.loginAttempts > 0 || admin.lockUntil) {
+      admin.loginAttempts = 0;
+      admin.lockUntil = undefined;
     }
 
     // Update last login
@@ -78,7 +108,7 @@ export const verifyTwoFactor = async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(tempToken, process.env.JWT_ADMIN_SECRET);
+      decoded = jwt.verify(tempToken, process.env.JWT_ADMIN_SECRET, { algorithms: ['HS256'] });
     } catch {
       return res.status(401).json({ success: false, message: 'Temp token expired or invalid' });
     }
@@ -171,9 +201,17 @@ export const getMe = (req, res) => {
   res.json({ success: true, data: formatAdmin(req.adminUser) });
 };
 
-export const adminLogout = (_req, res) => {
-  // JWT is stateless — client must discard the token
-  res.json({ success: true, message: 'Logged out' });
+export const adminLogout = async (req, res) => {
+  try {
+    // Bump tokenVersion so this (and any other outstanding) token for this
+    // admin is rejected by adminProtect's revocation check immediately,
+    // rather than staying valid client-side-discard-only for up to 8h.
+    await AdminUser.findByIdAndUpdate(req.adminUser._id, { $inc: { tokenVersion: 1 } });
+    res.json({ success: true, message: 'Logged out' });
+  } catch (err) {
+    console.error('adminLogout:', err);
+    res.status(500).json({ success: false, message: 'Logout failed' });
+  }
 };
 
 export const listAdmins = async (_req, res) => {
@@ -207,7 +245,7 @@ export const createAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Admin with this email already exists' });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 12);
     const admin  = await AdminUser.create({
       name,
       email:    email.toLowerCase().trim(),

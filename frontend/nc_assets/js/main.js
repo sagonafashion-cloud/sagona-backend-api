@@ -1,16 +1,5 @@
-import { API_BASE, escapeHtml } from './config.js';
+import { API_BASE, escapeHtml, sanitizeUrl } from './config.js';
 import { getCart, getToken, getUser } from './storage.js';
-
-// Homepage sections/products are admin-authored (and some are ingested from
-// bulk-uploaded Excel/Word/PDF files), so their text/URLs are not fully
-// trusted — escape before interpolating into innerHTML, and reject
-// javascript:/data:/vbscript: URIs in any href/src-bound field.
-function sanitizeUrl(url, fallback = '#') {
-  const trimmed = String(url ?? '').trim();
-  if (!trimmed) return fallback;
-  if (/^(javascript|data|vbscript):/i.test(trimmed)) return fallback;
-  return escapeHtml(trimmed);
-}
 
 // ── INIT ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {

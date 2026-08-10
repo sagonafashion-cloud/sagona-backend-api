@@ -202,11 +202,34 @@ async function callReplicate(modelImageUrl, garmentImageUrl) {
   throw new Error('Replicate timed out');
 }
 
+// Hosts a legitimate resultImageUrl can come from: SAGONA's own Cloudinary
+// account (see server.js CSP imgSrc), plus the two try-on providers actually
+// called above in generateTryOn (Fashn.ai serves output from cdn.fashn.ai;
+// Replicate serves output from replicate.delivery and its subdomains).
+// Restricts saved result-image URLs to these instead of accepting any
+// https:// URL a client sends.
+const ALLOWED_IMAGE_HOSTS = ['res.cloudinary.com', 'cdn.fashn.ai'];
+const ALLOWED_IMAGE_HOST_SUFFIXES = ['.replicate.delivery'];
+function isAllowedImageHost(hostname) {
+  return ALLOWED_IMAGE_HOSTS.includes(hostname) ||
+    hostname === 'replicate.delivery' ||
+    ALLOWED_IMAGE_HOST_SUFFIXES.some(suffix => hostname.endsWith(suffix));
+}
+
 // POST /api/tryon/save-result
 export const saveTryOnResult = async (req, res) => {
   try {
     const { resultImageUrl, garmentProductId, garmentName } = req.body;
     if (!garmentProductId || !/^https:\/\//i.test(resultImageUrl || '')) {
+      return res.status(400).json({ success: false, message: 'Invalid try-on result' });
+    }
+    let resultHost;
+    try {
+      resultHost = new URL(resultImageUrl).hostname;
+    } catch {
+      return res.status(400).json({ success: false, message: 'Invalid try-on result' });
+    }
+    if (!isAllowedImageHost(resultHost)) {
       return res.status(400).json({ success: false, message: 'Invalid try-on result' });
     }
     const product = await Product.findOne({ _id: garmentProductId, status: 'active' }).select('_id').lean();

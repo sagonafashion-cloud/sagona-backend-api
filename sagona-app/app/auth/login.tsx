@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import Button from '../../src/components/ui/Button';
@@ -11,6 +12,7 @@ import { colors, fonts, spacing } from '../../src/lib/theme';
 export default function LoginScreen() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const hydrate = useAuthStore((s) => s.hydrate);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,11 +32,19 @@ export default function LoginScreen() {
   const handleBiometric = async () => {
     const enrolled = await LocalAuthentication.isEnrolledAsync();
     if (!enrolled) return Alert.alert('Not set up', 'No biometrics enrolled on this device.');
+
+    // Biometrics only re-unlocks an existing session — there's no separate
+    // biometric-only credential store. Previously this showed "Success" and
+    // stopped, leaving the user stuck on the login screen with no session.
+    const storedToken = await SecureStore.getItemAsync('token');
+    if (!storedToken) {
+      return Alert.alert('Sign in required', 'Log in with your password once to enable biometric login.');
+    }
+
     const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Log in to SAGONA' });
     if (result.success) {
-      // If user already has saved credentials, hydrate will pick them up
-      // This is a convenience shortcut — credentials must already be stored
-      Alert.alert('Success', 'Biometric login verified');
+      await hydrate();
+      router.replace('/(tabs)/');
     }
   };
 
