@@ -138,6 +138,12 @@ orderSchema.pre('save', async function (next) {
 
 orderSchema.index({ 'customer.userId': 1, createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
+// Enforces at the DB layer that a captured Razorpay payment can back at most one
+// order — closes the TOCTOU gap in the query-time reuse check in
+// paymentController.verifyPayment (two concurrent requests could otherwise both
+// pass that check before either write lands). sparse: true because most orders
+// (COD/MANUAL, or ONLINE orders not yet paid) have no razorpayPaymentId set.
+orderSchema.index({ 'payment.razorpayPaymentId': 1 }, { unique: true, sparse: true });
 
 const Order = mongoose.model('Order', orderSchema);
 
