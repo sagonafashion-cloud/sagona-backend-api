@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import { verifyImageSignature } from '../utils/fileValidation.js';
+import { logAdminActivity } from '../utils/activityLogger.js';
 
 const router = express.Router();
 
@@ -51,6 +52,12 @@ router.post('/image', adminProtect, requireRole('super_admin', 'content_editor')
       format: 'webp'
     });
 
+    logAdminActivity(req, 'upload.image_create', {
+      targetType: 'CloudinaryAsset',
+      targetId: result.public_id,
+      details: { url: result.secure_url }
+    });
+
     res.json({
       success: true,
       data: { url: result.secure_url, publicId: result.public_id }
@@ -68,6 +75,12 @@ router.delete('/image', adminProtect, requireRole('super_admin', 'content_editor
     if (!publicId) return res.status(400).json({ success: false, message: 'publicId required' });
 
     await cloudinary.uploader.destroy(publicId);
+
+    logAdminActivity(req, 'upload.image_delete', {
+      targetType: 'CloudinaryAsset',
+      targetId: publicId
+    });
+
     res.json({ success: true, message: 'Image deleted' });
   } catch (err) {
     console.error('deleteImage:', err);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/lib/api';
@@ -18,10 +19,12 @@ type PaymentMethod = 'COD';
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { items, clear } = useCartStore();
   const user = useAuthStore((s) => s.user);
 
   const [name, setName] = useState(user?.name ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [line1, setLine1] = useState('');
   const [line2, setLine2] = useState('');
@@ -39,6 +42,14 @@ export default function CheckoutScreen() {
   const validate = () => {
     if (!name || !phone || !line1 || !city || !state || !pincode) {
       Alert.alert('Incomplete', 'Please fill all required address fields');
+      return false;
+    }
+    if (!user && !email) {
+      Alert.alert('Incomplete', 'Please enter an email so we can send your order confirmation');
+      return false;
+    }
+    if (!user && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert('Invalid email', 'Enter a valid email address');
       return false;
     }
     if (!/^\d{10}$/.test(phone)) { Alert.alert('Invalid phone', 'Enter a 10-digit phone number'); return false; }
@@ -60,17 +71,33 @@ export default function CheckoutScreen() {
         price: i.price,
         qty: i.qty,
       }));
+      // Guests have no account/token — backend's guest checkout (guestOrAuth)
+      // identifies them by email/phone and auto-creates an account.
+      const guestFields = !user ? { email } : {};
 
       if (payment === 'COD') {
-        await api.post('/orders', { items: orderItems, shippingAddress, payment: { method: 'COD' } });
+        await api.post('/orders', { items: orderItems, shippingAddress, payment: { method: 'COD' }, ...guestFields });
         clear();
-        Alert.alert('Order placed!', 'Your order has been confirmed.', [
-          { text: 'View orders', onPress: () => router.replace('/(tabs)/account' as any) }
-        ]);
+        // Keep the Account tab's order list (and the return-request order
+        // picker, which reads the same /orders/my endpoint) in sync with the
+        // order that was just placed, without requiring an app restart.
+        queryClient.invalidateQueries({ queryKey: ['myOrders'] });
+        queryClient.invalidateQueries({ queryKey: ['returnEligibleOrders'] });
+        if (user) {
+          Alert.alert('Order placed!', 'Your order has been confirmed.', [
+            { text: 'View orders', onPress: () => router.replace('/(tabs)/account' as any) }
+          ]);
+        } else {
+          Alert.alert(
+            'Order placed!',
+            `Your order has been confirmed and a confirmation sent to ${email}. We've started an account for you — log in with this email anytime to track it.`,
+            [{ text: 'Continue shopping', onPress: () => router.replace('/(tabs)/' as any) }]
+          );
+        }
       } else {
         // Razorpay: create order → open checkout. Amount is computed and verified
         // server-side from real product prices, never sent from the client.
-        const { data: rzp } = await api.post('/payment/create-order', { items: orderItems, shippingAddress });
+        const { data: rzp } = await api.post('/payment/create-order', { items: orderItems, shippingAddress, ...guestFields });
         Alert.alert('Online payment', 'Razorpay SDK integration requires native build.\nUse COD for now in Expo Go.');
       }
     } catch (err: any) {
@@ -93,6 +120,9 @@ export default function CheckoutScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.sectionTitle}>Delivery Address</Text>
         <Input label="Full Name *" value={name} onChangeText={setName} placeholder="As on ID" autoCapitalize="words" />
+        {!user && (
+          <Input label="Email *" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="For order confirmation" />
+        )}
         <Input label="Phone *" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="10-digit number" />
         <Input label="Address Line 1 *" value={line1} onChangeText={setLine1} placeholder="Building, street" />
         <Input label="Address Line 2" value={line2} onChangeText={setLine2} placeholder="Landmark (optional)" />

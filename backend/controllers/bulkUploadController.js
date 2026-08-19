@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
 import Product from '../models/Product.js';
+import { logAdminActivity } from '../utils/activityLogger.js';
 
 // ── MAIN PARSE ENDPOINT ───────────────────────────────────────
 // POST /api/admin/products/bulk-parse
@@ -141,6 +142,17 @@ export const bulkUploadProducts = async (req, res) => {
     if (bulkOps.length) {
       await Product.bulkWrite(bulkOps, { ordered: false });
     }
+
+    logAdminActivity(req, 'product.bulk_upload', {
+      targetType: 'Product',
+      details: {
+        mode,
+        created: results.created.length,
+        updated: results.updated.length,
+        skipped: results.skipped.length,
+        failed: results.failed.length
+      }
+    });
 
     res.json({
       success: true,

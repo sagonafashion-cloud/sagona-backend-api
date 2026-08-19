@@ -1,6 +1,7 @@
 import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import HomepageSection from '../models/HomepageSection.js';
+import { logAdminActivity } from '../utils/activityLogger.js';
 
 // GET /api/homepage/sections — public
 export const getSections = async (req, res) => {
@@ -45,6 +46,13 @@ function pickSectionFields(body = {}) {
 export const createSection = async (req, res) => {
   try {
     const section = await HomepageSection.create(pickSectionFields(req.body));
+
+    logAdminActivity(req, 'homepage_section.create', {
+      targetType: 'HomepageSection',
+      targetId: section._id,
+      details: { type: section.type, title: section.title }
+    });
+
     res.json({ success: true, data: section });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -54,8 +62,16 @@ export const createSection = async (req, res) => {
 // PUT /api/admin/homepage/sections/:id
 export const updateSection = async (req, res) => {
   try {
-    const section = await HomepageSection.findByIdAndUpdate(req.params.id, pickSectionFields(req.body), { new: true });
+    const picked = pickSectionFields(req.body);
+    const section = await HomepageSection.findByIdAndUpdate(req.params.id, picked, { new: true });
     if (!section) return res.status(404).json({ success: false, message: 'Section not found' });
+
+    logAdminActivity(req, 'homepage_section.update', {
+      targetType: 'HomepageSection',
+      targetId: section._id,
+      details: { changedFields: Object.keys(picked) }
+    });
+
     res.json({ success: true, data: section });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -74,6 +90,13 @@ export const deleteSection = async (req, res) => {
       }).catch(() => {});
     }
     await section.deleteOne();
+
+    logAdminActivity(req, 'homepage_section.delete', {
+      targetType: 'HomepageSection',
+      targetId: section._id,
+      details: { type: section.type, title: section.title }
+    });
+
     res.json({ success: true, message: 'Section deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -90,6 +113,11 @@ export const reorderSections = async (req, res) => {
           updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
         }))
       );
+
+      logAdminActivity(req, 'homepage_section.reorder', {
+        targetType: 'HomepageSection',
+        details: { count: order.length, order }
+      });
     }
     res.json({ success: true, message: 'Order saved' });
   } catch (err) {

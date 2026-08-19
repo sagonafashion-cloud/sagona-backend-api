@@ -7,6 +7,7 @@ import { sendOrderConfirmation, sendStatusUpdate, sendOrderStatusEmail } from '.
 import { buildTimelineEntry, calcEstimatedDelivery } from '../utils/orderTimeline.js';
 import { computeOrderTotals } from '../utils/orderCalculator.js';
 import { escapeRegex } from './productController.js';
+import { logAdminActivity } from '../utils/activityLogger.js';
 import crypto from 'crypto';
 
 /* ═══════════════════════════════════
@@ -219,8 +220,10 @@ export const getOrderById = async (req, res) => {
 
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    // Customers can only see their own orders
-    if (req.user && order.customer.userId?.toString() !== req.user._id.toString()) {
+    // Customers can only see their own orders. This route is always mounted
+    // behind `protect`, so req.user is expected to be set; fail closed instead
+    // of silently skipping the ownership check if that ever changes.
+    if (!req.user || order.customer.userId?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -320,6 +323,12 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
+
+    logAdminActivity(req, 'order.status_update', {
+      targetType: 'Order',
+      targetId: order._id,
+      details: { orderNumber: order.orderNumber, before: prevStatus, after: status, trackingId, courier }
+    });
 
     // Email customer on status change
     if (order.customer?.email && prevStatus !== status) {
@@ -432,6 +441,10 @@ export const createManualOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'customer and items required' });
     }
 
+    // NOTE: Admin-entered totals are trusted by design on this path (unlike
+    // customer checkout, which always recomputes server-side). Confirmed
+    // intentional — admins need custom pricing flexibility. Do not "fix" this
+    // without explicit sign-off.
     const order = await Order.create({
       customer,
       items,
@@ -440,6 +453,12 @@ export const createManualOrder = async (req, res) => {
       payment: payment || { method: 'MANUAL', status: 'paid', paidAt: new Date() },
       notes,
       status: 'confirmed'
+    });
+
+    logAdminActivity(req, 'order.manual_create', {
+      targetType: 'Order',
+      targetId: order._id,
+      details: { orderNumber: order.orderNumber, grandTotal: order.billing?.grandTotal, itemCount: items.length }
     });
 
     res.status(201).json({ success: true, data: order });
@@ -466,6 +485,12 @@ export const adminInitiateReturn = async (req, res) => {
       { status: 'returned', notes: newNotes },
       { new: true }
     );
+
+    logAdminActivity(req, 'order.admin_return_initiate', {
+      targetType: 'Order',
+      targetId: order._id,
+      details: { orderNumber: order.orderNumber, before: existing.status, after: 'returned', reason }
+    });
 
     res.json({ success: true, data: order });
   } catch (err) {
@@ -501,11 +526,21 @@ export const actionReturn = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
+    if (!order.returnRequest || order.returnRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'No pending return request on this order' });
+    }
+
     order.returnRequest.status    = action;
     order.returnRequest.adminNote = adminNote || '';
     order.returnRequest.resolvedAt = new Date();
     order.status = action === 'approved' ? 'returned' : 'delivered';
     await order.save();
+
+    logAdminActivity(req, 'order.return_action', {
+      targetType: 'Order',
+      targetId: order._id,
+      details: { orderNumber: order.orderNumber, action, adminNote, resultingStatus: order.status }
+    });
 
     res.json({ success: true, message: `Return request ${action}`, data: order });
   } catch (err) {

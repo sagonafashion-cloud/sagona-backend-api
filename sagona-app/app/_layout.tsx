@@ -25,11 +25,17 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/stores/authStore';
 import { useCartStore } from '../src/stores/cartStore';
+import { useWishlistStore } from '../src/stores/wishlistStore';
 import { usePushNotifications } from '../src/hooks/usePushNotifications';
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+// Tabs guests can browse without an account. Everything else ((tabs)/account,
+// (tabs)/chat, (tabs)/wishlist, orders/*, and all Phase 2 shell screens) stays
+// gated behind login, unchanged from before.
+const GUEST_ALLOWED_TABS = new Set(['index', 'shop', 'bag']);
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
@@ -39,7 +45,22 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
     const inAuth = segments[0] === 'auth';
-    if (!user && !inAuth) {
+    const inTabs = segments[0] === '(tabs)';
+    const tabName = segments[1];
+    // Guests may browse Home/Shop/Cart, view a PDP, reach checkout (guest
+    // checkout — see checkout/index.tsx), and view a product's Size Guide
+    // without logging in. Size Guide only reads GET /products/:id (the same
+    // public endpoint the guest-accessible PDP already uses) and is linked
+    // directly from the PDP's size picker — leaving it gated bounced guests
+    // tapping that link straight to the login screen mid-browse.
+    const guestAllowed =
+      inAuth ||
+      (inTabs && (tabName === undefined || GUEST_ALLOWED_TABS.has(tabName))) ||
+      segments[0] === 'product' ||
+      segments[0] === 'checkout' ||
+      segments[0] === 'size-guide';
+
+    if (!user && !guestAllowed) {
       router.replace('/auth/login');
     } else if (user && inAuth) {
       router.replace('/(tabs)/');
@@ -57,6 +78,7 @@ function PushSetup() {
 export default function RootLayout() {
   const hydrate = useAuthStore((s) => s.hydrate);
   const hydrateCart = useCartStore((s) => s.hydrate);
+  const hydrateWishlist = useWishlistStore((s) => s.hydrate);
 
   const [fontsLoaded] = useFonts({
     PlayfairDisplay_400Regular,
@@ -70,6 +92,7 @@ export default function RootLayout() {
   useEffect(() => {
     hydrate();
     hydrateCart();
+    hydrateWishlist();
   }, []);
 
   useEffect(() => {

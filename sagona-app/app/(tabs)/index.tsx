@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, FlatList, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, ScrollView, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../src/lib/api';
 import { colors, fonts, spacing } from '../../src/lib/theme';
 import ProductCard from '../../src/components/ui/ProductCard';
+import ErrorState from '../../src/components/ui/ErrorState';
 import { Product } from '../../src/types';
 
 const { width } = Dimensions.get('window');
@@ -22,7 +23,7 @@ const CATEGORIES = [
 export default function HomeScreen() {
   const router = useRouter();
 
-  const { data: newArrivals } = useQuery<Product[]>({
+  const { data: newArrivals, isLoading: newArrivalsLoading, isError: newArrivalsError, refetch: refetchNewArrivals } = useQuery<Product[]>({
     queryKey: ['newArrivals'],
     queryFn: async () => {
       const { data } = await api.get('/products?limit=6&sort=newest');
@@ -45,6 +46,7 @@ export default function HomeScreen() {
             source={{ uri: 'https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800' }}
             style={styles.heroImage}
             contentFit="cover"
+            transition={300}
           />
           <LinearGradient
             colors={['transparent', 'rgba(10,10,10,0.85)']}
@@ -78,7 +80,15 @@ export default function HomeScreen() {
         {/* New arrivals */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>New Arrivals</Text>
-          {newArrivals && newArrivals.length > 0 ? (
+          {newArrivalsError ? (
+            <ErrorState
+              title="Couldn't load new arrivals"
+              subtitle="Check your connection and try again."
+              onRetry={() => refetchNewArrivals()}
+            />
+          ) : newArrivalsLoading ? (
+            <ActivityIndicator color={colors.gold} style={{ marginVertical: spacing.xl }} />
+          ) : newArrivals && newArrivals.length > 0 ? (
             <FlatList
               data={newArrivals}
               keyExtractor={(p) => p._id}
@@ -87,7 +97,7 @@ export default function HomeScreen() {
               scrollEnabled={false}
             />
           ) : (
-            <Text style={styles.empty}>Loading...</Text>
+            <Text style={styles.empty}>No new arrivals right now</Text>
           )}
         </View>
       </ScrollView>

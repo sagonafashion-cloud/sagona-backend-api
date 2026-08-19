@@ -1,4 +1,5 @@
 import Product from '../models/Product.js';
+import { logAdminActivity } from '../utils/activityLogger.js';
 
 export const escapeRegex = (value = '') => String(value).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -94,6 +95,13 @@ export const createProduct = async (req, res) => {
     }
 
     const product = await Product.create({ name, price, image, description, featured: !!featured });
+
+    logAdminActivity(req, 'product.create', {
+      targetType: 'Product',
+      targetId: product._id,
+      details: { name: product.name, price: product.price }
+    });
+
     res.status(201).json({ success: true, data: product });
   } catch (err) {
     console.error('createProduct:', err);
@@ -105,6 +113,13 @@ export const deleteProduct = async (req, res) => {
   try {
     const deleted = await Product.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    logAdminActivity(req, 'product.delete', {
+      targetType: 'Product',
+      targetId: deleted._id,
+      details: { name: deleted.name, sku: deleted.sku }
+    });
+
     res.json({ success: true, message: 'Product deleted' });
   } catch {
     res.status(400).json({ success: false, message: 'Invalid product id' });
@@ -135,6 +150,12 @@ export const adminCreateProduct = async (req, res) => {
       gstSlab, hsnCode, fabric, careInstructions, weight,
       status: status || 'active', publishAt,
       variants: variants || [], stores: stores || []
+    });
+
+    logAdminActivity(req, 'product.admin_create', {
+      targetType: 'Product',
+      targetId: product._id,
+      details: { name: product.name, sku: product.sku, price: product.price }
     });
 
     res.status(201).json({ success: true, data: product });
@@ -186,6 +207,13 @@ export const adminUpdateProduct = async (req, res) => {
       { new: true, runValidators: true }
     );
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    logAdminActivity(req, 'product.update', {
+      targetType: 'Product',
+      targetId: product._id,
+      details: { changedFields: Object.keys(update), after: update }
+    });
+
     res.json({ success: true, data: product });
   } catch (err) {
     console.error('adminUpdateProduct:', err);
@@ -201,10 +229,40 @@ export const adminArchiveProduct = async (req, res) => {
       { new: true }
     );
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    logAdminActivity(req, 'product.archive', {
+      targetType: 'Product',
+      targetId: product._id,
+      details: { name: product.name, sku: product.sku, after: 'archived' }
+    });
+
     res.json({ success: true, message: 'Product archived', data: product });
   } catch {
     res.status(400).json({ success: false, message: 'Invalid product id' });
   }
+};
+
+// Explicit field whitelist per row — mirrors adminCreateProduct/adminUpdateProduct
+// above. Rows come from parsed files / raw req.body, so they must not be passed
+// straight into insertMany (defense-in-depth consistency with the rest of the
+// product-write endpoints; Mongoose's strict schema already blocks anything
+// truly unexpected, this just keeps the write path uniform).
+const pickBulkImportFields = (row = {}) => {
+  const {
+    name, price, mrp, image, images, description, featured,
+    sku, category, subcategory, gender, ageGroup, tags,
+    gstSlab, hsnCode, fabric, careInstructions, weight,
+    status, publishAt, variants, stores
+  } = row;
+
+  return {
+    name, price, mrp, image, images: images || [],
+    description, featured: !!featured,
+    sku, category, subcategory, gender, ageGroup, tags: tags || [],
+    gstSlab, hsnCode, fabric, careInstructions, weight,
+    status: status || 'active', publishAt,
+    variants: variants || [], stores: stores || []
+  };
 };
 
 export const adminBulkImport = async (req, res) => {
@@ -214,7 +272,15 @@ export const adminBulkImport = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Provide an array of products' });
     }
 
-    const inserted = await Product.insertMany(products, { ordered: false });
+    const whitelisted = products.map(pickBulkImportFields);
+
+    const inserted = await Product.insertMany(whitelisted, { ordered: false });
+
+    logAdminActivity(req, 'product.bulk_import', {
+      targetType: 'Product',
+      details: { count: inserted.length, skus: inserted.map(p => p.sku).filter(Boolean).slice(0, 50) }
+    });
+
     res.status(201).json({ success: true, data: inserted, count: inserted.length });
   } catch (err) {
     console.error('adminBulkImport:', err);
@@ -235,6 +301,13 @@ export const adminUpdateInventory = async (req, res) => {
       { new: true }
     );
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    logAdminActivity(req, 'product.inventory_update', {
+      targetType: 'Product',
+      targetId: product._id,
+      details: { sku: product.sku, stores }
+    });
+
     res.json({ success: true, data: product });
   } catch (err) {
     console.error('adminUpdateInventory:', err);

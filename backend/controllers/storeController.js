@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import Store from '../models/Store.js';
+import { logAdminActivity } from '../utils/activityLogger.js';
 
 // These endpoints are public (store-locator UI needs no login), but
 // includeInactive and GSTIN/phone should only be visible to a real admin —
@@ -63,6 +64,12 @@ export const createStore = async (req, res) => {
       dispatchEnabled, dispatchCutoffTime, priority
     });
 
+    logAdminActivity(req, 'store.create', {
+      targetType: 'Store',
+      targetId: store._id,
+      details: { name: store.name, city: store.city }
+    });
+
     res.status(201).json({ success: true, data: store });
   } catch (err) {
     console.error('createStore:', err);
@@ -93,6 +100,13 @@ export const updateStore = async (req, res) => {
 
     const store = await Store.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+
+    logAdminActivity(req, 'store.update', {
+      targetType: 'Store',
+      targetId: store._id,
+      details: { changedFields: Object.keys(update), after: update }
+    });
+
     res.json({ success: true, data: store });
   } catch (err) {
     console.error('updateStore:', err);
@@ -104,8 +118,16 @@ export const toggleStore = async (req, res) => {
   try {
     const store = await Store.findById(req.params.id);
     if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+    const wasActive = store.isActive;
     store.isActive = !store.isActive;
     await store.save();
+
+    logAdminActivity(req, 'store.toggle', {
+      targetType: 'Store',
+      targetId: store._id,
+      details: { name: store.name, before: wasActive, after: store.isActive }
+    });
+
     res.json({
       success: true,
       data: store,
@@ -124,6 +146,13 @@ export const deleteStore = async (req, res) => {
       { new: true }
     );
     if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+
+    logAdminActivity(req, 'store.delete', {
+      targetType: 'Store',
+      targetId: store._id,
+      details: { name: store.name }
+    });
+
     res.json({ success: true, message: 'Store deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

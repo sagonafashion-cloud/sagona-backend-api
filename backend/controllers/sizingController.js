@@ -356,13 +356,14 @@ export const getSizingAnalytics = async (req, res) => {
 
 export const getAllFeedback = async (req, res) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
+    const page  = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
     const feedback = await SizingFeedback.find()
       .populate('productId', 'name')
       .populate('userId', 'name email')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(Number(limit))
+      .limit(limit)
       .lean();
     const total = await SizingFeedback.countDocuments();
     res.json({ success: true, data: feedback, total });

@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image,
+  View, Text, StyleSheet, TouchableOpacity,
   Alert, ActivityIndicator, ScrollView
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
 import api from '../src/lib/api';
+import ErrorState from '../src/components/ui/ErrorState';
 
 const C = {
   black: '#0A0A0A', gold: '#C9A84C', cream: '#F8F6F3',
@@ -20,17 +22,22 @@ export default function TryOnStudioScreen() {
   const [myPhoto, setMyPhoto]     = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading]     = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => { fetchMyPhoto(); }, []);
 
   async function fetchMyPhoto() {
+    setLoading(true);
+    setFetchError(false);
     try {
       const res = await api.get('/tryon/photo');
       if (res.data.data?.hasPhoto) setMyPhoto(res.data.data.url);
     } catch (err) {
       // Silently failing here made a network error indistinguishable from
-      // "no photo uploaded yet" — report it so real failures are visible.
+      // "no photo uploaded yet" — report it so real failures are visible,
+      // and surface a retry-able error state instead of a blank/empty card.
       Sentry.captureException(err);
+      setFetchError(true);
     }
     finally { setLoading(false); }
   }
@@ -100,6 +107,23 @@ export default function TryOnStudioScreen() {
     </SafeAreaView>
   );
 
+  if (fetchError) return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={C.black} />
+        </TouchableOpacity>
+        <Text style={s.headerTitle}>Try-On Studio</Text>
+        <View style={{ width: 36 }} />
+      </View>
+      <ErrorState
+        title="Couldn't load your photo"
+        subtitle="Check your connection and try again."
+        onRetry={fetchMyPhoto}
+      />
+    </SafeAreaView>
+  );
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
@@ -125,7 +149,7 @@ export default function TryOnStudioScreen() {
 
         {myPhoto ? (
           <View style={s.photoCard}>
-            <Image source={{ uri: myPhoto }} style={s.myPhoto} />
+            <Image source={{ uri: myPhoto }} style={s.myPhoto} contentFit="cover" transition={200} />
             <View style={{ flex: 1 }}>
               <Text style={s.photoReady}>✓ Photo uploaded</Text>
               <Text style={s.photoSub}>
@@ -144,7 +168,7 @@ export default function TryOnStudioScreen() {
           </View>
         ) : (
           <View style={s.uploadCard}>
-            <Text style={s.uploadIcon}>👤</Text>
+            <Ionicons name="camera-outline" size={48} color={C.gold} style={{ marginBottom: 12 }} />
             <Text style={s.uploadTitle}>No photo yet</Text>
             <Text style={s.uploadHint}>
               Upload a clear, full-length or waist-up photo of yourself.
@@ -183,7 +207,7 @@ const s = StyleSheet.create({
   header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                   paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: C.border, backgroundColor: C.white },
   backBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:  { fontFamily: 'PlayfairDisplay_600SemiBold', fontSize: 18, color: C.black },
+  headerTitle:  { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 18, color: C.black },
   body:         { flex: 1, padding: 20 },
   subtitle:     { fontSize: 13, color: C.muted, lineHeight: 20, marginBottom: 16 },
   privacyBox:   { backgroundColor: '#EAF3DE', borderRadius: 8, padding: 12, marginBottom: 20 },
@@ -199,7 +223,6 @@ const s = StyleSheet.create({
   deleteBtn:    { padding: 8, alignItems: 'center' },
   deleteBtnText:{ fontSize: 11, color: '#E24B4A' },
   uploadCard:   { backgroundColor: C.white, borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 20 },
-  uploadIcon:   { fontSize: 48, marginBottom: 12 },
   uploadTitle:  { fontSize: 16, fontWeight: '600', color: C.black, marginBottom: 6 },
   uploadHint:   { fontSize: 13, color: C.muted, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
   guidelines:   { width: '100%', marginBottom: 20 },

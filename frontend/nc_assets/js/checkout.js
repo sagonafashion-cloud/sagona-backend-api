@@ -1,5 +1,5 @@
 import { request, handleSessionExpired }  from './api.js';
-import { API_BASE, fetchPincodeData } from './config.js';
+import { API_BASE, fetchPincodeData, escapeHtml } from './config.js';
 import { getAuth, getCart, saveCart } from './storage.js';
 
 const form          = document.querySelector('#checkout-form');
@@ -60,7 +60,7 @@ if (pointsEl) pointsEl.textContent = auth?.user?.loyaltyPoints || 0;
 if (itemsPreview) {
   itemsPreview.innerHTML = cart.map((i) =>
     `<div style="display:flex;justify-content:space-between;padding:4px 0">
-      <span>${i.name}${i.size ? ` · ${i.size}` : ''} ×${i.quantity}</span>
+      <span>${escapeHtml(i.name)}${i.size ? ` · ${escapeHtml(i.size)}` : ''} ×${i.quantity}</span>
       <span>${INR(i.price * i.quantity)}</span>
     </div>`
   ).join('');
@@ -126,7 +126,7 @@ async function loadSavedAddresses() {
         <select onchange="fillSavedAddress(this.value)"
                 style="width:100%;padding:9px;border:0.5px solid #E8E5E0;border-radius:4px;font-size:13px">
           <option value="">Select a saved address…</option>
-          ${data.map((a, i) => `<option value="${i}">${a.name} — ${a.line1}, ${a.city}</option>`).join('')}
+          ${data.map((a, i) => `<option value="${i}">${escapeHtml(a.name)} — ${escapeHtml(a.line1)}, ${escapeHtml(a.city)}</option>`).join('')}
         </select>
       </div>`;
   } catch {}

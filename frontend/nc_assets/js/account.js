@@ -1,4 +1,4 @@
-import { API_BASE, fetchPincodeData, escapeHtml, encodeJsArg } from './config.js';
+import { API_BASE, fetchPincodeData, escapeHtml, encodeJsArg, sanitizeUrl } from './config.js';
 import { getToken, getUser, saveUser, clearAuth } from './storage.js';
 import { handleSessionExpired, request } from './api.js';
 
@@ -359,7 +359,7 @@ async function loadReplacementProducts(query) {
              id="rp-${p._id}"
              style="border:0.5px solid #E8E5E0;border-radius:6px;overflow:hidden;cursor:pointer;transition:border 0.15s,background 0.15s">
           <div style="aspect-ratio:1;overflow:hidden;background:#F8F6F3">
-            ${img ? `<img src="${img}" alt="${escapeHtml(p.name)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;background:#F0EDE8"></div>'}
+            ${img ? `<img src="${sanitizeUrl(img)}" alt="${escapeHtml(p.name)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;background:#F0EDE8"></div>'}
           </div>
           <div style="padding:8px">
             <div style="font-size:12px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.name)}</div>
@@ -494,9 +494,9 @@ function buildTimeline(timeline, currentStatus) {
           <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};margin-top:3px"></div>
         </div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:${isLatest ? '600' : '400'};color:${isLatest ? '#0A0A0A' : '#555'}">${entry.label || entry.status || '—'}</div>
-          ${entry.description ? `<div style="font-size:12px;color:#777;margin-top:2px">${entry.description}</div>` : ''}
-          ${entry.location ? `<div style="font-size:11px;color:#aaa;margin-top:2px">📍 ${entry.location}</div>` : ''}
+          <div style="font-size:13px;font-weight:${isLatest ? '600' : '400'};color:${isLatest ? '#0A0A0A' : '#555'}">${escapeHtml(entry.label || entry.status) || '—'}</div>
+          ${entry.description ? `<div style="font-size:12px;color:#777;margin-top:2px">${escapeHtml(entry.description)}</div>` : ''}
+          ${entry.location ? `<div style="font-size:11px;color:#aaa;margin-top:2px">📍 ${escapeHtml(entry.location)}</div>` : ''}
           ${dateStr ? `<div style="font-size:11px;color:#aaa;margin-top:2px">${dateStr}</div>` : ''}
         </div>
       </div>`;
@@ -534,10 +534,10 @@ function renderOrderCard(o) {
 
         ${shipment ? `
           <div style="background:#F8F6F3;border-radius:6px;padding:12px 14px;margin:12px 0;font-size:13px">
-            <div style="font-weight:500">${shipment.courier || 'Courier'}</div>
-            <div style="color:#555;margin-top:2px">AWB: <strong>${shipment.trackingId}</strong></div>
+            <div style="font-weight:500">${escapeHtml(shipment.courier) || 'Courier'}</div>
+            <div style="color:#555;margin-top:2px">AWB: <strong>${escapeHtml(shipment.trackingId)}</strong></div>
             ${shipment.trackingUrl ? `
-              <a href="${shipment.trackingUrl}" target="_blank" rel="noopener"
+              <a href="${sanitizeUrl(shipment.trackingUrl)}" target="_blank" rel="noopener"
                  style="display:inline-block;margin-top:10px;padding:7px 16px;background:#0A0A0A;color:#fff;
                         text-decoration:none;font-size:11px;letter-spacing:0.08em;border-radius:3px">
                 TRACK SHIPMENT

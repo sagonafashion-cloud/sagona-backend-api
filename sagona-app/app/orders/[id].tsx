@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,20 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/lib/api';
 import { colors, fonts, spacing, radius } from '../../src/lib/theme';
 import { Order } from '../../src/types';
-
-const STATUS_COLORS: Record<string, string> = {
-  Processing: '#e67e22',
-  Confirmed: '#2980b9',
-  Shipped: '#8e44ad',
-  Delivered: '#27ae60',
-  Cancelled: '#c0392b',
-};
+import { statusColor, statusLabel } from '../../src/lib/orderStatus';
+import OrderTimeline from '../../src/components/ui/OrderTimeline';
+import ErrorState from '../../src/components/ui/ErrorState';
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const { data: order, isLoading } = useQuery<Order>({
+  const { data: order, isLoading, isError, refetch } = useQuery<Order>({
     queryKey: ['order', id],
     queryFn: async () => {
       const { data } = await api.get(`/orders/${id}`);
@@ -29,11 +24,32 @@ export default function OrderDetailScreen() {
     enabled: !!id,
   });
 
-  if (isLoading || !order) {
-    return <View style={styles.screen}><Text style={styles.loading}>Loading order...</Text></View>;
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <View style={styles.centerWrap}>
+          <ActivityIndicator color={colors.gold} size="large" />
+        </View>
+      </SafeAreaView>
+    );
   }
 
-  const statusColor = STATUS_COLORS[order.status] ?? colors.gray;
+  if (isError || !order) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={colors.black} />
+          </TouchableOpacity>
+          <Text style={styles.topTitle}>Order</Text>
+          <View style={{ width: 22 }} />
+        </View>
+        <ErrorState title="Couldn't load this order" onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  const sColor = statusColor(order.status);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -47,9 +63,13 @@ export default function OrderDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Status */}
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + '22', borderColor: statusColor }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>{order.status}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: sColor + '22', borderColor: sColor }]}>
+          <Text style={[styles.statusText, { color: sColor }]}>{statusLabel(order.status)}</Text>
         </View>
+
+        {/* Tracking timeline — reuses order.timeline / order.shipments, already
+            populated server-side by admin status updates (orderController.js) */}
+        <OrderTimeline order={order} />
 
         {/* Items */}
         <View style={styles.card}>
@@ -90,6 +110,19 @@ export default function OrderDetailScreen() {
           </TouchableOpacity>
         )}
 
+        {(order.status === 'delivered' || order.returnRequest) && (
+          <TouchableOpacity
+            style={styles.returnBtn}
+            onPress={() => router.push(`/return-request?orderId=${order._id}` as any)}
+          >
+            <Ionicons name="return-down-back-outline" size={18} color={colors.gray} />
+            <Text style={styles.returnBtnText}>
+              {order.returnRequest ? 'View Return / Exchange Status' : 'Return or Exchange'}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.lightGray} />
+          </TouchableOpacity>
+        )}
+
         <Text style={styles.date}>Placed on {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
       </ScrollView>
     </SafeAreaView>
@@ -98,7 +131,7 @@ export default function OrderDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.light },
-  loading: { fontFamily: fonts.body, color: colors.gray, textAlign: 'center', marginTop: 80 },
+  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   topTitle: { fontFamily: fonts.heading, fontSize: 16, color: colors.black },
   content: { padding: spacing.md, paddingBottom: 60, gap: spacing.md },
@@ -119,5 +152,7 @@ const styles = StyleSheet.create({
   totalValue: { fontFamily: fonts.heading, fontSize: 18, color: colors.black },
   invoiceBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'center', borderWidth: 1, borderColor: colors.gold, borderRadius: radius.sm, padding: spacing.md },
   invoiceBtnText: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.gold },
+  returnBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, backgroundColor: colors.white },
+  returnBtnText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.black },
   date: { fontFamily: fonts.body, fontSize: 12, color: colors.lightGray, textAlign: 'center' },
 });

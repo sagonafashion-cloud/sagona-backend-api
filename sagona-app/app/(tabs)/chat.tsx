@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EventSource from 'react-native-sse';
 import * as SecureStore from 'expo-secure-store';
@@ -13,6 +13,36 @@ interface Message {
   role: 'user' | 'assistant';
   text: string;
   streaming?: boolean;
+  error?: boolean;
+  retryText?: string;
+}
+
+// Light fade + slide-up on mount so new bubbles ease in instead of popping
+// in abruptly, matching a modern chat feel.
+function MessageBubble({ item, onRetry }: { item: Message; onRetry: (text: string) => void }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  const isUser = item.role === 'user';
+  return (
+    <Animated.View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleBot, { opacity, transform: [{ translateY }] }]}>
+      <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>{item.text}</Text>
+      {item.streaming && <ActivityIndicator size="small" color={colors.gold} style={{ marginTop: 4 }} />}
+      {item.error && (
+        <TouchableOpacity onPress={() => onRetry(item.retryText || '')} style={styles.retryRow}>
+          <Ionicons name="refresh" size={13} color={colors.error} />
+          <Text style={styles.retryText}>Tap to retry</Text>
+        </TouchableOpacity>
+      )}
+    </Animated.View>
+  );
 }
 
 export default function ChatScreen() {
@@ -30,10 +60,10 @@ export default function ChatScreen() {
     return () => { esRef.current?.close(); };
   }, []);
 
-  const sendMessage = async () => {
-    const text = input.trim();
+  const sendMessage = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || sending) return;
-    setInput('');
+    if (!overrideText) setInput('');
     setSending(true);
 
     const userMsg: Message = { id: Date.now().toString(), role: 'user', text };
@@ -75,11 +105,11 @@ export default function ChatScreen() {
       });
 
       es.addEventListener('error', () => {
-        setMessages((prev) => prev.map((m) => m.streaming ? { ...m, text: 'Sorry, something went wrong.', streaming: false } : m));
+        setMessages((prev) => prev.map((m) => m.streaming ? { ...m, text: 'Sorry, something went wrong.', streaming: false, error: true, retryText: text } : m));
         setSending(false);
       });
     } catch {
-      setMessages((prev) => prev.map((m) => m.streaming ? { ...m, text: 'Connection error. Please try again.', streaming: false } : m));
+      setMessages((prev) => prev.map((m) => m.streaming ? { ...m, text: 'Connection error. Please try again.', streaming: false, error: true, retryText: text } : m));
       setSending(false);
     }
   };
@@ -90,15 +120,9 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    const isUser = item.role === 'user';
-    return (
-      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleBot]}>
-        <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>{item.text}</Text>
-        {item.streaming && <ActivityIndicator size="small" color={colors.gold} style={{ marginTop: 4 }} />}
-      </View>
-    );
-  };
+  const renderMessage = ({ item }: { item: Message }) => (
+    <MessageBubble item={item} onRetry={sendMessage} />
+  );
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -124,11 +148,11 @@ export default function ChatScreen() {
             placeholderTextColor={colors.lightGray}
             value={input}
             onChangeText={setInput}
-            onSubmitEditing={sendMessage}
+            onSubmitEditing={() => sendMessage()}
             returnKeyType="send"
             multiline
           />
-          <TouchableOpacity style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]} onPress={sendMessage} disabled={!input.trim() || sending}>
+          <TouchableOpacity style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]} onPress={() => sendMessage()} disabled={!input.trim() || sending}>
             <Ionicons name="send" size={18} color={input.trim() && !sending ? colors.black : colors.lightGray} />
           </TouchableOpacity>
         </View>
@@ -148,6 +172,8 @@ const styles = StyleSheet.create({
   bubbleBot: { backgroundColor: colors.white, alignSelf: 'flex-start', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
   bubbleText: { fontFamily: fonts.body, fontSize: 15, color: colors.black, lineHeight: 22 },
   bubbleTextUser: { color: colors.black },
+  retryRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  retryText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.error },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, padding: spacing.sm, gap: spacing.sm },
   input: { flex: 1, fontFamily: fonts.body, fontSize: 15, color: colors.black, maxHeight: 100, paddingHorizontal: spacing.sm, paddingVertical: 8 },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center' },

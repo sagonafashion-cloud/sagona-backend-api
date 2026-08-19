@@ -1,5 +1,5 @@
 import { getWishlist, saveWishlist, getCart, saveCart } from './storage.js';
-import { API_BASE, escapeHtml } from './config.js';
+import { API_BASE, escapeHtml, sanitizeUrl } from './config.js';
 
 const list = document.querySelector('#wishlist-list');
 
@@ -26,10 +26,10 @@ function renderWishlist() {
         const img = item.images?.[0] || item.image || '';
         const hasDiscount = item.mrp && item.mrp > item.price;
         return `
-          <div style="background:#fff;cursor:pointer" onclick="location.href='product.html?id=${item.id || item._id}'">
+          <div style="background:#fff;cursor:pointer" onclick="location.href='product.html?id=${encodeURIComponent(item.id || item._id || '')}'">
             <div style="aspect-ratio:3/4;overflow:hidden;background:#F8F6F3;position:relative">
               ${img
-                ? `<img src="${img}" alt="${escapeHtml(item.name)}"
+                ? `<img src="${sanitizeUrl(img)}" alt="${escapeHtml(item.name)}"
                         style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s ease"
                         loading="lazy"
                         onmouseover="this.style.transform='scale(1.04)'"

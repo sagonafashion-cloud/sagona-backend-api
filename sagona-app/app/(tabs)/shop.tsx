@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/lib/api';
 import { colors, fonts, spacing, radius } from '../../src/lib/theme';
 import ProductCard from '../../src/components/ui/ProductCard';
+import ErrorState from '../../src/components/ui/ErrorState';
+import EmptyState from '../../src/components/ui/EmptyState';
 import { Product } from '../../src/types';
 
 const CATEGORIES = ['All', 'boys', 'girls', 'newborn', 'sets', 'accessories'];
@@ -23,7 +25,7 @@ export default function ShopScreen() {
   const [category, setCategory] = useState(params.category ?? 'All');
   const [price, setPrice] = useState('');
 
-  const { data, isLoading } = useQuery<Product[]>({
+  const { data, isLoading, isError, refetch } = useQuery<Product[]>({
     queryKey: ['products', category, price, search],
     queryFn: async () => {
       const p = new URLSearchParams();
@@ -93,7 +95,13 @@ export default function ShopScreen() {
       />
 
       {/* Product grid */}
-      {isLoading ? (
+      {isError ? (
+        <ErrorState
+          title="Couldn't load products"
+          subtitle="Check your connection and try again."
+          onRetry={() => refetch()}
+        />
+      ) : isLoading ? (
         <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.xl }} />
       ) : (
         <FlatList
@@ -102,7 +110,9 @@ export default function ShopScreen() {
           numColumns={2}
           renderItem={({ item }) => <ProductCard product={item} />}
           contentContainerStyle={styles.grid}
-          ListEmptyComponent={<Text style={styles.empty}>No products found</Text>}
+          ListEmptyComponent={
+            <EmptyState icon="search-outline" title="No products found" subtitle="Try adjusting your filters or search." />
+          }
         />
       )}
     </SafeAreaView>

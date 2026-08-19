@@ -1,4 +1,4 @@
-import { API_BASE, escapeHtml, encodeJsArg } from './config.js';
+import { API_BASE, escapeHtml, encodeJsArg, sanitizeUrl } from './config.js';
 
 // Tracks Cloudinary URLs uploaded in the current product modal
 let _uploadedUrls = [];
@@ -660,7 +660,7 @@ function renderProducts(products) {
     const img = p.images?.[0] || p.image || '';
     return `
     <tr>
-      <td><img src="${img}" style="width:44px;height:44px;object-fit:cover;border-radius:var(--radius)" onerror="this.style.display='none'"></td>
+      <td><img src="${sanitizeUrl(img)}" style="width:44px;height:44px;object-fit:cover;border-radius:var(--radius)" onerror="this.style.display='none'"></td>
       <td>${escapeHtml(p.name)}</td>
       <td style="font-size:11px;color:var(--gray)">${escapeHtml(p.sku) || '—'}</td>
       <td>${INR(p.price)}${p.mrp && p.mrp > p.price ? ` <span style="font-size:11px;color:var(--light-gray);text-decoration:line-through">${INR(p.mrp)}</span>` : ''}</td>
@@ -800,8 +800,8 @@ window.editProduct = async (id) => {
     openModal(`
       <h2 style="font-size:18px;margin-bottom:20px">Edit Product</h2>
       <div class="form-2col">
-        <div><label>Name *</label><input id="mp-name" type="text" value="${p.name || ''}"></div>
-        <div><label>SKU</label><input id="mp-sku" type="text" value="${p.sku || ''}"></div>
+        <div><label>Name *</label><input id="mp-name" type="text" value="${escapeHtml(p.name) || ''}"></div>
+        <div><label>SKU</label><input id="mp-sku" type="text" value="${escapeHtml(p.sku) || ''}"></div>
         <div><label>Price (₹) *</label><input id="mp-price" type="number" value="${p.price || ''}"></div>
         <div><label>MRP (₹)</label><input id="mp-mrp" type="number" value="${p.mrp || ''}"></div>
         <div>
@@ -825,7 +825,7 @@ window.editProduct = async (id) => {
         </div>
       </div>
       <label>Description</label>
-      <textarea id="mp-desc" rows="3">${p.description || ''}</textarea>
+      <textarea id="mp-desc" rows="3">${escapeHtml(p.description) || ''}</textarea>
       <label>Images (up to 5) — add new or remove existing</label>
       <input type="file" id="mp-image" accept="image/*" multiple>
       <div id="mp-img-preview" class="image-preview-grid" style="margin-top:8px"></div>
@@ -844,8 +844,8 @@ window.editProduct = async (id) => {
       const ph = document.createElement('div');
       ph.className = 'img-placeholder';
       ph.innerHTML = `
-        <img src="${url}" alt="Product image">
-        <button type="button" class="img-remove-btn" data-url="${url}">&times;</button>`;
+        <img src="${sanitizeUrl(url)}" alt="Product image">
+        <button type="button" class="img-remove-btn" data-url="${escapeHtml(url)}">&times;</button>`;
       preview.appendChild(ph);
     });
 
@@ -1217,9 +1217,9 @@ function _showBulkPreview(data, filename) {
 
     const actionCell = p.valid
       ? (p._warnings?.length
-          ? `<span title="${p._warnings.join('\n')}" style="font-size:11px;color:#EF9F27;cursor:help">&#9888; ${p._warnings.length} warning${p._warnings.length > 1 ? 's' : ''}</span>`
+          ? `<span title="${escapeHtml(p._warnings.join('\n'))}" style="font-size:11px;color:#EF9F27;cursor:help">&#9888; ${p._warnings.length} warning${p._warnings.length > 1 ? 's' : ''}</span>`
           : '<span style="color:#1D9E75;font-size:11px">&#10003; Ready</span>')
-      : `<span title="${p._errors?.join('\n')}" style="font-size:11px;color:#E24B4A;cursor:help">&#9888; ${p._errors?.[0] || 'Invalid'}</span>`;
+      : `<span title="${escapeHtml(p._errors?.join('\n'))}" style="font-size:11px;color:#E24B4A;cursor:help">&#9888; ${escapeHtml(p._errors?.[0]) || 'Invalid'}</span>`;
 
     return `
       <tr class="${p.valid ? 'bulk-valid-row' : 'bulk-invalid-row'}"
@@ -1227,20 +1227,20 @@ function _showBulkPreview(data, filename) {
         <td style="padding:8px 12px">${statusBadge}</td>
         <td style="padding:8px 12px;font-weight:500;color:#0A0A0A;max-width:200px;
                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${p.product_name || '—'}
+          ${escapeHtml(p.product_name) || '—'}
         </td>
         <td style="padding:8px 12px;font-family:monospace;font-size:11px;color:#555">
-          ${p.sku || '—'}
+          ${escapeHtml(p.sku) || '—'}
         </td>
         <td style="padding:8px 12px;text-align:center">
-          ${p.price ? '₹' + p.price : '—'}
+          ${p.price ? '₹' + escapeHtml(String(p.price)) : '—'}
         </td>
-        <td style="padding:8px 12px;text-align:center">${p.category || '—'}</td>
+        <td style="padding:8px 12px;text-align:center">${escapeHtml(p.category) || '—'}</td>
         <td style="padding:8px 12px;font-size:11px;color:#555;max-width:140px;
                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${p.available_sizes || '—'}
+          ${escapeHtml(p.available_sizes) || '—'}
         </td>
-        <td style="padding:8px 12px;text-align:center">${p.fit_type || 'regular'}</td>
+        <td style="padding:8px 12px;text-align:center">${escapeHtml(p.fit_type) || 'regular'}</td>
         <td style="padding:8px 12px;text-align:center">
           ${measCount > 0
             ? `<span style="color:#1D9E75;font-weight:500">&#10003; ${measCount} sizes</span>`
@@ -1268,19 +1268,19 @@ function _showBulkPreview(data, filename) {
       ${summary.duplicateSkusInFile?.length ? `
         <div style="background:#FCEBEB;border-radius:5px;padding:10px 14px;
                     margin-bottom:10px;font-size:12px;color:#E24B4A">
-          &#9888; Duplicate SKUs in file: ${summary.duplicateSkusInFile.join(', ')}
+          &#9888; Duplicate SKUs in file: ${summary.duplicateSkusInFile.map(escapeHtml).join(', ')}
           — only the last occurrence will be used.
         </div>` : ''}
       ${summary.existingSkus?.length ? `
         <div style="background:#FAEEDA;border-radius:5px;padding:10px 14px;
                     margin-bottom:10px;font-size:12px;color:#633806">
           &#128204; These SKUs already exist and will be updated:
-          ${summary.existingSkus.map(s => `<strong>${s}</strong>`).join(', ')}
+          ${summary.existingSkus.map(s => `<strong>${escapeHtml(s)}</strong>`).join(', ')}
         </div>` : ''}
       ${parseErrors?.length ? `
         <div style="background:#FCEBEB;border-radius:5px;padding:10px 14px;
                     margin-bottom:10px;font-size:12px;color:#E24B4A">
-          ${parseErrors.map(e => `<div>&#9888; ${e}</div>`).join('')}
+          ${parseErrors.map(e => `<div>&#9888; ${escapeHtml(e)}</div>`).join('')}
         </div>` : ''}
     </div>
 
@@ -1403,7 +1403,7 @@ function _showBulkResult(results) {
         </div>
         ${results.failed.map(f => `
           <div style="font-size:12px;color:#E24B4A;margin-bottom:3px">
-            &bull; ${f.sku} (${f.name || 'unknown'}) — ${f.reason}
+            &bull; ${escapeHtml(f.sku)} (${escapeHtml(f.name) || 'unknown'}) — ${escapeHtml(f.reason)}
           </div>
         `).join('')}
       </div>
@@ -1464,17 +1464,17 @@ function showStoreModal(s = null) {
   openModal(`
     <h2 style="font-size:18px;margin-bottom:20px">${s ? 'Edit' : 'Add'} Store</h2>
     <div class="form-2col">
-      <div><label>Name *</label><input id="st-name" value="${s?.name || ''}"></div>
-      <div><label>Phone</label><input id="st-phone" value="${s?.phone || ''}"></div>
-      <div><label>City</label><input id="st-city" value="${s?.city || ''}"></div>
-      <div><label>State</label><input id="st-state" value="${s?.state || ''}"></div>
-      <div><label>Pincode</label><input id="st-pincode" value="${s?.pincode || ''}"></div>
-      <div><label>GSTIN</label><input id="st-gstin" value="${s?.gstin || ''}"></div>
+      <div><label>Name *</label><input id="st-name" value="${escapeHtml(s?.name) || ''}"></div>
+      <div><label>Phone</label><input id="st-phone" value="${escapeHtml(s?.phone) || ''}"></div>
+      <div><label>City</label><input id="st-city" value="${escapeHtml(s?.city) || ''}"></div>
+      <div><label>State</label><input id="st-state" value="${escapeHtml(s?.state) || ''}"></div>
+      <div><label>Pincode</label><input id="st-pincode" value="${escapeHtml(s?.pincode) || ''}"></div>
+      <div><label>GSTIN</label><input id="st-gstin" value="${escapeHtml(s?.gstin) || ''}"></div>
       <div><label>Latitude</label><input id="st-lat" type="number" step="any" value="${s?.lat || ''}"></div>
       <div><label>Longitude</label><input id="st-lng" type="number" step="any" value="${s?.lng || ''}"></div>
     </div>
     <label>Address</label>
-    <textarea id="st-address" rows="2">${s?.address || ''}</textarea>
+    <textarea id="st-address" rows="2">${escapeHtml(s?.address) || ''}</textarea>
     <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
       <input type="checkbox" id="st-dispatch" ${s?.dispatchEnabled !== false ? 'checked' : ''}>
       <label for="st-dispatch" style="margin:0;font-size:12px;letter-spacing:0">Dispatch enabled</label>
@@ -1769,8 +1769,8 @@ async function handleImageSelect(files) {
 
       ph.classList.remove('loading');
       ph.innerHTML = `
-        <img src="${url}" alt="Product image">
-        <button type="button" class="img-remove-btn" data-url="${url}">&times;</button>`;
+        <img src="${sanitizeUrl(url)}" alt="Product image">
+        <button type="button" class="img-remove-btn" data-url="${escapeHtml(url)}">&times;</button>`;
     } catch (err) {
       toast('Image upload failed: ' + (err.message || 'unknown error'), 'error');
       ph.remove();
@@ -1850,17 +1850,17 @@ function hpSectionRow(s, i) {
   const labels = { hero:'Hero', editorial:'Editorial', feature:'Feature', split:'Split', strip:'Strip', products:'Products' };
   const preview = s.mediaUrl
     ? (s.mediaType === 'video'
-        ? `<video src="${s.mediaUrl}" style="width:80px;height:50px;object-fit:cover;border-radius:3px" muted></video>`
-        : `<img src="${s.mediaUrl}" style="width:80px;height:50px;object-fit:cover;border-radius:3px" alt="">`)
-    : `<div style="width:80px;height:50px;background:#F0EDE8;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999">${labels[s.type]||s.type}</div>`;
+        ? `<video src="${sanitizeUrl(s.mediaUrl)}" style="width:80px;height:50px;object-fit:cover;border-radius:3px" muted></video>`
+        : `<img src="${sanitizeUrl(s.mediaUrl)}" style="width:80px;height:50px;object-fit:cover;border-radius:3px" alt="">`)
+    : `<div style="width:80px;height:50px;background:#F0EDE8;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999">${escapeHtml(labels[s.type]||s.type)}</div>`;
   return `
     <div class="hp-section-row" data-id="${s._id}" data-order="${s.order ?? i}">
       <div class="hp-drag-handle" title="Drag to reorder">&#8942;&#8942;</div>
       ${preview}
       <div class="hp-section-info">
-        <div class="hp-section-type">${labels[s.type] || s.type}</div>
-        <div class="hp-section-title">${s.title || s.text || s.label || '(no title)'}</div>
-        ${s.category ? `<div class="hp-section-cat">Category: ${s.category}</div>` : ''}
+        <div class="hp-section-type">${escapeHtml(labels[s.type] || s.type)}</div>
+        <div class="hp-section-title">${escapeHtml(s.title || s.text || s.label) || '(no title)'}</div>
+        ${s.category ? `<div class="hp-section-cat">Category: ${escapeHtml(s.category)}</div>` : ''}
       </div>
       <div class="hp-section-status">
         <span class="status-badge ${s.isActive ? 'active' : 'inactive'}">${s.isActive ? 'LIVE' : 'HIDDEN'}</span>
@@ -1997,7 +1997,7 @@ function hpTypeFields(s) {
   if (type === 'strip') return `
     <div class="form-group" style="margin-bottom:16px">
       <label class="form-label">Strip Text</label>
-      <input type="text" id="hp-strip-text" value="${s?.text||''}" placeholder="NEW COLLECTION COMING SOON"
+      <input type="text" id="hp-strip-text" value="${escapeHtml(s?.text)||''}" placeholder="NEW COLLECTION COMING SOON"
              style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
     </div>`;
 
@@ -2005,12 +2005,12 @@ function hpTypeFields(s) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
         <label class="form-label">Section Heading</label>
-        <input type="text" id="hp-prod-title" value="${s?.title||'NEW ARRIVALS'}"
+        <input type="text" id="hp-prod-title" value="${escapeHtml(s?.title)||'NEW ARRIVALS'}"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
       <div>
         <label class="form-label">Category filter (optional)</label>
-        <input type="text" id="hp-prod-cat" value="${s?.category||''}" placeholder="kids / women / men"
+        <input type="text" id="hp-prod-cat" value="${escapeHtml(s?.category)||''}" placeholder="kids / women / men"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
       <div>
@@ -2020,7 +2020,7 @@ function hpTypeFields(s) {
       </div>
       <div>
         <label class="form-label">View All link</label>
-        <input type="text" id="hp-prod-link" value="${s?.viewAllLink||'shop.html'}"
+        <input type="text" id="hp-prod-link" value="${escapeHtml(s?.viewAllLink)||'shop.html'}"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
       <div style="grid-column:1/-1">
@@ -2042,8 +2042,8 @@ function hpMediaField(s) {
   const isVideo  = s?.mediaType === 'video';
   const preview  = hasMedia
     ? (isVideo
-        ? `<video src="${s.mediaUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" controls muted></video>`
-        : `<img src="${s.mediaUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" alt="">`)
+        ? `<video src="${sanitizeUrl(s.mediaUrl)}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" controls muted></video>`
+        : `<img src="${sanitizeUrl(s.mediaUrl)}" style="width:100%;max-height:200px;object-fit:cover;border-radius:6px" alt="">`)
     : `<div style="height:120px;background:#F0EDE8;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#999;border:2px dashed #E8E5E0">No media yet</div>`;
 
   return `
@@ -2100,8 +2100,8 @@ function hpSplitFields(s) {
     const isVideo  = m?.type === 'video';
     const preview  = hasMedia
       ? (isVideo
-          ? `<video src="${m.url}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" muted></video>`
-          : `<img src="${m.url}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" alt="">`)
+          ? `<video src="${sanitizeUrl(m.url)}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" muted></video>`
+          : `<img src="${sanitizeUrl(m.url)}" style="width:100%;height:120px;object-fit:cover;border-radius:4px" alt="">`)
       : `<div style="height:80px;background:#F0EDE8;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#999">No media</div>`;
     return `
       <div style="border:0.5px solid var(--border);border-radius:6px;padding:14px">
@@ -2111,13 +2111,13 @@ function hpSplitFields(s) {
           <input type="file" id="hp-${side}-file" accept="image/*,video/*" style="display:none" onchange="window.hpUploadSplit(this,'${side}')">
           <div style="text-align:center;padding:10px;font-size:12px">&#128247; Upload</div>
         </div>
-        <input type="text" id="hp-${side}-text" placeholder="Text overlay (optional)" value="${m?.text||''}"
+        <input type="text" id="hp-${side}-text" placeholder="Text overlay (optional)" value="${escapeHtml(m?.text)||''}"
                style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px;margin-bottom:6px">
-        <input type="text" id="hp-${side}-label" placeholder="Label (optional)" value="${m?.label||''}"
+        <input type="text" id="hp-${side}-label" placeholder="Label (optional)" value="${escapeHtml(m?.label)||''}"
                style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px;margin-bottom:6px">
-        <input type="text" id="hp-${side}-cta" placeholder="CTA text (optional)" value="${m?.cta||''}"
+        <input type="text" id="hp-${side}-cta" placeholder="CTA text (optional)" value="${escapeHtml(m?.cta)||''}"
                style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px;margin-bottom:6px">
-        <input type="text" id="hp-${side}-link" placeholder="CTA link (e.g. shop.html)" value="${m?.ctaLink||''}"
+        <input type="text" id="hp-${side}-link" placeholder="CTA link (e.g. shop.html)" value="${escapeHtml(m?.ctaLink)||''}"
                style="width:100%;padding:7px 9px;border:0.5px solid var(--border);border-radius:4px;font-size:12px">
       </div>`;
   }
@@ -2134,27 +2134,27 @@ function hpTextFields(s) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
         <label class="form-label">Label (small uppercase text)</label>
-        <input type="text" id="hp-label" value="${s?.label||''}" placeholder="NEW COLLECTION · 2026"
+        <input type="text" id="hp-label" value="${escapeHtml(s?.label)||''}" placeholder="NEW COLLECTION · 2026"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
       <div>
         <label class="form-label">CTA Button Text</label>
-        <input type="text" id="hp-cta" value="${s?.cta||''}" placeholder="EXPLORE COLLECTION"
+        <input type="text" id="hp-cta" value="${escapeHtml(s?.cta)||''}" placeholder="EXPLORE COLLECTION"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
       <div style="grid-column:1/-1">
         <label class="form-label">Title</label>
-        <input type="text" id="hp-title" value="${s?.title||''}" placeholder="Luxury Kidswear for Modern Families"
+        <input type="text" id="hp-title" value="${escapeHtml(s?.title)||''}" placeholder="Luxury Kidswear for Modern Families"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
       <div style="grid-column:1/-1">
         <label class="form-label">Subtitle (optional)</label>
-        <input type="text" id="hp-subtitle" value="${s?.subtitle||''}" placeholder="Discover the new collection"
+        <input type="text" id="hp-subtitle" value="${escapeHtml(s?.subtitle)||''}" placeholder="Discover the new collection"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
       <div style="grid-column:1/-1">
         <label class="form-label">CTA Link</label>
-        <input type="text" id="hp-cta-link" value="${s?.ctaLink||''}" placeholder="shop.html or shop.html?category=kids"
+        <input type="text" id="hp-cta-link" value="${escapeHtml(s?.ctaLink)||''}" placeholder="shop.html or shop.html?category=kids"
                style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:4px;font-size:13px">
       </div>
     </div>`;

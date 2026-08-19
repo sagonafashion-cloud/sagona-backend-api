@@ -569,7 +569,7 @@ async function _fetchRecommendation(measurements, method) {
       result.innerHTML = `
         <div style="text-align:center;padding:40px 20px;color:#888">
           <div style="font-size:30px;margin-bottom:12px">&#128207;</div>
-          <div style="font-size:14px;margin-bottom:20px">${data.message}</div>
+          <div style="font-size:14px;margin-bottom:20px">${escapeHtml(data.message)}</div>
           <button onclick="window.szShowMethod()" class="sizing-btn-primary"
                   style="max-width:200px;margin:0 auto">TRY AGAIN</button>
         </div>
@@ -583,7 +583,7 @@ async function _fetchRecommendation(measurements, method) {
       <div style="text-align:center;padding:40px 20px">
         <div style="font-size:30px;margin-bottom:12px">&#9888;</div>
         <div style="color:#E24B4A;font-size:14px;margin-bottom:20px">
-          ${err.message || 'Something went wrong. Please try again.'}
+          ${escapeHtml(err.message || 'Something went wrong. Please try again.')}
         </div>
         <button onclick="window.szShowMethod()" class="sizing-btn-primary"
                 style="max-width:200px;margin:0 auto">TRY AGAIN</button>
@@ -603,13 +603,13 @@ function _renderResult(container, rec, measurements) {
                   color:#888;margin-bottom:12px">RECOMMENDED SIZE</div>
       <div style="font-size:60px;font-family:'Playfair Display',Georgia,serif;
                   font-weight:500;color:#0A0A0A;line-height:1;margin-bottom:12px">
-        ${rec.size}
+        ${escapeHtml(rec.size)}
       </div>
       <span style="padding:6px 16px;border-radius:99px;font-size:13px;font-weight:600;
                    background:${confBg};color:${confColor}">
-        ${rec.confidence}% match &nbsp;·&nbsp; ${rec.confidenceLabel} Confidence
+        ${rec.confidence}% match &nbsp;·&nbsp; ${escapeHtml(rec.confidenceLabel)} Confidence
       </span>
-      ${rec.fitType ? `<div style="font-size:12px;color:#888;margin-top:8px">${rec.fitType}</div>` : ''}
+      ${rec.fitType ? `<div style="font-size:12px;color:#888;margin-top:8px">${escapeHtml(rec.fitType)}</div>` : ''}
     </div>
 
     <div style="padding:0 22px 20px;border-bottom:0.5px solid #E8E5E0">
@@ -630,7 +630,7 @@ function _renderResult(container, rec, measurements) {
           ${rec.warnings.map(w => `
             <div style="font-size:13px;color:#C0392B;display:flex;gap:8px;
                         margin-bottom:3px;line-height:1.5">
-              <span style="flex-shrink:0">&#9888;&#65039;</span><span>${w}</span>
+              <span style="flex-shrink:0">&#9888;&#65039;</span><span>${escapeHtml(w)}</span>
             </div>
           `).join('')}
         </div>
@@ -639,7 +639,7 @@ function _renderResult(container, rec, measurements) {
       ${rec.fitNote ? `
         <div style="background:#FAEEDA;border-radius:6px;padding:12px 14px;
                     margin-bottom:14px;font-size:13px;color:#633806;line-height:1.5">
-          &#128204; ${rec.fitNote}
+          &#128204; ${escapeHtml(rec.fitNote)}
         </div>
       ` : ''}
 
@@ -647,7 +647,7 @@ function _renderResult(container, rec, measurements) {
         <div style="background:#EAF3DE;border-radius:6px;padding:12px 14px;margin-bottom:14px">
           ${rec.notes.map(n => `
             <div style="font-size:13px;color:#2D6A4F;display:flex;gap:8px;line-height:1.5">
-              <span>&#10003;</span><span>${n}</span>
+              <span>&#10003;</span><span>${escapeHtml(n)}</span>
             </div>
           `).join('')}
         </div>
@@ -659,10 +659,10 @@ function _renderResult(container, rec, measurements) {
                     justify-content:space-between;gap:10px">
           <div>
             <div style="font-size:11px;color:#888;margin-bottom:3px;letter-spacing:0.06em">ALTERNATIVE SIZE</div>
-            <div style="font-size:20px;font-weight:600;color:#0A0A0A">${rec.alternative.size}</div>
-            <div style="font-size:12px;color:#888;margin-top:2px">${rec.alternative.reason}</div>
+            <div style="font-size:20px;font-weight:600;color:#0A0A0A">${escapeHtml(rec.alternative.size)}</div>
+            <div style="font-size:12px;color:#888;margin-top:2px">${escapeHtml(rec.alternative.reason)}</div>
           </div>
-          <button onclick="window.szApplySize('${rec.alternative.size}')"
+          <button onclick="window.szApplySize('${escapeHtml(rec.alternative.size)}')"
                   class="sizing-btn-ghost">SELECT</button>
         </div>
       ` : ''}
@@ -670,14 +670,14 @@ function _renderResult(container, rec, measurements) {
       ${rec.safeToAvoid?.size ? `
         <div style="background:#FCEBEB;border-radius:6px;padding:10px 14px;
                     margin-bottom:14px;font-size:12px;color:#C0392B">
-          &#10060; Avoid size <strong>${rec.safeToAvoid.size}</strong>
-          ${rec.safeToAvoid.reason ? ` — ${rec.safeToAvoid.reason}` : ''}
+          &#10060; Avoid size <strong>${escapeHtml(rec.safeToAvoid.size)}</strong>
+          ${rec.safeToAvoid.reason ? ` — ${escapeHtml(rec.safeToAvoid.reason)}` : ''}
         </div>
       ` : ''}
 
       <div style="display:flex;gap:10px;margin-bottom:18px">
-        <button onclick="window.szApplySize('${rec.size}')" class="sizing-btn-primary">
-          SELECT SIZE ${rec.size}
+        <button onclick="window.szApplySize('${escapeHtml(rec.size)}')" class="sizing-btn-primary">
+          SELECT SIZE ${escapeHtml(rec.size)}
         </button>
         <button onclick="window.szShowMethod()" class="sizing-btn-ghost">REDO</button>
       </div>
@@ -690,7 +690,7 @@ function _renderResult(container, rec, measurements) {
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
               <span style="font-size:13px;font-weight:${s.recommended ? '600' : '400'};
                            color:${s.recommended ? '#0A0A0A' : '#888'};
-                           width:36px;flex-shrink:0">${s.size}</span>
+                           width:36px;flex-shrink:0">${escapeHtml(s.size)}</span>
               <div style="flex:1;height:4px;background:#E8E5E0;border-radius:99px;overflow:hidden">
                 <div style="height:100%;width:${s.confidence}%;
                             background:${s.confidence >= 85 ? '#1D9E75' : s.confidence >= 65 ? '#C9A84C' : '#D4CFC9'};

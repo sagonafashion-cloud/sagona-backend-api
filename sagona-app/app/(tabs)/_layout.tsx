@@ -52,8 +52,17 @@ export default function TabLayout() {
       <Tabs.Screen
         name="bag"
         options={{
-          title: 'Bag',
+          // Label only — route/file name stays "bag" so existing
+          // router.push('/(tabs)/bag') calls elsewhere keep working.
+          title: 'Cart',
           tabBarIcon: ({ color, size }) => <CartTabIcon color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="wishlist"
+        options={{
+          title: 'Wishlist',
+          tabBarIcon: ({ color, size }) => <Ionicons name="heart-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

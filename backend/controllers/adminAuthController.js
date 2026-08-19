@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import AdminUser from '../models/AdminUser.js';
+import { logAdminActivity } from '../utils/activityLogger.js';
 
 // Shorter-lived than before (was 7d) to shrink the exposure window for a
 // stolen token; combined with the tokenVersion check in adminProtect, logout
@@ -252,6 +253,12 @@ export const createAdmin = async (req, res) => {
       password: hashed,
       role,
       assignedStores: assignedStores || []
+    });
+
+    logAdminActivity(req, 'admin.create', {
+      targetType: 'AdminUser',
+      targetId: admin._id,
+      details: { createdEmail: admin.email, createdName: admin.name, role: admin.role }
     });
 
     res.status(201).json({ success: true, data: formatAdmin(admin) });

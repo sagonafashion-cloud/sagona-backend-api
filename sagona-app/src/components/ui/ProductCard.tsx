@@ -9,7 +9,7 @@ interface Props {
   product: Product;
 }
 
-export default function ProductCard({ product }: Props) {
+function ProductCard({ product }: Props) {
   const router = useRouter();
   const image = product.images?.[0] ?? product.image ?? '';
   const price = product.price ?? product.salePrice ?? product.basePrice ?? product.variants?.[0]?.price ?? 0;
@@ -28,6 +28,8 @@ export default function ProductCard({ product }: Props) {
     </TouchableOpacity>
   );
 }
+
+export default React.memo(ProductCard);
 
 const styles = StyleSheet.create({
   card: { flex: 1, margin: spacing.xs },
