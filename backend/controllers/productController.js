@@ -136,7 +136,7 @@ export const adminCreateProduct = async (req, res) => {
       name, price, mrp, image, images, description, featured,
       sku, category, subcategory, gender, ageGroup, tags,
       gstSlab, hsnCode, fabric, careInstructions, weight,
-      status, publishAt, variants, stores
+      status, publishAt, stock, variants, stores
     } = req.body;
 
     if (!name || !price) {
@@ -149,7 +149,7 @@ export const adminCreateProduct = async (req, res) => {
       sku, category, subcategory, gender, ageGroup, tags: tags || [],
       gstSlab, hsnCode, fabric, careInstructions, weight,
       status: status || 'active', publishAt,
-      variants: variants || [], stores: stores || []
+      stock: stock || 0, variants: variants || [], stores: stores || []
     });
 
     logAdminActivity(req, 'product.admin_create', {
@@ -174,7 +174,7 @@ export const adminUpdateProduct = async (req, res) => {
       name, price, mrp, image, images, description, featured,
       sku, category, subcategory, gender, ageGroup, tags,
       gstSlab, hsnCode, fabric, careInstructions, weight,
-      status, publishAt, variants, stores
+      status, publishAt, stock, variants, stores
     } = req.body;
 
     const update = {};
@@ -198,6 +198,7 @@ export const adminUpdateProduct = async (req, res) => {
     if (weight            !== undefined) update.weight            = weight;
     if (status            !== undefined) update.status            = status;
     if (publishAt         !== undefined) update.publishAt         = publishAt;
+    if (stock             !== undefined) update.stock             = stock;
     if (variants          !== undefined) update.variants          = variants;
     if (stores            !== undefined) update.stores            = stores;
 
@@ -290,22 +291,31 @@ export const adminBulkImport = async (req, res) => {
 
 export const adminUpdateInventory = async (req, res) => {
   try {
-    const { stores } = req.body; // [{ storeId, stock }]
-    if (!Array.isArray(stores)) {
-      return res.status(400).json({ success: false, message: 'stores array required' });
+    // Writes to the fields checkout actually reads/decrements (see
+    // orderController stock reservation): top-level `stock` for
+    // non-variant products, `variants[].stock` per size/colour for
+    // variant products. `stores[].stock` is not read by checkout, so it
+    // is intentionally no longer the target of this endpoint.
+    const { stock, variants } = req.body; // stock: Number, variants: [{ size, colour, stock }]
+    if (stock === undefined && !Array.isArray(variants)) {
+      return res.status(400).json({ success: false, message: 'stock or variants array required' });
     }
+
+    const update = {};
+    if (stock !== undefined) update.stock = stock;
+    if (Array.isArray(variants)) update.variants = variants;
 
     const product = await Product.findByIdAndUpdate(
       req.params.id,
-      { stores },
-      { new: true }
+      update,
+      { new: true, runValidators: true }
     );
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
 
     logAdminActivity(req, 'product.inventory_update', {
       targetType: 'Product',
       targetId: product._id,
-      details: { sku: product.sku, stores }
+      details: { sku: product.sku, ...update }
     });
 
     res.json({ success: true, data: product });

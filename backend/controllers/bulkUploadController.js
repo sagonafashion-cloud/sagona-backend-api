@@ -449,6 +449,10 @@ function buildProductData(product) {
     sku:               product.sku?.trim(),
     price,
     mrp:               Math.max(price, mrp),
+    // Top-level stock — only read by checkout for products with no
+    // size/colour variants. Variant products track stock per-variant
+    // in buildVariants() below instead.
+    stock:             parseNum(product.stock) || 0,
     category:          (product.category || 'kids').toLowerCase(),
     ageGroup:          product.age_group || '',
     gstSlab:           parseNum(product.gst_slab) || 12,
@@ -475,6 +479,13 @@ function buildVariants(product) {
   const variants = [];
   const sizes    = (product.available_sizes   || '').split(',').map(s => s.trim()).filter(Boolean);
   const colours  = (product.available_colours || '').split(',').map(c => c.trim()).filter(Boolean);
+  // The template has one flat `stock` column per product row (no
+  // per-variant matrix), so that quantity is applied to every
+  // size/colour combination generated below rather than left at 0 —
+  // previously every variant was hardcoded to stock:0, making all
+  // variant products permanently unsellable regardless of what the
+  // uploaded file said.
+  const stock = parseNum(product.stock) || 0;
 
   for (const colour of (colours.length ? colours : [''])) {
     for (const size of sizes) {
@@ -483,7 +494,7 @@ function buildVariants(product) {
         colour,
         size,
         sku:   `${product.sku?.trim()}-${suffix}`.slice(0, 50),
-        stock: 0
+        stock
       });
     }
   }

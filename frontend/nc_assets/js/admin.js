@@ -692,6 +692,7 @@ document.getElementById('add-product-btn')?.addEventListener('click', () => {
       <div><label>SKU</label><input id="mp-sku" type="text" placeholder="SAG-001"></div>
       <div><label>Price (₹) *</label><input id="mp-price" type="number" min="0"></div>
       <div><label>MRP (₹)</label><input id="mp-mrp" type="number" min="0"></div>
+      <div><label>Stock</label><input id="mp-stock" type="number" min="0" value="0" placeholder="0"></div>
       <div>
         <label>Category</label>
         <select id="mp-category">
@@ -761,6 +762,7 @@ async function saveProduct(editId = null) {
       name,
       price,
       mrp:        Number(document.getElementById('mp-mrp')?.value) || undefined,
+      stock:      Number(document.getElementById('mp-stock')?.value) || 0,
       sku:        document.getElementById('mp-sku')?.value.trim() || undefined,
       category:   document.getElementById('mp-category')?.value || undefined,
       ageGroup:   document.getElementById('mp-age')?.value || undefined,
@@ -804,6 +806,7 @@ window.editProduct = async (id) => {
         <div><label>SKU</label><input id="mp-sku" type="text" value="${escapeHtml(p.sku) || ''}"></div>
         <div><label>Price (₹) *</label><input id="mp-price" type="number" value="${p.price || ''}"></div>
         <div><label>MRP (₹)</label><input id="mp-mrp" type="number" value="${p.mrp || ''}"></div>
+        <div><label>Stock</label><input id="mp-stock" type="number" min="0" value="${p.stock ?? 0}"></div>
         <div>
           <label>Category</label>
           <select id="mp-category">
