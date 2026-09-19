@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import axios from 'axios';
 import {
   orderConfirmationTemplate,
   statusUpdateTemplate,
@@ -7,34 +7,37 @@ import {
   restockAlertTemplate
 } from './emailTemplates.js';
 
-/* ── transport factory (lazy — only created when sending) ── */
-const createTransport = () =>
-  nodemailer.createTransport({
-    host:   process.env.EMAIL_HOST   || 'smtp.gmail.com',
-    port:   Number(process.env.EMAIL_PORT) || 587,
-    secure: Number(process.env.EMAIL_PORT) === 465,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
+/* ── Resend HTTP API (replaces Gmail SMTP — Render's free-tier network
+   blocks/timeouts outbound port 587, so we send over HTTPS instead) ── */
+const RESEND_API_URL = 'https://api.resend.com/emails';
 
 const FROM = () => process.env.EMAIL_FROM || '"SAGONA" <noreply@sagona.in>';
+const REPLY_TO = () => process.env.SUPPORT_EMAIL || 'care@sagona.in';
 
 /* ── core send function ── */
 export const sendEmail = async ({ to, subject, html }) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[email] EMAIL_USER / EMAIL_PASS not configured — skipping send');
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[email] RESEND_API_KEY not configured — skipping send');
     return;
   }
 
   try {
-    const transporter = createTransport();
-    const info = await transporter.sendMail({ from: FROM(), to, subject, html });
-    console.log(`[email] Sent "${subject}" to ${to} (${info.messageId})`);
-    return info;
+    const { data } = await axios.post(
+      RESEND_API_URL,
+      { from: FROM(), to, subject, html, reply_to: REPLY_TO() },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      }
+    );
+    console.log(`[email] Sent "${subject}" to ${to} (${data.id})`);
+    return data;
   } catch (err) {
-    console.error(`[email] Failed to send "${subject}" to ${to}:`, err.message);
+    const detail = err.response?.data?.message || err.message;
+    console.error(`[email] Failed to send "${subject}" to ${to}:`, detail);
     throw err;
   }
 };
