@@ -27,8 +27,21 @@ const uploadPdf = (buffer, publicId) =>
     stream.end(buffer);
   });
 
+/* ── Seller registered details (GST Rule 46) ──
+   These are fixed for the whole business, not per-store — the Store model
+   currently only holds one placeholder/test record, so GSTIN + registered
+   address are printed from here regardless of whether an order has a
+   resolvable store. Update this block if these details ever change. */
+const SELLER_LEGAL_NAME     = 'SAGONA';
+const SELLER_GSTIN          = '05CZOPK4885L2ZJ';
+const SELLER_ADDRESS_LINES  = ['Radhe Complex', 'Haridwar, Uttarakhand - 249403'];
+
 /* ── Drawing helpers ── */
-const INR = (n) => `₹${Number(n || 0).toFixed(2)}`;
+// NOTE: the ₹ glyph (U+20B9) has no glyph in PDF's base-14 Helvetica font
+// under WinAnsiEncoding — pdfkit silently substitutes the wrong character
+// for it (confirmed: renders as "¹"). Use "Rs." instead, which is always
+// correct with the standard font rather than embedding a custom font.
+const INR = (n) => `Rs. ${Number(n || 0).toFixed(2)}`;
 const pct = (n) => `${n}%`;
 
 function drawHLine(doc, y, x1 = 40, x2 = 555) {
@@ -54,13 +67,23 @@ export async function generateInvoice(order, store) {
   const pageW = 515; // usable width (595 - 2*40)
 
   /* ── HEADER ──────────────────────────────────────────── */
-  doc.fontSize(22).font('Helvetica-Bold').fillColor('#111111').text('SAGONA', 40, 40);
+  // Business name + registered address + GSTIN are always printed — this is
+  // the seller's fixed registered identity for GST Rule 46, independent of
+  // whichever store (if any) the order's items happen to be tagged with.
+  doc.fontSize(22).font('Helvetica-Bold').fillColor('#111111').text(SELLER_LEGAL_NAME, 40, 40);
   doc.fontSize(8).font('Helvetica').fillColor('#555555');
-  if (store) {
-    doc.text(store.name, 40, 66);
-    doc.text([store.address, store.city, store.state, store.pincode].filter(Boolean).join(', '), 40, 78);
-    if (store.gstin) doc.text(`GSTIN: ${store.gstin}`, 40, 90);
-    if (store.phone) doc.text(`Ph: ${store.phone}`,    40, 100);
+  SELLER_ADDRESS_LINES.forEach((line, i) => doc.text(line, 40, 66 + i * 11));
+  doc.font('Helvetica-Bold').fillColor('#111111')
+     .text(`GSTIN: ${SELLER_GSTIN}`, 40, 66 + SELLER_ADDRESS_LINES.length * 11 + 2);
+  doc.font('Helvetica').fillColor('#555555');
+
+  // Store dispatch info, when the order's item resolves to a real store —
+  // secondary/informational only, doesn't replace the registered identity above.
+  let storeLineY = 66 + SELLER_ADDRESS_LINES.length * 11 + 14;
+  if (store?.name) {
+    doc.fontSize(7).fillColor('#888888')
+       .text(`Dispatched from: ${store.name}${store.city ? `, ${store.city}` : ''}`, 40, storeLineY);
+    storeLineY += 11;
   }
 
   /* Invoice meta — right column */
@@ -70,8 +93,9 @@ export async function generateInvoice(order, store) {
   doc.text(`Invoice No: ${order.orderNumber}`,          360, 62, { width: 195, align: 'right' });
   doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`, 360, 74, { width: 195, align: 'right' });
   doc.text(`Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`, 360, 86, { width: 195, align: 'right' });
+  doc.text('Reverse Charge: No', 360, 98, { width: 195, align: 'right' });
 
-  const hdrBottom = 115;
+  const hdrBottom = Math.max(storeLineY, 110) + 6;
   drawHLine(doc, hdrBottom);
 
   /* ── BILL TO ─────────────────────────────────────────── */
@@ -84,6 +108,11 @@ export async function generateInvoice(order, store) {
   const cityLine = [addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
   if (cityLine) doc.text(cityLine,                      40, doc.y);
   if (addr.phone) doc.text(`Ph: ${addr.phone}`,         40, doc.y);
+
+  // Place of supply drives CGST+SGST vs IGST below — state the delivery
+  // state explicitly rather than leaving it implied by the column headers.
+  doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#333333')
+     .text(`Place of Supply: ${addr.state || '—'}`, 40, doc.y + 4);
 
   /* Payment info — right column */
   doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#333333').text('PAYMENT', 360, hdrBottom + 8, { width: 195, align: 'right' });
@@ -124,11 +153,16 @@ export async function generateInvoice(order, store) {
     const sgstRate = taxType === 'intra' ? gstSlab / 2 : 0;
     const igstRate = taxType === 'inter' ? gstSlab : 0;
 
+    // Flag a missing HSN code visibly rather than leaving the cell blank —
+    // a blank cell reads as "nothing to report," which understates a real
+    // catalog data gap that needs fixing (Product.hsnCode not set).
+    const hsnCell = item.hsnCode || 'MISSING';
+
     const cols = taxType === 'intra'
       ? [srNo, `${item.name}${item.size ? ` (${item.size})` : ''}${item.colour ? ` / ${item.colour}` : ''}`,
-         item.hsnCode || '', item.qty, INR(lineTotal), INR(taxableAmt), pct(cgstRate), INR(cgst), pct(sgstRate), INR(sgst)]
+         hsnCell, item.qty, INR(lineTotal), INR(taxableAmt), pct(cgstRate), INR(cgst), pct(sgstRate), INR(sgst)]
       : [srNo, `${item.name}${item.size ? ` (${item.size})` : ''}${item.colour ? ` / ${item.colour}` : ''}`,
-         item.hsnCode || '', item.qty, INR(lineTotal), INR(taxableAmt), pct(igstRate), INR(igst), '', ''];
+         hsnCell, item.qty, INR(lineTotal), INR(taxableAmt), pct(igstRate), INR(igst), '', ''];
 
     if (rowY > 720) { doc.addPage(); rowY = 40; }
 
@@ -179,7 +213,7 @@ export async function generateInvoice(order, store) {
   const footerY = 790;
   drawHLine(doc, footerY - 5);
   doc.fontSize(7).font('Helvetica').fillColor('#888888')
-     .text('This is a computer-generated invoice. No signature required.', 40, footerY, {
+     .text('This is a computer-generated invoice and does not require a physical signature.', 40, footerY, {
        width: pageW, align: 'center'
      });
 
