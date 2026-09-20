@@ -1,7 +1,7 @@
 import Order from '../models/Order.js';
 import Store from '../models/Store.js';
 import PurchaseInvoice from '../models/PurchaseInvoice.js';
-import { gstRates } from '../utils/taxCalculator.js';
+import { gstRates, splitInclusivePrice } from '../utils/taxCalculator.js';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 
@@ -152,23 +152,24 @@ function computeHsnRows(orders) {
       if (!groups.has(key)) {
         groups.set(key, {
           hsnCode: item.hsnCode, description: item.name, taxType: o.taxType,
-          gstSlab: item.gstSlab, totalQty: 0, taxableAmt: 0
+          gstSlab: item.gstSlab, totalQty: 0, lineTotal: 0
         });
       }
       const g = groups.get(key);
       const lineAmt = Number(item.unitPrice || 0) * Number(item.qty || 0);
       g.totalQty += o._gstSign * Number(item.qty || 0);
-      g.taxableAmt += o._gstSign * lineAmt;
+      g.lineTotal += o._gstSign * lineAmt; // GST-inclusive amount actually charged
     }
   }
 
   return [...groups.values()]
     .map((r) => {
-      const { cgstRate, sgstRate, igstRate } = gstRates(r.gstSlab || 0, r.taxType);
-      const taxableAmt = round2(r.taxableAmt);
-      const cgst = round2((taxableAmt * cgstRate) / 100);
-      const sgst = round2((taxableAmt * sgstRate) / 100);
-      const igst = round2((taxableAmt * igstRate) / 100);
+      // Prices are GST-inclusive — reverse-derive taxable value + GST out of
+      // the charged line total via the shared splitInclusivePrice() helper
+      // (same source of truth as taxCalculator.js/invoiceGenerator.js),
+      // instead of applying gstRates() on top of an already-inclusive amount
+      // (which would double-count GST under the inclusive pricing model).
+      const { taxableAmt, cgst, sgst, igst } = splitInclusivePrice(r.lineTotal, r.gstSlab || 0, r.taxType);
       return {
         hsnCode:     r.hsnCode || 'N/A',
         description: r.description,
@@ -308,8 +309,14 @@ function splitOrderNilVsTaxable(order) {
   let nilAmt = 0, taxableAmt = 0;
   for (const item of order.items || []) {
     const lineAmt = Number(item.unitPrice || 0) * Number(item.qty || 0);
-    if (Number(item.gstSlab || 0) === 0) nilAmt += lineAmt;
-    else taxableAmt += lineAmt;
+    if (Number(item.gstSlab || 0) === 0) {
+      nilAmt += lineAmt; // nil-rated — no GST to reverse out, price IS the taxable value
+    } else {
+      // lineAmt is the GST-inclusive amount actually charged, not the taxable
+      // value — reverse-derive it via the shared splitInclusivePrice() helper
+      // so this matches order.billing.cgst/sgst/igst (already correct below).
+      taxableAmt += splitInclusivePrice(lineAmt, item.gstSlab, order.taxType).taxableAmt;
+    }
   }
   return { nilAmt: round2(nilAmt), taxableAmt: round2(taxableAmt) };
 }

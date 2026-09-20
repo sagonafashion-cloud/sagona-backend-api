@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { v2 as cloudinary } from 'cloudinary';
+import { splitInclusivePrice } from './taxCalculator.js';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -94,12 +95,15 @@ export async function generateInvoice(order, store) {
   drawHLine(doc, addrBottom);
 
   /* ── ITEMS TABLE ─────────────────────────────────────── */
-  const COL_W = [20, 130, 45, 40, 55, 40, 55, 40, 55, 35];
-  // Sr | Description | HSN | Qty | Unit Price | CGST%/IGST% | CGST/IGST | SGST% | SGST | Total
+  // Prices are GST-inclusive — GST is NOT added on top of "Price". It is shown
+  // as an informational breakdown: Taxable Value + GST (CGST+SGST or IGST) = Price.
+  // This uses the SAME splitInclusivePrice() helper as taxCalculator.js/calculateTax
+  // (the single shared source of truth) rather than recomputing tax independently.
+  const COL_W = [20, 125, 40, 30, 55, 55, 35, 45, 35, 55];
   const taxType = order.taxType || 'intra';
   const headers = taxType === 'intra'
-    ? ['#', 'Description', 'HSN', 'Qty', 'Unit Price', 'CGST%', 'CGST', 'SGST%', 'SGST', 'Total']
-    : ['#', 'Description', 'HSN', 'Qty', 'Unit Price', 'IGST%', 'IGST', '', '', 'Total'];
+    ? ['#', 'Description', 'HSN', 'Qty', 'Price', 'Taxable Val', 'CGST%', 'CGST', 'SGST%', 'SGST']
+    : ['#', 'Description', 'HSN', 'Qty', 'Price', 'Taxable Val', 'IGST%', 'IGST', '', ''];
 
   const tableTop = addrBottom + 8;
 
@@ -112,27 +116,19 @@ export async function generateInvoice(order, store) {
   let srNo = 1;
 
   for (const item of order.items || []) {
-    const gstSlab = item.gstSlab || 0;
-    let cgstRate = 0, sgstRate = 0, igstRate = 0;
-    let cgstAmt = 0, sgstAmt = 0, igstAmt = 0;
+    const gstSlab   = item.gstSlab || 0;
+    const lineTotal = item.unitPrice * item.qty; // GST-inclusive — what was actually charged
+    const { taxableAmt, cgst, sgst, igst } = splitInclusivePrice(lineTotal, gstSlab, taxType);
 
-    if (taxType === 'intra') {
-      cgstRate = gstSlab / 2;
-      sgstRate = gstSlab / 2;
-      cgstAmt  = item.cgst || ((item.unitPrice * item.qty * cgstRate) / 100);
-      sgstAmt  = item.sgst || cgstAmt;
-    } else {
-      igstRate = gstSlab;
-      igstAmt  = item.igst || ((item.unitPrice * item.qty * igstRate) / 100);
-    }
-
-    const total = item.unitPrice * item.qty + cgstAmt + sgstAmt + igstAmt;
+    const cgstRate = taxType === 'intra' ? gstSlab / 2 : 0;
+    const sgstRate = taxType === 'intra' ? gstSlab / 2 : 0;
+    const igstRate = taxType === 'inter' ? gstSlab : 0;
 
     const cols = taxType === 'intra'
       ? [srNo, `${item.name}${item.size ? ` (${item.size})` : ''}${item.colour ? ` / ${item.colour}` : ''}`,
-         item.hsnCode || '', item.qty, INR(item.unitPrice), pct(cgstRate), INR(cgstAmt), pct(sgstRate), INR(sgstAmt), INR(total)]
+         item.hsnCode || '', item.qty, INR(lineTotal), INR(taxableAmt), pct(cgstRate), INR(cgst), pct(sgstRate), INR(sgst)]
       : [srNo, `${item.name}${item.size ? ` (${item.size})` : ''}${item.colour ? ` / ${item.colour}` : ''}`,
-         item.hsnCode || '', item.qty, INR(item.unitPrice), pct(igstRate), INR(igstAmt), '', '', INR(total)];
+         item.hsnCode || '', item.qty, INR(lineTotal), INR(taxableAmt), pct(igstRate), INR(igst), '', ''];
 
     if (rowY > 720) { doc.addPage(); rowY = 40; }
 
@@ -143,20 +139,20 @@ export async function generateInvoice(order, store) {
   }
 
   /* ── TOTALS ──────────────────────────────────────────── */
+  // Prices are GST-inclusive: Subtotal + Shipping = Grand Total, with NO GST
+  // added on top. The CGST/SGST/IGST split is shown as a separate, visually
+  // distinct informational note — not as a row that sums into Grand Total —
+  // so it can't be misread as an additional charge.
   const billing   = order.billing || {};
   const totalsX   = 370;
   const totalsW   = 185;
   rowY += 10;
 
   const totalsData = [
-    ['Subtotal',    INR(billing.subtotal    || billing.taxableAmount)],
-    ['Shipping',    INR(billing.shippingCharge || 0)],
-    ...(taxType === 'intra'
-      ? [['CGST', INR(billing.cgst)], ['SGST', INR(billing.sgst)]]
-      : [['IGST', INR(billing.igst)]]
-    ),
-    ...(billing.discount ? [['Discount', `-${INR(billing.discount)}`]] : []),
-    ['Grand Total', INR(billing.grandTotal)]
+    ['Subtotal (GST-incl.)', INR(billing.subtotal || billing.taxableAmount)],
+    ['Shipping',             INR(billing.shippingCharge || 0)],
+    ...(billing.discount ? [['Savings vs MRP', `-${INR(billing.discount)}`]] : []),
+    ['Grand Total',          INR(billing.grandTotal)]
   ];
 
   for (const [label, value] of totalsData) {
@@ -169,6 +165,15 @@ export async function generateInvoice(order, store) {
     if (isGrand) drawHLine(doc, rowY - 2, totalsX, totalsX + totalsW);
     rowY += isGrand ? 14 : 12;
   }
+
+  // Informational GST breakdown — already included in the price above, not additive.
+  rowY += 4;
+  const gstNote = taxType === 'intra'
+    ? `Includes GST — CGST ${INR(billing.cgst)} + SGST ${INR(billing.sgst)} (already part of the price above)`
+    : `Includes GST — IGST ${INR(billing.igst)} (already part of the price above)`;
+  doc.fontSize(6.5).font('Helvetica').fillColor('#888888')
+     .text(gstNote, totalsX, rowY, { width: totalsW, align: 'left' });
+  rowY += 10;
 
   /* ── FOOTER ──────────────────────────────────────────── */
   const footerY = 790;

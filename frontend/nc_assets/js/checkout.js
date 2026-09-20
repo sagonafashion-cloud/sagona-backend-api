@@ -12,9 +12,49 @@ const pointsEl      = document.querySelector('#loyalty-points');
 const itemsPreview  = document.querySelector('#order-items-preview');
 
 const INR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-const GST_RATE = 0.05;
 const FREE_SHIP = 999;
 const SHIP_CHARGE = 99;
+
+// Product prices are GST-inclusive — GST is never added on top of the price.
+// This mirrors backend/utils/taxCalculator.js's splitInclusivePrice(): it's
+// purely for the informational "Includes GST: ₹X" line, using each item's own
+// gstSlab (never a flat assumed rate). The backend remains the authoritative
+// source for the actual amount charged/verified.
+function splitInclusivePrice(lineTotal, gstSlab) {
+  const rate = Number(gstSlab || 0);
+  if (rate <= 0) return { taxableAmt: lineTotal, gstAmount: 0 };
+  const taxableAmt = lineTotal / (1 + rate / 100);
+  return { taxableAmt, gstAmount: lineTotal - taxableAmt };
+}
+
+// productId -> gstSlab, fetched once from the public product endpoint since
+// cart items in localStorage don't carry each product's GST rate.
+const gstSlabMap = {};
+
+async function loadGstSlabs() {
+  const ids = [...new Set(cart.map((i) => i.id || i._id).filter(Boolean))];
+  await Promise.all(ids.map(async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/products/${id}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json?.data && typeof json.data.gstSlab === 'number') {
+        gstSlabMap[id] = json.data.gstSlab;
+      }
+    } catch { /* informational display only — silently skip on failure */ }
+  }));
+}
+
+function computeGstBreakdown() {
+  return cart.reduce((sum, item) => {
+    const pid = item.id || item._id;
+    // Fallback to 5% only if the fetch above failed for this product —
+    // display-only estimate; never affects what's actually charged/verified.
+    const gstSlab = gstSlabMap[pid] ?? 5;
+    const lineTotal = (item.price || 0) * (item.quantity || 1);
+    return sum + splitInclusivePrice(lineTotal, gstSlab).gstAmount;
+  }, 0);
+}
 
 const cart = getCart();
 const auth = getAuth();
@@ -78,11 +118,13 @@ function getBirthdayDiscount(dateVal) {
 }
 
 function updateTotal() {
+  // Prices are GST-inclusive — GST is informational only and is NOT added on
+  // top. Grand Total = (subtotal - birthday discount) + shipping.
   const discount  = getBirthdayDiscount(document.querySelector('#birthday')?.value);
   const taxable   = Math.max(subtotal - discount, 0);
   const shipping  = taxable >= FREE_SHIP ? 0 : SHIP_CHARGE;
-  const gstAmt    = Math.round(taxable * GST_RATE);
-  const grand     = taxable + shipping + gstAmt;
+  const gstAmt    = Math.round(computeGstBreakdown());
+  const grand     = taxable + shipping;
 
   if (discountEl) discountEl.textContent = discount;
   if (subtotalEl) subtotalEl.textContent = INR(subtotal);
@@ -92,7 +134,12 @@ function updateTotal() {
 }
 
 document.querySelector('#birthday')?.addEventListener('change', updateTotal);
+
+// Render immediately with the 5% fallback so the page isn't blank, then
+// refresh once real per-product gstSlab values arrive (informational only —
+// never affects the Grand Total, which is already correct on first render).
 updateTotal();
+loadGstSlabs().then(updateTotal);
 
 /* ── pincode autofill ── */
 window.autofillAddress = (pincode) => fetchPincodeData(pincode, 'city', 'state', 'pincode-status');

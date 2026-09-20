@@ -39,12 +39,53 @@
 
   <script type="module">
     import { getCart, saveCart } from '/nc_assets/js/storage.js';
-    import { escapeHtml, sanitizeUrl } from '/nc_assets/js/config.js';
+    import { escapeHtml, sanitizeUrl, API_BASE } from '/nc_assets/js/config.js';
 
     const INR      = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-    const GST_RATE = 0.05; // 5% display estimate (actual calculated server-side)
     const FREE_SHIP_THRESHOLD = 999;
     const SHIP_CHARGE = 99;
+
+    // Product prices are GST-inclusive — GST is never added on top of the
+    // price. Mirrors backend/utils/taxCalculator.js's splitInclusivePrice()
+    // and checkout.js's identical helper: purely an informational "Includes
+    // GST: ₹X" line, using each item's own gstSlab (never a flat assumed
+    // rate). The backend remains the authoritative source for the amount
+    // actually charged/verified at checkout.
+    function splitInclusivePrice(lineTotal, gstSlab) {
+      const rate = Number(gstSlab || 0);
+      if (rate <= 0) return { taxableAmt: lineTotal, gstAmount: 0 };
+      const taxableAmt = lineTotal / (1 + rate / 100);
+      return { taxableAmt, gstAmount: lineTotal - taxableAmt };
+    }
+
+    // productId -> gstSlab, fetched once from the public product endpoint
+    // since cart items in localStorage don't carry each product's GST rate.
+    const gstSlabMap = {};
+
+    async function loadGstSlabs(cart) {
+      const ids = [...new Set(cart.map((i) => i.id || i._id).filter(Boolean))];
+      await Promise.all(ids.map(async (id) => {
+        try {
+          const res = await fetch(`${API_BASE}/products/${id}`);
+          if (!res.ok) return;
+          const json = await res.json();
+          if (json?.data && typeof json.data.gstSlab === 'number') {
+            gstSlabMap[id] = json.data.gstSlab;
+          }
+        } catch { /* informational display only — silently skip on failure */ }
+      }));
+    }
+
+    function computeGstBreakdown(cart) {
+      return cart.reduce((sum, item) => {
+        const pid = item.id || item._id;
+        // Fallback to 5% only if the fetch above failed for this product —
+        // display-only estimate; never affects what's actually charged.
+        const gstSlab = gstSlabMap[pid] ?? 5;
+        const lineTotal = (item.price || 0) * (item.quantity || 1);
+        return sum + splitInclusivePrice(lineTotal, gstSlab).gstAmount;
+      }, 0);
+    }
 
     function render() {
       const root = document.getElementById('cart-root');
@@ -62,8 +103,10 @@
 
       const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
       const shipping = subtotal >= FREE_SHIP_THRESHOLD ? 0 : SHIP_CHARGE;
-      const gstAmt   = Math.round(subtotal * GST_RATE);
-      const total    = subtotal + shipping + gstAmt;
+      // GST is informational only — already included in `subtotal`, not
+      // added on top. Total = subtotal + shipping.
+      const gstAmt   = Math.round(computeGstBreakdown(cart));
+      const total    = subtotal + shipping;
 
       root.innerHTML = `
         <table class="cart-table" style="width:100%">
@@ -107,11 +150,11 @@
 
         <div class="cart-summary-box">
           <h3>Order Summary</h3>
-          <div class="summary-row"><span>Subtotal</span><span>${INR(subtotal)}</span></div>
+          <div class="summary-row"><span>Subtotal (GST-incl.)</span><span>${INR(subtotal)}</span></div>
           <div class="summary-row"><span>Shipping</span><span class="${shipping === 0 ? 'free' : ''}">${shipping === 0 ? 'Free' : INR(shipping)}</span></div>
-          <div class="summary-row"><span>GST (est. 5%)</span><span>${INR(gstAmt)}</span></div>
           <div class="summary-row total"><span>Total</span><span style="color:var(--gold)">${INR(total)}</span></div>
-          <p class="gst-note">* Final GST calculated at checkout based on your state</p>
+          <p class="gst-note">Includes GST: ${INR(gstAmt)} (already part of the price shown, not an extra charge)</p>
+          <p class="gst-note">* GST is included in the displayed price; exact split shown at checkout</p>
           <a href="checkout.html" class="btn gold" style="display:block;text-align:center;margin-top:20px">Proceed to Checkout</a>
           <a href="shop.html" class="btn ghost" style="display:block;text-align:center;margin-top:8px">Continue Shopping</a>
         </div>`;
@@ -140,7 +183,11 @@
       render();
     });
 
+    // Render immediately with the 5% fallback so the page isn't blank, then
+    // refresh once real per-product gstSlab values arrive (informational
+    // only — never affects Total, which is already correct on first render).
     render();
+    loadGstSlabs(getCart()).then(render);
   </script>
   <script type="module" src="/nc_assets/js/tryOn.js"></script>
 
