@@ -23,6 +23,7 @@ import deliveryRoutes    from './routes/deliveryRoutes.js';
 import chatRoutes        from './routes/chatRoutes.js';
 import sitemapRoutes     from './routes/sitemapRoutes.js';
 import supportRoutes     from './routes/supportRoutes.js';
+import invoiceRoutes     from './routes/invoiceRoutes.js';
 
 // ── Admin routes ───────────────────────────────────────────
 import adminAuthRoutes    from './routes/adminAuthRoutes.js';
@@ -191,6 +192,7 @@ app.use('/api/chat',     chatRoutes);
 app.use('/api/support',  supportRoutes);
 app.use('/api/sizing',   sizingRoutes);
 app.use('/api/tryon',   tryOnRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // ── Admin API ──────────────────────────────────────────────
 app.use('/api/admin/auth',      adminAuthRoutes);

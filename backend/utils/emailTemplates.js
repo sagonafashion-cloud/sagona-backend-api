@@ -3,6 +3,14 @@
 // into these HTML email templates, so it needs escaping before insertion.
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// Invoice PDFs are served by our own backend (see routes/invoiceRoutes.js),
+// not linked directly to Cloudinary — Cloudinary blocks public delivery of
+// raw PDF files by default, which is why the old order.invoiceUrl link
+// never worked. This route regenerates the PDF from the order's own data
+// on request, so it works with no login session, exactly like this link
+// needs to for someone reading the email.
+const invoiceDownloadUrl = (orderNumber) => `https://sagona-backend-api.onrender.com/api/invoices/${encodeURIComponent(orderNumber)}`;
+
 /* ── shared layout ── */
 const layout = (title, body) => `<!DOCTYPE html>
 <html lang="en">
@@ -153,7 +161,7 @@ export const orderConfirmationTemplate = (order) => {
 
     ${order.invoiceUrl ? `${divider}
     <p style="font-size:13px;color:#555550;margin:0 0 16px;">Your tax invoice is ready:</p>
-    ${btn('Download Invoice', order.invoiceUrl)}` : ''}
+    ${btn('Download Invoice', invoiceDownloadUrl(order.orderNumber))}` : ''}
 
     ${divider}
     ${p('We will notify you when your order is dispatched. Questions? Reply to this email or visit <a href="https://sagona.in" style="color:#C9A84C;">sagona.in</a>.')}
@@ -214,7 +222,7 @@ export const statusUpdateTemplate = (order) => {
     ${order.invoiceUrl && order.status === 'delivered' ? `
     ${divider}
     ${p('Your invoice is available for download:')}
-    ${btn('Download Invoice', order.invoiceUrl)}` : ''}
+    ${btn('Download Invoice', invoiceDownloadUrl(order.orderNumber))}` : ''}
 
     ${divider}
     ${p('Need help? Contact us at <a href="mailto:care@sagona.in" style="color:#C9A84C;">care@sagona.in</a>')}
