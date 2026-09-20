@@ -85,11 +85,15 @@ const itemsTable = (items = []) => `
   </tbody>
 </table>`;
 
+// Prices are GST-inclusive — GST is NOT added on top of Subtotal. It's shown
+// as a separate, visually distinct informational line (small/muted) below the
+// addition, not a row that sums into Grand Total, so it can't be misread as
+// an extra charge. Grand Total = Subtotal + Shipping only.
 const billingBlock = (billing = {}, taxType = 'intra') => `
 <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
        style="font-size:13px;border-collapse:collapse;">
   <tr>
-    <td style="padding:6px 0;color:#555550;">Subtotal</td>
+    <td style="padding:6px 0;color:#555550;">Subtotal (GST-incl.)</td>
     <td style="padding:6px 0;text-align:right;">${INR(billing.subtotal)}</td>
   </tr>
   ${billing.shippingCharge > 0 ? `
@@ -101,23 +105,17 @@ const billingBlock = (billing = {}, taxType = 'intra') => `
     <td style="padding:6px 0;color:#555550;">Shipping</td>
     <td style="padding:6px 0;text-align:right;color:#16a34a;">Free</td>
   </tr>`}
-  ${taxType === 'intra' ? `
-  <tr>
-    <td style="padding:6px 0;color:#555550;">CGST</td>
-    <td style="padding:6px 0;text-align:right;">${INR(billing.cgst)}</td>
-  </tr>
-  <tr>
-    <td style="padding:6px 0;color:#555550;">SGST</td>
-    <td style="padding:6px 0;text-align:right;">${INR(billing.sgst)}</td>
-  </tr>` : `
-  <tr>
-    <td style="padding:6px 0;color:#555550;">IGST</td>
-    <td style="padding:6px 0;text-align:right;">${INR(billing.igst)}</td>
-  </tr>`}
   <tr style="border-top:2px solid #0A0A0A;">
     <td style="padding:10px 0;font-weight:700;font-size:15px;">Grand Total</td>
     <td style="padding:10px 0;text-align:right;font-weight:700;font-size:15px;color:#C9A84C;">
       ${INR(billing.grandTotal)}
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="padding:8px 0 0;color:#999990;font-size:11px;">
+      ${taxType === 'intra'
+        ? `Includes GST — CGST ${INR(billing.cgst)} + SGST ${INR(billing.sgst)} (already part of the price above, not an extra charge)`
+        : `Includes GST — IGST ${INR(billing.igst)} (already part of the price above, not an extra charge)`}
     </td>
   </tr>
 </table>`;
