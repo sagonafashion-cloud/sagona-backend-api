@@ -1844,7 +1844,7 @@ async function loadGst() {
   const from = document.getElementById('gst-from')?.value;
   const to   = document.getElementById('gst-to')?.value;
   const tbody = document.getElementById('gst-body');
-  tbody.innerHTML = `<tr><td colspan="6" class="loading">Loading…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" class="loading">Loading…</td></tr>`;
 
   try {
     const params = new URLSearchParams();
@@ -1857,15 +1857,16 @@ async function loadGst() {
       ? items.map((r) => `
         <tr>
           <td>${r.hsnCode || '—'}</td>
+          <td>${r.totalQty ?? '—'}</td>
           <td>${INR(r.taxableAmt)}</td>
           <td>${INR(r.cgst)}</td>
           <td>${INR(r.sgst)}</td>
           <td>${INR(r.igst)}</td>
           <td>${INR(r.totalTax ?? (Number(r.cgst || 0) + Number(r.sgst || 0) + Number(r.igst || 0)))}</td>
         </tr>`).join('')
-      : `<tr><td colspan="6" class="loading">No data for selected range.</td></tr>`;
+      : `<tr><td colspan="7" class="loading">No data for selected range.</td></tr>`;
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="loading">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading">${err.message}</td></tr>`;
   }
 }
 
