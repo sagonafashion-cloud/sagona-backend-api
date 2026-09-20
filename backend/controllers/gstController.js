@@ -47,68 +47,139 @@ const parseDates = (query) => ({
   to:   query.to   ? new Date(query.to)   : new Date()
 });
 
-// 'returned' is excluded alongside 'cancelled' so a reversed sale doesn't
-// keep inflating GST totals forever — there's no credit-note/reversal model
-// in this codebase, so the only way to keep these reports honest is to drop
-// returned orders from the source data entirely. This mirrors the exclusion
-// analyticsController.js already applies to revenue (`$nin: ['cancelled',
-// 'returned']`); GST reporting had fallen out of sync with that behavior.
-const baseMatch = (from, to, storeId) => {
-  const match = {
-    createdAt: { $gte: from, $lte: to },
-    status: { $nin: ['cancelled', 'returned'] }
-  };
-  if (storeId) match['items.storeId'] = storeId;
-  return match;
-};
+// Order statuses that represent a sale no longer counted as GST-liable.
+// 'return_requested' is included pre-emptively (not just 'cancelled' and
+// 'returned') so a pending return stops inflating totals while it's being
+// processed, rather than waiting for admin approval to catch up.
+const REVERSED_STATUSES = ['cancelled', 'returned', 'return_requested'];
 
-/* ── pipeline shared across reports ──
-   Grouped by productId (not hsnCode): hsnCode is an optional per-line
-   snapshot field, and multiple distinct products with a blank/shared HSN
-   code used to collapse into a single mislabeled row (description picked via
-   $first from whichever item the aggregation happened to see first).
-   Tax is NOT summed from order-level billing.cgst/sgst/igst here — those are
-   whole-order totals, so summing them per unwound line item double- (or
-   triple-, etc.) counts an order's tax across every group its items land in.
-   Instead this only accumulates qty/taxable amount per line, and callers
-   derive cgst/sgst/igst from taxableAmt + gstSlab + taxType via gstRates(),
-   the same per-line tax math already used by the Phase 4 summary builders. */
-const hsnPipeline = (match) => [
-  { $match: match },
-  { $unwind: '$items' },
-  {
-    $group: {
-      _id: { productId: '$items.productId', taxType: '$taxType' },
-      hsnCode:     { $first: '$items.hsnCode' },
-      description: { $first: '$items.name' },
-      gstSlab:     { $first: '$items.gstSlab' },
-      totalQty:    { $sum: '$items.qty' },
-      taxableAmt:  { $sum: { $multiply: ['$items.unitPrice', '$items.qty'] } }
+// The date a cancellation/return took effect — used to decide which GST
+// period absorbs it (see getPeriodOrders below). Preference order, most to
+// least authoritative:
+//   1. returnRequest.resolvedAt — stamped the moment an admin approves/
+//      rejects a return (orderController.actionReturn); the most accurate
+//      signal once status is 'returned'.
+//   2. returnRequest.requestedAt — stamped when the customer files the
+//      return (orderController.initiateReturn); used while still
+//      'return_requested', before resolvedAt exists.
+//   3. updatedAt — fallback for paths with no dedicated timestamp
+//      (customer cancelOrder, legacy adminInitiateReturn, admin
+//      updateOrderStatus). This assumes nothing else touches the order
+//      after it's cancelled/returned — true for this codebase's lifecycle
+//      today, but worth knowing if that ever changes, since an unrelated
+//      later edit would shift updatedAt and misattribute the period.
+function reversalEventDate(order) {
+  if (order.returnRequest?.resolvedAt)  return new Date(order.returnRequest.resolvedAt);
+  if (order.returnRequest?.requestedAt) return new Date(order.returnRequest.requestedAt);
+  return new Date(order.updatedAt || order.createdAt);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PERIOD-AWARE ORDER SET — cross-quarter cancel/return handling
+
+   GST liability attaches when the invoice is generated (order placement for
+   COD, payment confirmation for online — see orderController.js /
+   paymentController.js), not at shipment or delivery. So a sale that was
+   valid at invoice time must stay reported in THAT period even if the order
+   is later cancelled/returned — silently erasing it every time the report
+   is regenerated (the old behavior) retroactively changes a period's
+   numbers. Real GST practice instead reverses a sale with a credit note
+   dated in the period the cancellation/return actually happens, which
+   reduces THAT period's liability instead. There's no credit-note ledger in
+   this codebase, so this reproduces the same net effect directly from
+   Order data:
+     • Reversed within the SAME period it was created  → nets to zero,
+       omitted entirely (equivalent to invoice + same-period credit note).
+     • Created in-period, reversed AFTER the period ends (or never)
+                                                          → included normally;
+       it was a valid sale as of this period's close.
+     • Created in an EARLIER period, reversed WITHIN this period
+                                                          → included as a
+       negative adjustment (`_gstSign: -1`, `isAdjustment: true`) — the
+       auto-carry-forward into the next GST calculation the business asked
+       for.
+
+   Every consumer below must sum `sign * value`, never assume sign is +1. */
+async function getPeriodOrders(from, to, storeId) {
+  const storeFilter = storeId ? { 'items.storeId': storeId } : {};
+  const projection = 'orderNumber customer shippingAddress billing taxType items status returnRequest createdAt updatedAt invoiceUrl payment';
+
+  const [inPeriod, priorReversed] = await Promise.all([
+    Order.find({ ...storeFilter, createdAt: { $gte: from, $lte: to } }).select(projection).lean(),
+    // Only orders created before this period AND currently in a reversed
+    // status can possibly need a cross-period adjustment here — narrowing on
+    // both keeps this query cheap since reversals are a small minority.
+    Order.find({ ...storeFilter, createdAt: { $lt: from }, status: { $in: REVERSED_STATUSES } })
+      .select(projection).lean()
+  ]);
+
+  const rows = [];
+  for (const o of inPeriod) {
+    if (REVERSED_STATUSES.includes(o.status)) {
+      const evt = reversalEventDate(o);
+      if (evt >= from && evt <= to) continue; // same-period reversal → net zero, omit
     }
-  },
-  { $sort: { taxableAmt: -1 } }
-];
+    rows.push({ ...o, _gstSign: 1 });
+  }
+  for (const o of priorReversed) {
+    const evt = reversalEventDate(o);
+    if (evt >= from && evt <= to) {
+      rows.push({ ...o, _gstSign: -1, isAdjustment: true });
+    }
+  }
+  rows.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  return rows;
+}
 
-// Shared by getGstr1, getHsnSummary and exportGstReport(type=hsn) so the
-// productId-grouping + per-line tax derivation only lives in one place.
-async function computeHsnRows(match) {
-  const raw = await Order.aggregate(hsnPipeline(match));
-  return raw.map((r) => {
-    const { cgstRate, sgstRate, igstRate } = gstRates(r.gstSlab || 0, r._id.taxType);
-    const taxableAmt = round2(r.taxableAmt);
-    const cgst = round2((taxableAmt * cgstRate) / 100);
-    const sgst = round2((taxableAmt * sgstRate) / 100);
-    const igst = round2((taxableAmt * igstRate) / 100);
-    return {
-      hsnCode:     r.hsnCode || 'N/A',
-      description: r.description,
-      taxType:     r._id.taxType,
-      totalQty:    r.totalQty,
-      taxableAmt,
-      cgst, sgst, igst,
-      totalTax: round2(cgst + sgst + igst)
-    };
-  });
+// Shared by getGstr1, getHsnSummary and exportGstReport(type=hsn). Builds
+// per-product HSN rows from a period's signed order set (see
+// getPeriodOrders) — qty/taxableAmt are summed with each order's sign, so a
+// prior-period order reversed in this period subtracts its quantity/value
+// instead of just disappearing. Grouped by productId (not hsnCode): hsnCode
+// is an optional per-line snapshot field, and multiple distinct products
+// with a blank/shared HSN code used to collapse into a single mislabeled
+// row. Tax is NOT summed from order-level billing.cgst/sgst/igst — those are
+// whole-order totals, so summing them per line item would double/triple
+// count an order's tax across every group its items land in. Instead this
+// only accumulates qty/taxable amount per line, then derives cgst/sgst/igst
+// from taxableAmt + gstSlab + taxType via gstRates(), the same per-line tax
+// math already used by the Phase 4 summary builders.
+function computeHsnRows(orders) {
+  const groups = new Map();
+  for (const o of orders) {
+    for (const item of o.items || []) {
+      const key = `${item.productId}|${o.taxType}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          hsnCode: item.hsnCode, description: item.name, taxType: o.taxType,
+          gstSlab: item.gstSlab, totalQty: 0, taxableAmt: 0
+        });
+      }
+      const g = groups.get(key);
+      const lineAmt = Number(item.unitPrice || 0) * Number(item.qty || 0);
+      g.totalQty += o._gstSign * Number(item.qty || 0);
+      g.taxableAmt += o._gstSign * lineAmt;
+    }
+  }
+
+  return [...groups.values()]
+    .map((r) => {
+      const { cgstRate, sgstRate, igstRate } = gstRates(r.gstSlab || 0, r.taxType);
+      const taxableAmt = round2(r.taxableAmt);
+      const cgst = round2((taxableAmt * cgstRate) / 100);
+      const sgst = round2((taxableAmt * sgstRate) / 100);
+      const igst = round2((taxableAmt * igstRate) / 100);
+      return {
+        hsnCode:     r.hsnCode || 'N/A',
+        description: r.description,
+        taxType:     r.taxType,
+        totalQty:    r.totalQty,
+        taxableAmt,
+        cgst, sgst, igst,
+        totalTax: round2(cgst + sgst + igst)
+      };
+    })
+    .sort((a, b) => b.taxableAmt - a.taxableAmt);
 }
 
 /* ═══════════════════════════════════
@@ -117,13 +188,11 @@ async function computeHsnRows(match) {
 export const getGstr1 = async (req, res) => {
   try {
     const { from, to } = parseDates(req.query);
-    const match = baseMatch(from, to, req.query.storeId);
-
-    // B2C invoices (we don't capture GSTIN, so all are B2C)
-    const invoices = await Order.find(match)
-      .select('orderNumber customer shippingAddress billing taxType items createdAt')
-      .sort({ createdAt: 1 })
-      .lean();
+    // Signed order set (see getPeriodOrders) — a cross-period cancel/return
+    // shows up here as a negative-sign row instead of just vanishing, so
+    // b2cLarge/b2cSmall invoice lists below can include a reversal row
+    // (flagged isAdjustment: true) alongside normal sales.
+    const orders = await getPeriodOrders(from, to, req.query.storeId);
 
     // B2C(Large): interstate (taxType 'inter') supplies to unregistered
     // persons with invoice value > ₹1,00,000 — per Notification No. 12/2024
@@ -131,19 +200,19 @@ export const getGstr1 = async (req, res) => {
     // from the earlier ₹2.5 lakh AND restricted it to interstate supplies
     // only; intrastate orders of any value are always B2C(Small).
     const isB2cLarge = (o) => o.taxType === 'inter' && (o.billing?.grandTotal || 0) > 100000;
-    const b2cLarge = invoices.filter(isB2cLarge);
-    const b2cSmall = invoices.filter((o) => !isB2cLarge(o));
+    const b2cLarge = orders.filter(isB2cLarge);
+    const b2cSmall = orders.filter((o) => !isB2cLarge(o));
 
     // HSN summary
-    const hsnSummary = await computeHsnRows(match);
+    const hsnSummary = computeHsnRows(orders);
 
-    const totals = invoices.reduce(
+    const totals = orders.reduce(
       (acc, o) => ({
-        taxableAmt: acc.taxableAmt + (o.billing?.taxableAmount || o.billing?.subtotal || 0),
-        cgst:       acc.cgst       + (o.billing?.cgst          || 0),
-        sgst:       acc.sgst       + (o.billing?.sgst          || 0),
-        igst:       acc.igst       + (o.billing?.igst          || 0),
-        grandTotal: acc.grandTotal + (o.billing?.grandTotal    || 0)
+        taxableAmt: acc.taxableAmt + o._gstSign * (o.billing?.taxableAmount || o.billing?.subtotal || 0),
+        cgst:       acc.cgst       + o._gstSign * (o.billing?.cgst          || 0),
+        sgst:       acc.sgst       + o._gstSign * (o.billing?.sgst          || 0),
+        igst:       acc.igst       + o._gstSign * (o.billing?.igst          || 0),
+        grandTotal: acc.grandTotal + o._gstSign * (o.billing?.grandTotal    || 0)
       }),
       { taxableAmt: 0, cgst: 0, sgst: 0, igst: 0, grandTotal: 0 }
     );
@@ -153,8 +222,10 @@ export const getGstr1 = async (req, res) => {
       data: {
         reportType: 'GSTR-1',
         period: { from, to },
-        b2cLarge: { invoices: b2cLarge, count: b2cLarge.length },
-        b2cSmall: { invoices: b2cSmall, count: b2cSmall.length },
+        // count only actual sales (sign > 0); an included cross-period
+        // reversal row is a deduction, not an additional invoice
+        b2cLarge: { invoices: b2cLarge, count: b2cLarge.filter((o) => o._gstSign > 0).length },
+        b2cSmall: { invoices: b2cSmall, count: b2cSmall.filter((o) => o._gstSign > 0).length },
         hsnSummary,
         totals
       }
@@ -171,21 +242,19 @@ export const getGstr1 = async (req, res) => {
 export const getGstr3b = async (req, res) => {
   try {
     const { from, to } = parseDates(req.query);
-    const match = baseMatch(from, to, req.query.storeId);
+    const orders = await getPeriodOrders(from, to, req.query.storeId);
 
-    const [summary] = await Order.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: null,
-          totalTaxableSupplies: { $sum: { $ifNull: ['$billing.taxableAmount', '$billing.subtotal'] } },
-          totalCgst:            { $sum: '$billing.cgst' },
-          totalSgst:            { $sum: '$billing.sgst' },
-          totalIgst:            { $sum: '$billing.igst' },
-          orderCount:           { $sum: 1 }
-        }
-      }
-    ]);
+    const summary = orders.reduce(
+      (acc, o) => ({
+        totalTaxableSupplies: acc.totalTaxableSupplies + o._gstSign * (o.billing?.taxableAmount || o.billing?.subtotal || 0),
+        totalCgst:            acc.totalCgst            + o._gstSign * (o.billing?.cgst          || 0),
+        totalSgst:            acc.totalSgst            + o._gstSign * (o.billing?.sgst          || 0),
+        totalIgst:            acc.totalIgst            + o._gstSign * (o.billing?.igst          || 0),
+        // order count reflects actual sales this period, not reversal rows
+        orderCount:           acc.orderCount           + (o._gstSign > 0 ? 1 : 0)
+      }),
+      { totalTaxableSupplies: 0, totalCgst: 0, totalSgst: 0, totalIgst: 0, orderCount: 0 }
+    );
 
     const totalOutward = (summary?.totalCgst || 0) + (summary?.totalSgst || 0) + (summary?.totalIgst || 0);
 
@@ -250,8 +319,16 @@ const isB2cLargeOrder = (o) => o.taxType === 'inter' && (o.billing?.grandTotal |
 /* ── GSTR-1 Full Summary (outward supplies, from Order) ── */
 async function buildGstr1Summary(req) {
   const { from, to } = parseDates(req.query);
-  const match = baseMatch(from, to, req.query.storeId);
-  const orders = await Order.find(match).select('billing taxType items').lean();
+  // Signed order set (see getPeriodOrders): normal sales carry _gstSign +1
+  // and land in b2cLarge/b2cSmall as before; a cross-period cancel/return
+  // that resolves in THIS period carries _gstSign -1 and is routed into
+  // Credit/Debit Notes(Unregistered) instead — guest checkout never
+  // captures a GSTIN, so any reversal is inherently "unregistered". This
+  // bucket was always zero before (no credit-note model existed); it's now
+  // the statutorily-correct home for the auto-adjustment the business asked
+  // for, and it flows into the Total row via the existing reducer below
+  // since totals sum every bucket unconditionally, sign included.
+  const orders = await getPeriodOrders(from, to, req.query.storeId);
 
   const blank = () => ({ count: 0, taxable: 0, igst: 0, cgst: 0, sgst: 0, cess: 0, tax: 0, invoiceAmt: 0 });
   const buckets = {
@@ -261,6 +338,21 @@ async function buildGstr1Summary(req) {
 
   for (const o of orders) {
     const { nilAmt, taxableAmt } = splitOrderNilVsTaxable(o);
+
+    if (o._gstSign < 0) {
+      // Cross-period reversal adjustment — credit note dated in this
+      // period, not a fresh sale. Values already carry the sign, so this
+      // bucket ends up negative (a deduction against the period's total).
+      const r = buckets.cdnUnregistered;
+      r.count += 1;
+      r.taxable += o._gstSign * taxableAmt;
+      r.cgst += o._gstSign * Number(o.billing?.cgst || 0);
+      r.sgst += o._gstSign * Number(o.billing?.sgst || 0);
+      r.igst += o._gstSign * Number(o.billing?.igst || 0);
+      r.invoiceAmt += o._gstSign * Number(o.billing?.grandTotal || 0);
+      continue;
+    }
+
     const bucket = isB2cLargeOrder(o) ? buckets.b2cLarge : buckets.b2cSmall;
 
     bucket.count += 1;
@@ -277,9 +369,10 @@ async function buildGstr1Summary(req) {
     }
   }
 
-  // b2b / exports / credit-debit notes are always zero here: guest checkout
-  // never captures a buyer GSTIN (no B2B sales flow), and there's no
-  // export/SEZ sales channel or formal credit-note model in this codebase.
+  // b2b / exports are always zero here: guest checkout never captures a
+  // buyer GSTIN (no B2B sales flow), and there's no export/SEZ sales
+  // channel in this codebase. cdnRegistered is always zero for the same
+  // GSTIN reason — any credit note here is necessarily unregistered.
   // Rows are still emitted (not omitted) to match the statutory layout 1:1.
   const order = ['b2b', 'b2cLarge', 'b2cSmall', 'cdnRegistered', 'cdnUnregistered', 'exports', 'nilRated'];
   for (const k of order) {
@@ -413,8 +506,11 @@ export const getGstr2Summary = async (req, res) => {
    this mirrors the CAUTION already given for Phase 1-3's tax logic. */
 async function buildGstr3bSummary(req) {
   const { from, to } = parseDates(req.query);
-  const match = baseMatch(from, to, req.query.storeId);
-  const orders = await Order.find(match).select('billing taxType items').lean();
+  // Signed order set (see getPeriodOrders) — GSTR-3B has no separate
+  // credit-note line (it's already a net-total format), so a cross-period
+  // reversal is folded straight into these net sums via its sign rather
+  // than routed to a special bucket the way GSTR-1 does.
+  const orders = await getPeriodOrders(from, to, req.query.storeId);
 
   let outA = { taxable: 0, cgst: 0, sgst: 0, igst: 0 };
   let outBTaxable = 0;
@@ -422,12 +518,12 @@ async function buildGstr3bSummary(req) {
 
   for (const o of orders) {
     const { nilAmt, taxableAmt } = splitOrderNilVsTaxable(o);
-    outA.taxable += taxableAmt;
-    outA.cgst += Number(o.billing?.cgst || 0);
-    outA.sgst += Number(o.billing?.sgst || 0);
-    outA.igst += Number(o.billing?.igst || 0);
-    outBTaxable += nilAmt;
-    if (isB2cLargeOrder(o)) interUnregTaxable += taxableAmt; // guest checkout = always unregistered
+    outA.taxable += o._gstSign * taxableAmt;
+    outA.cgst += o._gstSign * Number(o.billing?.cgst || 0);
+    outA.sgst += o._gstSign * Number(o.billing?.sgst || 0);
+    outA.igst += o._gstSign * Number(o.billing?.igst || 0);
+    outBTaxable += o._gstSign * nilAmt;
+    if (isB2cLargeOrder(o)) interUnregTaxable += o._gstSign * taxableAmt; // guest checkout = always unregistered
   }
 
   const outwardTaxable      = { taxable: round2(outA.taxable), cgst: round2(outA.cgst), sgst: round2(outA.sgst), igst: round2(outA.igst), cess: 0, tax: round2(outA.cgst + outA.sgst + outA.igst) };
@@ -652,9 +748,9 @@ export const exportGstSummary = async (req, res) => {
 export const getHsnSummary = async (req, res) => {
   try {
     const { from, to } = parseDates(req.query);
-    const match = baseMatch(from, to, req.query.storeId);
+    const orders = await getPeriodOrders(from, to, req.query.storeId);
 
-    const rows = await computeHsnRows(match);
+    const rows = computeHsnRows(orders);
 
     const formatted = rows.map((r) => ({
       hsnCode:     r.hsnCode,
@@ -681,22 +777,19 @@ export const getHsnSummary = async (req, res) => {
 export const getInvoiceRegister = async (req, res) => {
   try {
     const { from, to } = parseDates(req.query);
-    const match = baseMatch(from, to, req.query.storeId);
+    // The signed set (see getPeriodOrders) mixes normal sales with any
+    // cross-period reversal adjustment rows that resolve in this period, so
+    // pagination has to happen in JS over the merged/sorted array rather
+    // than via Mongo skip/limit against a single query.
+    const orders = await getPeriodOrders(from, to, req.query.storeId);
 
     const page  = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(200, parseInt(req.query.limit) || 50);
     const skip  = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-      Order.find(match)
-        .select('orderNumber customer shippingAddress billing taxType createdAt invoiceUrl payment.status')
-        .sort({ createdAt: 1 })
-        .skip(skip).limit(limit)
-        .lean(),
-      Order.countDocuments(match)
-    ]);
+    const data = orders.slice(skip, skip + limit);
 
-    res.json({ success: true, data, total, page, limit, period: { from, to } });
+    res.json({ success: true, data, total: orders.length, page, limit, period: { from, to } });
   } catch (err) {
     console.error('getInvoiceRegister:', err);
     res.status(500).json({ success: false, message: 'Invoice register failed' });
@@ -711,12 +804,15 @@ export const exportGstReport = async (req, res) => {
     const { from, to } = parseDates(req.query);
     const format = (req.query.format || 'xlsx').toLowerCase();
     const type   = (req.query.type   || 'hsn').toLowerCase();
-    const match  = baseMatch(from, to, req.query.storeId);
+    // Signed order set (see getPeriodOrders) — shared by both export
+    // branches so a cross-period reversal adjustment appears in either
+    // export as a negative/labeled row instead of being silently dropped.
+    const orders = await getPeriodOrders(from, to, req.query.storeId);
 
     /* Build flat rows for the requested report type */
     let rows = [];
     if (type === 'hsn') {
-      const raw = await computeHsnRows(match);
+      const raw = computeHsnRows(orders);
       rows = raw.map((r) => ({
         'HSN Code':       r.hsnCode,
         'Description':    r.description,
@@ -729,23 +825,23 @@ export const exportGstReport = async (req, res) => {
         'Total Tax':      Number(INR(r.totalTax))
       }));
     } else {
-      // Invoice register rows
-      const invoices = await Order.find(match)
-        .select('orderNumber customer shippingAddress billing taxType createdAt payment')
-        .sort({ createdAt: 1 }).lean();
-
-      rows = invoices.map((o) => ({
+      // Invoice register rows — a cross-period reversal is labeled 'Credit
+      // Note' and dated on the actual reversal event (not order creation),
+      // and its money columns are pre-multiplied by _gstSign so they read
+      // as negative deductions in the exported file.
+      rows = orders.map((o) => ({
         'Invoice No':      o.orderNumber,
-        'Date':            new Date(o.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        'Date':            new Date(o.isAdjustment ? reversalEventDate(o) : o.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        'Type':            o.isAdjustment ? 'Credit Note' : 'Invoice',
         'Customer':        o.customer?.name || '',
         'State':           o.shippingAddress?.state || '',
         'Tax Type':        o.taxType,
-        'Taxable Amount':  Number(INR(o.billing?.taxableAmount || o.billing?.subtotal)),
-        'CGST':            Number(INR(o.billing?.cgst)),
-        'SGST':            Number(INR(o.billing?.sgst)),
-        'IGST':            Number(INR(o.billing?.igst)),
+        'Taxable Amount':  Number(INR(o._gstSign * (o.billing?.taxableAmount || o.billing?.subtotal || 0))),
+        'CGST':            Number(INR(o._gstSign * (o.billing?.cgst || 0))),
+        'SGST':            Number(INR(o._gstSign * (o.billing?.sgst || 0))),
+        'IGST':            Number(INR(o._gstSign * (o.billing?.igst || 0))),
         'Shipping':        Number(INR(o.billing?.shippingCharge)),
-        'Grand Total':     Number(INR(o.billing?.grandTotal)),
+        'Grand Total':     Number(INR(o._gstSign * (o.billing?.grandTotal || 0))),
         'Payment Status':  o.payment?.status || ''
       }));
     }
@@ -828,27 +924,25 @@ export const getConsolidated = async (req, res) => {
     const { from, to } = parseDates(req.query);
     const format = (req.query.format || 'json').toLowerCase();
 
-    const stateData = await Order.aggregate([
-      { $match: baseMatch(from, to) },
-      {
-        $group: {
-          _id: '$shippingAddress.state',
-          orderCount:   { $sum: 1 },
-          taxableAmt:   { $sum: { $ifNull: ['$billing.taxableAmount', '$billing.subtotal'] } },
-          cgst:         { $sum: '$billing.cgst' },
-          sgst:         { $sum: '$billing.sgst' },
-          igst:         { $sum: '$billing.igst' },
-          grandTotal:   { $sum: '$billing.grandTotal' }
-        }
-      },
-      { $sort: { grandTotal: -1 } },
-      {
-        $project: {
-          state:      '$_id',
-          orderCount: 1, taxableAmt: 1, cgst: 1, sgst: 1, igst: 1, grandTotal: 1, _id: 0
-        }
+    // Signed order set (see getPeriodOrders) grouped by state in JS — a
+    // cross-period reversal adjustment subtracts from its shipping state's
+    // totals instead of being silently dropped.
+    const orders = await getPeriodOrders(from, to);
+    const byState = new Map();
+    for (const o of orders) {
+      const state = o.shippingAddress?.state || null;
+      if (!byState.has(state)) {
+        byState.set(state, { state, orderCount: 0, taxableAmt: 0, cgst: 0, sgst: 0, igst: 0, grandTotal: 0 });
       }
-    ]);
+      const g = byState.get(state);
+      g.orderCount += (o._gstSign > 0 ? 1 : 0); // reversal rows adjust totals, not the invoice count
+      g.taxableAmt += o._gstSign * (o.billing?.taxableAmount || o.billing?.subtotal || 0);
+      g.cgst       += o._gstSign * (o.billing?.cgst || 0);
+      g.sgst       += o._gstSign * (o.billing?.sgst || 0);
+      g.igst       += o._gstSign * (o.billing?.igst || 0);
+      g.grandTotal += o._gstSign * (o.billing?.grandTotal || 0);
+    }
+    const stateData = [...byState.values()].sort((a, b) => b.grandTotal - a.grandTotal);
 
     const overallTotals = stateData.reduce(
       (acc, r) => ({
