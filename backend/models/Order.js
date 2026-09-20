@@ -11,7 +11,12 @@ const orderItemSchema = new mongoose.Schema({
   qty: { type: Number, required: true, min: 1 },
   unitPrice: { type: Number, required: true },
   mrp: { type: Number },
-  gstSlab: { type: Number, enum: [0, 5, 12, 18, 28], default: 0 },
+  // Kept in sync with Product.js's gstSlab enum — see that file's comment on
+  // the GST 2.0 rate reform (12/28 deprecated, 40 added, effective
+  // 22-Sep-2025). This is a snapshot of the product's slab at order time, so
+  // it must accept whatever values a product can currently carry, or order
+  // creation would fail for any item priced under the new 40% slab.
+  gstSlab: { type: Number, enum: [0, 5, 12, 18, 28, 40], default: 0 },
   hsnCode: { type: String },
   storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store' }
 }, { _id: false });

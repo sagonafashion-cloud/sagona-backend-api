@@ -42,7 +42,21 @@ const productSchema = new mongoose.Schema(
 
     /* ── pricing & GST ── */
     mrp: { type: Number, min: 0 },
-    gstSlab: { type: Number, enum: [0, 5, 12, 18, 28], default: 5 },
+    // Buying/cost price — super_admin visibility only. select:false mirrors
+    // AdminUser.js's password/twoFactorSecret pattern: excluded from every
+    // query by default, so public product routes (which do plain find()/
+    // findOne() with no field exclusions) never leak it. Must be explicitly
+    // requested with .select('+costPrice') by a super_admin-gated query.
+    costPrice: { type: Number, min: 0, select: false },
+    // GST 2.0 rate rationalization (effective 22-Sep-2025) abolished the 12%
+    // and 28% slabs, moving to a 0/5/18/40% structure. For apparel: garments
+    // ≤₹2,500 stay at 5%, garments >₹2,500 moved from 12% to 18%. 12 and 28
+    // are kept in the enum ONLY so existing products already tagged at those
+    // (now-defunct) rates don't fail validation on unrelated saves — they are
+    // deprecated for new/edited products and any product still carrying one
+    // needs manual reclassification, which is a business/CA decision and is
+    // intentionally NOT done automatically here.
+    gstSlab: { type: Number, enum: [0, 5, 12, 18, 28, 40], default: 5 },
     hsnCode: { type: String, trim: true },
 
     /* ── content ── */

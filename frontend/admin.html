@@ -166,6 +166,7 @@
       <div class="admin-nav-item" data-section="homepage">🖼 Homepage</div>
       <div class="admin-nav-item" data-section="analytics">📈 Analytics</div>
       <div class="admin-nav-item" data-section="gst">🧾 GST Reports</div>
+      <div class="admin-nav-item" data-section="purchaseInvoices">📥 Purchase Invoices</div>
       <div class="admin-nav-item" data-section="users">👤 Admin Users</div>
     </nav>
 
@@ -361,6 +362,84 @@
               <tr><th>HSN</th><th>Taxable Amt</th><th>CGST</th><th>SGST</th><th>IGST</th><th>Total Tax</th></tr>
             </thead>
             <tbody id="gst-body"><tr><td colspan="6" class="loading">Select a date range and click Load.</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- ── GSTR-1 Full Summary ── -->
+        <div class="admin-card" style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3>GSTR-1 — Full Summary</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn gold" id="gstr1-load-btn">Load</button>
+              <button class="btn ghost" id="gstr1-pdf-btn">Export PDF</button>
+              <button class="btn ghost" id="gstr1-xlsx-btn">Export Excel</button>
+            </div>
+          </div>
+          <div id="gstr1-period" style="font-size:13px;color:#777;margin-bottom:8px"></div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead>
+                <tr><th>SI No.</th><th>Particulars</th><th>Voucher Count</th><th>Taxable Value</th><th>Integrated Tax</th><th>Central Tax</th><th>State Tax</th><th>Cess</th><th>Tax Amount</th><th>Invoice Amount</th></tr>
+              </thead>
+              <tbody id="gstr1-body"><tr><td colspan="10" class="loading">Click Load to fetch the GSTR-1 Full Summary.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── GSTR-2 B2B (from Phase 3 vendor purchase invoices) ── -->
+        <div class="admin-card" style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3>GSTR-2 — B2B (Vendor Purchase Invoices)</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn gold" id="gstr2-load-btn">Load</button>
+              <button class="btn ghost" id="gstr2-pdf-btn">Export PDF</button>
+              <button class="btn ghost" id="gstr2-xlsx-btn">Export Excel</button>
+            </div>
+          </div>
+          <div id="gstr2-period" style="font-size:13px;color:#777;margin-bottom:8px"></div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead>
+                <tr><th>Type</th><th>Supplier</th><th>GSTIN</th><th>Invoice #</th><th>Date</th><th>Invoice Value</th><th>POS</th><th>RCM</th><th>Invoice Type</th><th>Rate</th><th>Taxable Value</th><th>IGST</th><th>CGST</th><th>SGST</th><th>Cess</th></tr>
+              </thead>
+              <tbody id="gstr2-body"><tr><td colspan="15" class="loading">Click Load to fetch the GSTR-2 B2B register.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── GSTR-3B Full Summary ── -->
+        <div class="admin-card" style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3>GSTR-3B — Full Summary</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn gold" id="gstr3b-load-btn">Load</button>
+              <button class="btn ghost" id="gstr3b-pdf-btn">Export PDF</button>
+              <button class="btn ghost" id="gstr3b-xlsx-btn">Export Excel</button>
+            </div>
+          </div>
+          <div id="gstr3b-period" style="font-size:13px;color:#777;margin-bottom:8px"></div>
+          <table class="admin-table">
+            <thead>
+              <tr><th>Table No.</th><th>Particulars</th><th>Taxable Value</th><th>Integrated Tax</th><th>Central Tax</th><th>State Tax</th><th>Cess</th><th>Tax Amount</th></tr>
+            </thead>
+            <tbody id="gstr3b-body"><tr><td colspan="8" class="loading">Click Load to fetch the GSTR-3B Full Summary.</td></tr></tbody>
+          </table>
+          <p style="font-size:12px;color:#a33;margin-top:10px">⚠ Simplified ITC / tax-payable calculation (no s.17(5) blocked-credit rules, no IGST-first utilisation order) — get CA sign-off before using this for an actual filing.</p>
+        </div>
+      </div>
+
+      <!-- ── PURCHASE INVOICES (super_admin only — enforced server-side) ── -->
+      <div id="section-purchaseInvoices" style="display:none">
+        <div class="section-header">
+          <h2>Purchase Invoices</h2>
+          <button class="btn gold" id="add-pi-btn">+ Add Purchase Invoice</button>
+        </div>
+        <div class="admin-card">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Vendor</th><th>Invoice #</th><th>Date</th><th>Type</th><th>Taxable Value</th><th>Tax</th><th>Invoice Value</th><th>Payment</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="pi-body"><tr><td colspan="9" class="loading">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>

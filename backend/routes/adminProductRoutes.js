@@ -5,7 +5,8 @@ import {
   adminUpdateProduct,
   adminArchiveProduct,
   adminBulkImport,
-  adminUpdateInventory
+  adminUpdateInventory,
+  adminGetProductCostPrice
 } from '../controllers/productController.js';
 import { parseProductFile, bulkUploadProducts } from '../controllers/bulkUploadController.js';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
@@ -35,6 +36,7 @@ router.post('/bulk-upload', adminProtect, canEdit, uploadLimiter, bulkUploadProd
 router.post('/bulk', adminProtect, requireRole('super_admin', 'content_editor'), adminBulkImport);
 router.post('/', adminProtect, canEdit, createProductRules, validate, adminCreateProduct);
 router.put('/:id/inventory', adminProtect, requireRole('super_admin', 'store_manager', 'content_editor'), mongoIdParam('id'), validate, adminUpdateInventory);
+router.get('/:id/cost-price', adminProtect, requireRole('super_admin'), mongoIdParam('id'), validate, adminGetProductCostPrice);
 router.put('/:id', adminProtect, canEdit, mongoIdParam('id'), validate, adminUpdateProduct);
 router.delete('/:id', adminProtect, requireRole('super_admin'), mongoIdParam('id'), validate, adminArchiveProduct);
 

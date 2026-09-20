@@ -181,7 +181,7 @@ async function startApp() {
 /* ══════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════ */
-const SECTIONS = ['dashboard','orders','returns','products','stores','homepage','analytics','gst','users'];
+const SECTIONS = ['dashboard','orders','returns','products','stores','homepage','analytics','gst','purchaseInvoices','users'];
 
 function initNav() {
   document.getElementById('admin-nav').addEventListener('click', (e) => {
@@ -208,6 +208,7 @@ function showSection(name) {
     homepage:  loadHomepageManager,
     analytics: loadAnalytics,
     gst:       () => {},
+    purchaseInvoices: loadPurchaseInvoices,
     users:     loadAdminUsers
   };
   loaders[name]?.();
@@ -692,6 +693,7 @@ document.getElementById('add-product-btn')?.addEventListener('click', () => {
       <div><label>SKU</label><input id="mp-sku" type="text" placeholder="SAG-001"></div>
       <div><label>Price (₹) *</label><input id="mp-price" type="number" min="0"></div>
       <div><label>MRP (₹)</label><input id="mp-mrp" type="number" min="0"></div>
+      ${_adminUser?.role === 'super_admin' ? `<div><label>Cost Price (₹) <span style="opacity:.6;font-weight:400">— visible to super admin only</span></label><input id="mp-cost" type="number" min="0" placeholder="Buying price"></div>` : ''}
       <div><label>Stock</label><input id="mp-stock" type="number" min="0" value="0" placeholder="0"></div>
       <div>
         <label>Category</label>
@@ -714,7 +716,10 @@ document.getElementById('add-product-btn')?.addEventListener('click', () => {
         <label>GST Slab (%)</label>
         <select id="mp-gst">
           <option value="0">0%</option><option value="5" selected>5%</option>
-          <option value="12">12%</option><option value="18">18%</option><option value="28">28%</option>
+          <option value="12">12% (deprecated — pre GST 2.0)</option>
+          <option value="18">18%</option>
+          <option value="28">28% (deprecated — pre GST 2.0)</option>
+          <option value="40">40%</option>
         </select>
       </div>
       <div>
@@ -770,7 +775,10 @@ async function saveProduct(editId = null) {
       description:document.getElementById('mp-desc')?.value.trim() || '',
       featured:   document.getElementById('mp-featured')?.checked || false,
       status:     document.getElementById('mp-status')?.value || 'active',
-      ...(_uploadedUrls.length ? { images: _uploadedUrls, image: _uploadedUrls[0] } : {})
+      ...(_uploadedUrls.length ? { images: _uploadedUrls, image: _uploadedUrls[0] } : {}),
+      // The cost-price input only exists in the DOM for super_admin (see the
+      // Add/Edit Product modals) — other roles never send this field at all.
+      ...(document.getElementById('mp-cost')?.value ? { costPrice: Number(document.getElementById('mp-cost').value) } : {})
     };
 
     if (editId) {
@@ -806,6 +814,7 @@ window.editProduct = async (id) => {
         <div><label>SKU</label><input id="mp-sku" type="text" value="${escapeHtml(p.sku) || ''}"></div>
         <div><label>Price (₹) *</label><input id="mp-price" type="number" value="${p.price || ''}"></div>
         <div><label>MRP (₹)</label><input id="mp-mrp" type="number" value="${p.mrp || ''}"></div>
+        ${_adminUser?.role === 'super_admin' ? `<div><label>Cost Price (₹) <span style="opacity:.6;font-weight:400">— visible to super admin only</span></label><input id="mp-cost" type="number" min="0" placeholder="Loading…"></div>` : ''}
         <div><label>Stock</label><input id="mp-stock" type="number" min="0" value="${p.stock ?? 0}"></div>
         <div>
           <label>Category</label>
@@ -821,7 +830,7 @@ window.editProduct = async (id) => {
           </select>
         </div>
         <div><label>GST Slab (%)</label>
-          <select id="mp-gst">${[0,5,12,18,28].map((g) => `<option value="${g}" ${p.gstSlab === g ? 'selected':''}>${g}%</option>`).join('')}</select>
+          <select id="mp-gst">${[0,5,12,18,28,40].map((g) => `<option value="${g}" ${p.gstSlab === g ? 'selected':''}>${g}%${[12,28].includes(g) ? ' (deprecated — pre GST 2.0)' : ''}</option>`).join('')}</select>
         </div>
         <div><label>Age Group</label>
           <select id="mp-age"><option value="">—</option>${['0-2','2-5','5-10','10-14','adult'].map((a) => `<option value="${a}" ${p.ageGroup === a ? 'selected':''}>${a}</option>`).join('')}</select>
@@ -858,6 +867,24 @@ window.editProduct = async (id) => {
     });
 
     document.getElementById('mp-save').addEventListener('click', () => saveProduct(id));
+
+    // costPrice has select:false on the backend and is never included in the
+    // public /products/:id response used above, so super_admin needs a
+    // second, dedicated fetch to populate it.
+    if (_adminUser?.role === 'super_admin') {
+      api(`/admin/products/${id}/cost-price`)
+        .then((res) => {
+          const costInput = document.getElementById('mp-cost');
+          if (costInput) {
+            costInput.value = res.data?.costPrice ?? '';
+            costInput.placeholder = 'Buying price';
+          }
+        })
+        .catch(() => {
+          const costInput = document.getElementById('mp-cost');
+          if (costInput) costInput.placeholder = 'Unable to load';
+        });
+    }
   } catch (err) { toast(err.message || 'Failed to load product', 'error'); }
 };
 
@@ -1549,6 +1576,209 @@ window.confirmDeleteStore = async (storeId, storeName) => {
 };
 
 /* ══════════════════════════════════════
+   PURCHASE INVOICES (super_admin only —
+   backend enforces the restriction; see
+   routes/purchaseInvoiceRoutes.js)
+══════════════════════════════════════ */
+function fmtMoney(n) { return '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+
+async function loadPurchaseInvoices() {
+  try {
+    const data     = await api('/admin/purchase-invoices');
+    const invoices = data.data || [];
+    const tbody    = document.getElementById('pi-body');
+
+    if (!invoices.length) {
+      tbody.innerHTML = `<tr><td colspan="9" class="loading">No purchase invoices yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = invoices.map((inv) => `
+      <tr>
+        <td>${escapeHtml(inv.vendor?.name)}<br><span style="font-size:11px;color:var(--gray)">${escapeHtml(inv.vendor?.gstin) || '—'}</span></td>
+        <td>${escapeHtml(inv.invoiceNumber)}</td>
+        <td>${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString('en-IN') : '—'}</td>
+        <td style="text-transform:uppercase;font-size:11px">${escapeHtml(inv.taxType)}</td>
+        <td>${fmtMoney(inv.billing?.taxableValue)}</td>
+        <td>${fmtMoney((inv.billing?.cgst || 0) + (inv.billing?.sgst || 0) + (inv.billing?.igst || 0) + (inv.billing?.cess || 0))}</td>
+        <td>${fmtMoney(inv.billing?.invoiceValue)}</td>
+        <td><span class="pill ${inv.paymentStatus === 'paid' ? 'pill-delivered' : inv.paymentStatus === 'partial' ? 'pill-placed' : 'pill-cancelled'}">${escapeHtml(inv.paymentStatus).toUpperCase()}</span></td>
+        <td>
+          ${inv.status === 'cancelled'
+            ? `<span class="pill pill-cancelled">CANCELLED</span>`
+            : `<button class="btn ghost" style="padding:5px 10px;font-size:10px" onclick="editPurchaseInvoice('${inv._id}')">Edit</button>
+               <button class="btn ghost" style="padding:5px 10px;font-size:10px;color:#dc2626" onclick="confirmCancelPurchaseInvoice('${inv._id}', '${encodeJsArg(inv.invoiceNumber)}')">Cancel</button>`}
+        </td>
+      </tr>`).join('');
+  } catch (err) {
+    document.getElementById('pi-body').innerHTML = `<tr><td colspan="9" class="loading">Failed to load${err.message ? ': ' + escapeHtml(err.message) : ''}.</td></tr>`;
+  }
+}
+
+document.getElementById('add-pi-btn')?.addEventListener('click', () => showPurchaseInvoiceModal());
+
+function piItemRowHtml(item = {}) {
+  return `
+    <div class="pi-item-row" style="display:grid;grid-template-columns:2fr 1fr 0.7fr 1fr 1fr 0.8fr auto;gap:6px;margin-bottom:6px;align-items:center">
+      <input class="pi-item-desc" placeholder="Description *" value="${escapeHtml(item.description) || ''}">
+      <input class="pi-item-hsn" placeholder="HSN" value="${escapeHtml(item.hsnCode) || ''}">
+      <input class="pi-item-qty" type="number" min="0" placeholder="Qty" value="${item.qty ?? ''}">
+      <input class="pi-item-unit" type="number" min="0" placeholder="Unit price" value="${item.unitPrice ?? ''}">
+      <input class="pi-item-taxable" type="number" min="0" placeholder="Taxable value *" value="${item.taxableValue ?? ''}">
+      <input class="pi-item-rate" type="number" min="0" max="100" placeholder="GST %" value="${item.gstRate ?? ''}">
+      <button type="button" class="btn ghost pi-item-remove" style="padding:5px 8px;font-size:10px">✕</button>
+    </div>`;
+}
+
+function showPurchaseInvoiceModal(inv = null) {
+  openModal(`
+    <h2 style="font-size:18px;margin-bottom:20px">${inv ? 'Edit' : 'Add'} Purchase Invoice</h2>
+    <div class="form-2col">
+      <div><label>Vendor Name *</label><input id="pi-vendor-name" value="${escapeHtml(inv?.vendor?.name) || ''}"></div>
+      <div><label>Vendor GSTIN</label><input id="pi-vendor-gstin" value="${escapeHtml(inv?.vendor?.gstin) || ''}"></div>
+      <div><label>Vendor State</label><input id="pi-vendor-state" value="${escapeHtml(inv?.vendor?.state) || ''}"></div>
+      <div><label>Place of Supply</label><input id="pi-pos" value="${escapeHtml(inv?.placeOfSupply) || ''}"></div>
+      <div><label>Invoice Number *</label><input id="pi-invnum" value="${escapeHtml(inv?.invoiceNumber) || ''}"></div>
+      <div><label>Invoice Date *</label><input id="pi-invdate" type="date" value="${inv?.invoiceDate ? new Date(inv.invoiceDate).toISOString().slice(0, 10) : ''}"></div>
+      <div>
+        <label>Tax Type *</label>
+        <select id="pi-taxtype">
+          <option value="intra" ${inv?.taxType === 'intra' ? 'selected' : ''}>Intra-state (CGST+SGST)</option>
+          <option value="inter" ${inv?.taxType === 'inter' ? 'selected' : ''}>Inter-state (IGST)</option>
+        </select>
+      </div>
+      <div>
+        <label>Invoice Type</label>
+        <select id="pi-invtype">
+          ${['Regular', 'SEZ supplies with payment', 'SEZ supplies without payment', 'Deemed Exports']
+            .map((t) => `<option value="${t}" ${inv?.invoiceType === t ? 'selected' : ''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Payment Status</label>
+        <select id="pi-paystatus">
+          ${['unpaid', 'partial', 'paid'].map((t) => `<option value="${t}" ${inv?.paymentStatus === t ? 'selected' : ''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div><label>Cess (₹)</label><input id="pi-cess" type="number" min="0" value="${inv?.billing?.cess ?? 0}"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:22px">
+        <input type="checkbox" id="pi-reverse" ${inv?.reverseCharge ? 'checked' : ''}>
+        <label for="pi-reverse" style="margin:0;font-size:12px;letter-spacing:0">Reverse charge</label>
+      </div>
+    </div>
+
+    <label style="margin-top:14px;display:block">Line Items *</label>
+    <div id="pi-items">${(inv?.items?.length ? inv.items : [{}]).map(piItemRowHtml).join('')}</div>
+    <button type="button" class="btn ghost" id="pi-add-item" style="margin-bottom:10px">+ Add Item</button>
+
+    <label>Attachment (scanned vendor invoice)</label>
+    <input type="file" id="pi-attachment-file" accept="image/*,application/pdf">
+    <input type="hidden" id="pi-attachment-url" value="${escapeHtml(inv?.attachmentUrl) || ''}">
+    <div id="pi-attachment-preview" style="margin:6px 0;font-size:11px;color:var(--gray)">${inv?.attachmentUrl ? 'Existing attachment on file.' : ''}</div>
+
+    <label>Notes</label>
+    <textarea id="pi-notes" rows="2">${escapeHtml(inv?.notes) || ''}</textarea>
+
+    <div class="form-actions">
+      <button class="btn gold" id="pi-save">${inv ? 'Update' : 'Create'} Invoice</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+
+  document.getElementById('pi-add-item').addEventListener('click', () => {
+    document.getElementById('pi-items').insertAdjacentHTML('beforeend', piItemRowHtml());
+  });
+  document.getElementById('pi-items').addEventListener('click', (e) => {
+    if (!e.target.classList.contains('pi-item-remove')) return;
+    const rows = document.querySelectorAll('.pi-item-row');
+    if (rows.length <= 1) { toast('At least one line item required', 'error'); return; }
+    e.target.closest('.pi-item-row').remove();
+  });
+
+  document.getElementById('pi-attachment-file').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const preview = document.getElementById('pi-attachment-preview');
+    preview.textContent = 'Uploading…';
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const up  = await api('/admin/upload/invoice-attachment', { method: 'POST', body: fd });
+      const url = up.data?.url || up.url;
+      if (!url) throw new Error('No URL returned from upload');
+      document.getElementById('pi-attachment-url').value = url;
+      preview.textContent = `Attachment uploaded (${up.data?.kind === 'pdf' ? 'PDF' : 'image'}).`;
+    } catch (err) {
+      preview.textContent = '';
+      toast('Attachment upload failed: ' + (err.message || 'unknown error'), 'error');
+    }
+  });
+
+  document.getElementById('pi-save').addEventListener('click', async () => {
+    const vendorName = document.getElementById('pi-vendor-name').value.trim();
+    const invoiceNumber = document.getElementById('pi-invnum').value.trim();
+    const invoiceDate = document.getElementById('pi-invdate').value;
+    if (!vendorName) { toast('Vendor name required', 'error'); return; }
+    if (!invoiceNumber || !invoiceDate) { toast('Invoice number and date required', 'error'); return; }
+
+    const items = Array.from(document.querySelectorAll('.pi-item-row')).map((row) => ({
+      description:  row.querySelector('.pi-item-desc').value.trim(),
+      hsnCode:      row.querySelector('.pi-item-hsn').value.trim() || undefined,
+      qty:          Number(row.querySelector('.pi-item-qty').value) || undefined,
+      unitPrice:    Number(row.querySelector('.pi-item-unit').value) || undefined,
+      taxableValue: Number(row.querySelector('.pi-item-taxable').value) || 0,
+      gstRate:      Number(row.querySelector('.pi-item-rate').value) || 0
+    }));
+    if (!items.length || items.some((it) => !it.description || it.taxableValue < 0)) {
+      toast('Each line item needs a description and a taxable value', 'error');
+      return;
+    }
+
+    const payload = {
+      vendor: {
+        name:  vendorName,
+        gstin: document.getElementById('pi-vendor-gstin').value.trim() || undefined,
+        state: document.getElementById('pi-vendor-state').value.trim() || undefined
+      },
+      invoiceNumber,
+      invoiceDate,
+      placeOfSupply: document.getElementById('pi-pos').value.trim() || undefined,
+      reverseCharge: document.getElementById('pi-reverse').checked,
+      invoiceType:   document.getElementById('pi-invtype').value,
+      taxType:       document.getElementById('pi-taxtype').value,
+      paymentStatus: document.getElementById('pi-paystatus').value,
+      items,
+      cess:          Number(document.getElementById('pi-cess').value) || 0,
+      attachmentUrl: document.getElementById('pi-attachment-url').value || undefined,
+      notes:         document.getElementById('pi-notes').value.trim() || undefined
+    };
+
+    try {
+      if (inv) await api(`/admin/purchase-invoices/${inv._id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      else     await api('/admin/purchase-invoices', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Purchase invoice saved', 'success');
+      closeModal();
+      loadPurchaseInvoices();
+    } catch (err) { toast(err.message || 'Save failed', 'error'); }
+  });
+}
+
+window.editPurchaseInvoice = async (id) => {
+  try {
+    const data = await api(`/admin/purchase-invoices/${id}`);
+    showPurchaseInvoiceModal(data.data || data);
+  } catch (err) { toast('Failed to load invoice: ' + (err.message || ''), 'error'); }
+};
+
+window.confirmCancelPurchaseInvoice = async (id, invoiceNumber) => {
+  if (!confirm(`Cancel purchase invoice "${decodeURIComponent(invoiceNumber)}"? It will be excluded from active GST reports but kept for audit trail.`)) return;
+  try {
+    await api(`/admin/purchase-invoices/${id}/cancel`, { method: 'PATCH' });
+    toast('Purchase invoice cancelled', 'success');
+    loadPurchaseInvoices();
+  } catch (err) { toast('Failed: ' + err.message, 'error'); }
+};
+
+/* ══════════════════════════════════════
    ANALYTICS
 ══════════════════════════════════════ */
 let _revChart2 = null, _statusChart2 = null, _topChart = null;
@@ -1626,12 +1856,12 @@ async function loadGst() {
     tbody.innerHTML = items.length
       ? items.map((r) => `
         <tr>
-          <td>${r._id || r.hsn || '—'}</td>
-          <td>${INR(r.taxableAmount)}</td>
+          <td>${r.hsnCode || '—'}</td>
+          <td>${INR(r.taxableAmt)}</td>
           <td>${INR(r.cgst)}</td>
           <td>${INR(r.sgst)}</td>
           <td>${INR(r.igst)}</td>
-          <td>${INR((r.cgst || 0) + (r.sgst || 0) + (r.igst || 0))}</td>
+          <td>${INR(r.totalTax ?? (Number(r.cgst || 0) + Number(r.sgst || 0) + Number(r.igst || 0)))}</td>
         </tr>`).join('')
       : `<tr><td colspan="6" class="loading">No data for selected range.</td></tr>`;
   } catch (err) {
@@ -1654,6 +1884,171 @@ async function exportGst() {
   a.href = URL.createObjectURL(blob);
   a.download = `sagona-gst-${from || 'all'}.csv`;
   a.click();
+}
+
+/* ── Phase 4: GSTR-1 / GSTR-2 / GSTR-3B exact-format summary reports ──
+   All three reuse the #gst-from/#gst-to date-range inputs above. */
+function gstSummaryRange() {
+  return {
+    from: document.getElementById('gst-from')?.value,
+    to:   document.getElementById('gst-to')?.value
+  };
+}
+
+async function downloadGstSummary(reportType, format) {
+  const { from, to } = gstSummaryRange();
+  const token  = sessionStorage.getItem('admin_token');
+  const params = new URLSearchParams({ reportType, format });
+  if (from) params.set('from', from);
+  if (to)   params.set('to', to);
+
+  const url = `${API_BASE}/admin/gst/export/summary?${params}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) { toast('Export failed', 'error'); return; }
+
+  const blob = await res.blob();
+  const a    = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sagona-${reportType}-${from || 'all'}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`;
+  a.click();
+}
+
+document.getElementById('gstr1-load-btn')?.addEventListener('click', loadGstr1Summary);
+document.getElementById('gstr1-pdf-btn')?.addEventListener('click', () => downloadGstSummary('gstr1', 'pdf'));
+document.getElementById('gstr1-xlsx-btn')?.addEventListener('click', () => downloadGstSummary('gstr1', 'xlsx'));
+
+async function loadGstr1Summary() {
+  const { from, to } = gstSummaryRange();
+  const tbody = document.getElementById('gstr1-body');
+  tbody.innerHTML = `<tr><td colspan="10" class="loading">Loading…</td></tr>`;
+
+  try {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to)   params.set('to', to);
+    const { data } = await api(`/admin/gst/gstr1/summary?${params}`);
+
+    document.getElementById('gstr1-period').textContent = data.periodLabel ? `Period: ${data.periodLabel}` : '';
+
+    const rowHtml = (r) => `
+      <tr>
+        <td>${r.sl}</td>
+        <td>${escapeHtml(r.particulars)}</td>
+        <td>${r.notApplicable ? '—' : r.count}</td>
+        <td>${r.notApplicable ? '—' : INR(r.taxable)}</td>
+        <td>${r.notApplicable ? '—' : INR(r.igst)}</td>
+        <td>${r.notApplicable ? '—' : INR(r.cgst)}</td>
+        <td>${r.notApplicable ? '—' : INR(r.sgst)}</td>
+        <td>${r.notApplicable ? '—' : INR(r.cess)}</td>
+        <td>${r.notApplicable ? '—' : INR(r.tax)}</td>
+        <td>${r.notApplicable ? '—' : INR(r.invoiceAmt)}</td>
+      </tr>`;
+    const t = data.totals || {};
+    const totalHtml = `
+      <tr style="font-weight:700">
+        <td></td><td>Total</td><td>${t.count || 0}</td><td>${INR(t.taxable)}</td>
+        <td>${INR(t.igst)}</td><td>${INR(t.cgst)}</td><td>${INR(t.sgst)}</td>
+        <td>${INR(t.cess)}</td><td>${INR(t.tax)}</td><td>${INR(t.invoiceAmt)}</td>
+      </tr>`;
+
+    tbody.innerHTML = (data.rows || []).map(rowHtml).join('') + totalHtml;
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="10" class="loading">${err.message}</td></tr>`;
+  }
+}
+
+document.getElementById('gstr2-load-btn')?.addEventListener('click', loadGstr2Summary);
+document.getElementById('gstr2-pdf-btn')?.addEventListener('click', () => downloadGstSummary('gstr2', 'pdf'));
+document.getElementById('gstr2-xlsx-btn')?.addEventListener('click', () => downloadGstSummary('gstr2', 'xlsx'));
+
+async function loadGstr2Summary() {
+  const { from, to } = gstSummaryRange();
+  const tbody = document.getElementById('gstr2-body');
+  tbody.innerHTML = `<tr><td colspan="15" class="loading">Loading…</td></tr>`;
+
+  try {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to)   params.set('to', to);
+    const { data } = await api(`/admin/gst/gstr2/summary?${params}`);
+
+    document.getElementById('gstr2-period').textContent = data.periodLabel ? `Period: ${data.periodLabel}` : '';
+
+    const rows = data.rows || [];
+    const rowHtml = (r) => `
+      <tr>
+        <td>${escapeHtml(r.type)}</td>
+        <td>${escapeHtml(r.supplierName || '')}</td>
+        <td>${escapeHtml(r.supplierGstin || '')}</td>
+        <td>${escapeHtml(r.invoiceNumber || '')}</td>
+        <td>${fmt(r.invoiceDate)}</td>
+        <td>${r.invoiceValue !== null ? INR(r.invoiceValue) : ''}</td>
+        <td>${escapeHtml(r.placeOfSupply || '')}</td>
+        <td>${r.reverseCharge}</td>
+        <td>${escapeHtml(r.invoiceType || '')}</td>
+        <td>${r.rate}%</td>
+        <td>${INR(r.taxableValue)}</td>
+        <td>${INR(r.igstPaid)}</td>
+        <td>${INR(r.cgstPaid)}</td>
+        <td>${INR(r.sgstPaid)}</td>
+        <td>${INR(r.cessPaid)}</td>
+      </tr>`;
+    const t = data.totals || {};
+    const totalHtml = `
+      <tr style="font-weight:700">
+        <td colspan="9"></td><td>Total</td><td>${INR(t.taxableValue)}</td>
+        <td>${INR(t.igstPaid)}</td><td>${INR(t.cgstPaid)}</td><td>${INR(t.sgstPaid)}</td><td>${INR(t.cessPaid)}</td>
+      </tr>`;
+
+    tbody.innerHTML = rows.length
+      ? rows.map(rowHtml).join('') + totalHtml
+      : `<tr><td colspan="15" class="loading">No purchase invoices for selected range.</td></tr>`;
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="15" class="loading">${err.message}</td></tr>`;
+  }
+}
+
+document.getElementById('gstr3b-load-btn')?.addEventListener('click', loadGstr3bSummary);
+document.getElementById('gstr3b-pdf-btn')?.addEventListener('click', () => downloadGstSummary('gstr3b', 'pdf'));
+document.getElementById('gstr3b-xlsx-btn')?.addEventListener('click', () => downloadGstSummary('gstr3b', 'xlsx'));
+
+async function loadGstr3bSummary() {
+  const { from, to } = gstSummaryRange();
+  const tbody = document.getElementById('gstr3b-body');
+  tbody.innerHTML = `<tr><td colspan="8" class="loading">Loading…</td></tr>`;
+
+  try {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to)   params.set('to', to);
+    const { data } = await api(`/admin/gst/gstr3b/summary?${params}`);
+
+    document.getElementById('gstr3b-period').textContent = data.periodLabel ? `Period: ${data.periodLabel}` : '';
+
+    const r = data.rows || {};
+    const line = (table, particulars, row, opts = {}) => `
+      <tr${opts.total ? ' style="font-weight:700"' : ''}>
+        <td>${table}</td><td>${particulars}</td>
+        <td>${row.taxable !== undefined ? INR(row.taxable) : '—'}</td>
+        <td>${row.igst !== undefined ? INR(row.igst) : '—'}</td>
+        <td>${row.cgst !== undefined ? INR(row.cgst) : '—'}</td>
+        <td>${row.sgst !== undefined ? INR(row.sgst) : '—'}</td>
+        <td>${row.cess !== undefined ? INR(row.cess) : '—'}</td>
+        <td>${row.tax !== undefined ? INR(row.tax) : '—'}</td>
+      </tr>`;
+
+    tbody.innerHTML = [
+      line('(a)', 'Outward taxable supplies (other than zero rated, nil rated and exempted)', r.outwardTaxable || {}),
+      line('(b)', 'Other outward supplies (Nil rated, exempted)', r.outwardZeroNilRated || {}),
+      line('3.1', 'Total Outward Supplies (a + b)', r.totalOutward || {}),
+      line('3.2', 'Inter-State supplies to Unregistered Persons', r.interstateUnregistered || {}),
+      line('4', 'Eligible ITC', r.eligibleItc || {}),
+      line('5', 'Exempt, Nil and Non-GST inward supplies', r.exemptNilNonGstInward || {}),
+      line('', 'Tax Payable', r.taxPayable || {}, { total: true })
+    ].join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" class="loading">${err.message}</td></tr>`;
+  }
 }
 
 /* ══════════════════════════════════════

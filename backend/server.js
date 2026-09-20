@@ -31,6 +31,7 @@ import adminOrderRoutes   from './routes/adminOrderRoutes.js';
 import analyticsRoutes    from './routes/analyticsRoutes.js';
 import uploadRoutes       from './routes/uploadRoutes.js';
 import gstRoutes          from './routes/gstRoutes.js';
+import purchaseInvoiceRoutes from './routes/purchaseInvoiceRoutes.js';
 import { adminChat }      from './controllers/chatController.js';
 import { adminProtect }  from './middleware/adminAuth.js';
 import homepageRoutes    from './routes/homepageRoutes.js';
@@ -199,6 +200,7 @@ app.use('/api/admin/analytics', analyticsRoutes);
 app.use('/api/admin/upload',    uploadRoutes);
 app.use('/api/admin/gst',       gstRoutes);
 app.use('/api/admin/stores',    storeRoutes);
+app.use('/api/admin/purchase-invoices', purchaseInvoiceRoutes);
 app.use('/api',                 homepageRoutes);
 app.post('/api/admin/chat',     adminProtect, adminChat);
 

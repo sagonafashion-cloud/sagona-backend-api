@@ -5,6 +5,12 @@ import { PDFParse } from 'pdf-parse';
 import Product from '../models/Product.js';
 import { logAdminActivity } from '../utils/activityLogger.js';
 
+// Shared by validateProduct's warning check and buildProductData's actual
+// fallback below — kept as one list so the two can't drift out of sync again.
+// 12/28 legacy/back-compat only, 40 is the new GST 2.0 top slab (see
+// Product.js gstSlab comment).
+const VALID_GST_SLABS = [0, 5, 12, 18, 28, 40];
+
 // ── MAIN PARSE ENDPOINT ───────────────────────────────────────
 // POST /api/admin/products/bulk-parse
 export const parseProductFile = async (req, res) => {
@@ -408,9 +414,8 @@ function validateProduct(product) {
   const mrp   = parseNum(product.mrp);
   if (mrp > 0 && mrp < price) warnings.push('MRP is less than price — will be set equal to price');
 
-  const validGST = ['0', '5', '12', '18', '28'];
-  if (product.gst_slab && !validGST.includes(String(product.gst_slab))) {
-    warnings.push('GST slab should be 0, 5, 12, 18, or 28. Defaulting to 12.');
+  if (product.gst_slab && !VALID_GST_SLABS.map(String).includes(String(product.gst_slab))) {
+    warnings.push('GST slab should be 0, 5, 12, 18, 28, or 40. Defaulting to 5.');
   }
 
   const validStatus = ['active', 'draft'];
@@ -455,7 +460,15 @@ function buildProductData(product) {
     stock:             parseNum(product.stock) || 0,
     category:          (product.category || 'kids').toLowerCase(),
     ageGroup:          product.age_group || '',
-    gstSlab:           parseNum(product.gst_slab) || 12,
+    // Falls back to 5 — matching Product.js's own schema-level default — for
+    // a missing/unparsable gst_slab column OR a numeric value outside
+    // VALID_GST_SLABS (e.g. a typo'd "99"). Previously only the
+    // missing/unparsable case was caught; an out-of-range-but-numeric value
+    // passed straight through to Product.create(), which would then throw a
+    // Mongoose enum validation error instead of the warning already shown to
+    // the uploader actually taking effect. 12 is no longer a valid fallback —
+    // it's a deprecated pre-GST 2.0 slab (see Product.js gstSlab comment).
+    gstSlab:           VALID_GST_SLABS.includes(parseNum(product.gst_slab)) ? parseNum(product.gst_slab) : 5,
     description:       product.description || '',
     fabric:            product.fabric_material || product.fabric || product.material || '',
     careInstructions:  product.care_instructions || '',

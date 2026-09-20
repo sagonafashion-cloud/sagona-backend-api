@@ -63,7 +63,10 @@ export const createProductRules = [
   body('name').trim().isLength({ min: 2, max: 200 }).withMessage('Product name required (2–200 chars)'),
   body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
   body('sku').optional({ nullable: true, checkFalsy: true }).trim(),
-  body('gstSlab').optional().isIn([0, 5, 12, 18, 28]).withMessage('GST slab must be 0, 5, 12, 18, or 28'),
+  // 12 and 28 kept valid only for legacy/back-compat edits (see Product.js
+  // gstSlab comment — deprecated under the GST 2.0 rate reform, effective
+  // 22-Sep-2025); 40 added as the new top slab.
+  body('gstSlab').optional().isIn([0, 5, 12, 18, 28, 40]).withMessage('GST slab must be 0, 5, 12, 18, 28, or 40'),
 ];
 
 // ── Delivery ──────────────────────────────────────────────
@@ -98,6 +101,28 @@ export const verifyPaymentRules = [
 export const adminLoginRules = [
   body('email').trim().notEmpty().withMessage('Email required').isEmail().withMessage('Invalid email'),
   body('password').notEmpty().withMessage('Password required'),
+];
+
+// ── Purchase invoices (vendor-side, super_admin only) ─────
+export const createPurchaseInvoiceRules = [
+  body('vendor.name').trim().notEmpty().withMessage('Vendor name required'),
+  body('vendor.gstin').optional({ checkFalsy: true }).trim(),
+  body('invoiceNumber').trim().notEmpty().withMessage('Invoice number required'),
+  body('invoiceDate').isISO8601().withMessage('Valid invoice date required'),
+  body('taxType').isIn(['intra', 'inter']).withMessage('taxType must be intra or inter'),
+  body('invoiceType').optional()
+    .isIn(['Regular', 'SEZ supplies with payment', 'SEZ supplies without payment', 'Deemed Exports'])
+    .withMessage('Invalid invoice type'),
+  body('reverseCharge').optional().isBoolean().withMessage('reverseCharge must be true/false'),
+  body('paymentStatus').optional().isIn(['unpaid', 'partial', 'paid']).withMessage('Invalid payment status'),
+  body('items').isArray({ min: 1 }).withMessage('At least one line item required'),
+  body('items.*.description').trim().notEmpty().withMessage('Each item needs a description'),
+  body('items.*.taxableValue').isFloat({ min: 0 }).withMessage('Each item needs a non-negative taxable value'),
+  // Not constrained to Product.js's gstSlab enum on purpose — see
+  // PurchaseInvoice.js's item schema comment (vendor rates can fall outside
+  // our own retail catalog's slabs).
+  body('items.*.gstRate').optional().isFloat({ min: 0, max: 100 }).withMessage('GST rate must be 0-100'),
+  body('cess').optional().isFloat({ min: 0 }).withMessage('Cess must be a non-negative number'),
 ];
 
 // ── Generic param validation ──────────────────────────────

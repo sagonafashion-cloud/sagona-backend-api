@@ -136,12 +136,18 @@ export const adminCreateProduct = async (req, res) => {
       name, price, mrp, image, images, description, featured,
       sku, category, subcategory, gender, ageGroup, tags,
       gstSlab, hsnCode, fabric, careInstructions, weight,
-      status, publishAt, stock, variants, stores
+      status, publishAt, stock, variants, stores, costPrice
     } = req.body;
 
     if (!name || !price) {
       return res.status(400).json({ success: false, message: 'name and price required' });
     }
+
+    // costPrice is super_admin-only — silently dropped (not errored) for any
+    // other role, same as an omitted optional field. Schema also has
+    // select:false on costPrice so it's never returned unless explicitly
+    // requested by a super_admin-gated read.
+    const isSuperAdmin = req.adminUser?.role === 'super_admin';
 
     const product = await Product.create({
       name, price, mrp, image, images: images || [],
@@ -149,7 +155,8 @@ export const adminCreateProduct = async (req, res) => {
       sku, category, subcategory, gender, ageGroup, tags: tags || [],
       gstSlab, hsnCode, fabric, careInstructions, weight,
       status: status || 'active', publishAt,
-      stock: stock || 0, variants: variants || [], stores: stores || []
+      stock: stock || 0, variants: variants || [], stores: stores || [],
+      ...(isSuperAdmin && costPrice !== undefined ? { costPrice } : {})
     });
 
     logAdminActivity(req, 'product.admin_create', {
@@ -174,7 +181,7 @@ export const adminUpdateProduct = async (req, res) => {
       name, price, mrp, image, images, description, featured,
       sku, category, subcategory, gender, ageGroup, tags,
       gstSlab, hsnCode, fabric, careInstructions, weight,
-      status, publishAt, stock, variants, stores
+      status, publishAt, stock, variants, stores, costPrice
     } = req.body;
 
     const update = {};
@@ -201,6 +208,11 @@ export const adminUpdateProduct = async (req, res) => {
     if (stock             !== undefined) update.stock             = stock;
     if (variants          !== undefined) update.variants          = variants;
     if (stores            !== undefined) update.stores            = stores;
+    // costPrice is super_admin-only — silently ignored for any other role
+    // rather than rejecting the whole update (mirrors adminCreateProduct).
+    if (costPrice !== undefined && req.adminUser?.role === 'super_admin') {
+      update.costPrice = costPrice;
+    }
 
     const product = await Product.findByIdAndUpdate(
       req.params.id,
@@ -219,6 +231,26 @@ export const adminUpdateProduct = async (req, res) => {
   } catch (err) {
     console.error('adminUpdateProduct:', err);
     res.status(500).json({ success: false, message: 'Unable to update product' });
+  }
+};
+
+// super_admin-only read path for the select:false costPrice field. Kept as
+// its own narrow endpoint (rather than opening it up on the general product
+// read paths) so cost data is only ever returned to the one role allowed to
+// see it, and only when explicitly asked for.
+export const adminGetProductCostPrice = async (req, res) => {
+  try {
+    // "+costPrice" is required, not just naming the field, because it has
+    // select:false at the schema level — a plain inclusive projection alone
+    // does not override that default in Mongoose.
+    const product = await Product.findById(req.params.id).select('name sku +costPrice');
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    res.json({
+      success: true,
+      data: { _id: product._id, name: product.name, sku: product.sku, costPrice: product.costPrice ?? null }
+    });
+  } catch {
+    res.status(400).json({ success: false, message: 'Invalid product id' });
   }
 };
 
