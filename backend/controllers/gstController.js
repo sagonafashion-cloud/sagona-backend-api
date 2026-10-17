@@ -42,9 +42,19 @@ const startOfCurrentMonthIST = () => {
   return new Date(startIST.getTime() - IST_OFFSET_MS);  // back to a real UTC instant
 };
 
+// A bare YYYY-MM-DD from the date pickers means the whole IST calendar day.
+// new Date('2026-09-30') is 00:00 UTC (05:30 IST), which silently dropped
+// every order placed on the "to" day itself. Full ISO timestamps are untouched.
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const parseBoundary = (value, endOfDay) => {
+  if (!DATE_ONLY_RE.test(String(value))) return new Date(value);
+  const istMidnightUtc = new Date(value).getTime() - IST_OFFSET_MS;
+  return new Date(endOfDay ? istMidnightUtc + 24 * 60 * 60 * 1000 - 1 : istMidnightUtc);
+};
+
 const parseDates = (query) => ({
-  from: query.from ? new Date(query.from) : startOfCurrentMonthIST(),
-  to:   query.to   ? new Date(query.to)   : new Date()
+  from: query.from ? parseBoundary(query.from, false) : startOfCurrentMonthIST(),
+  to:   query.to   ? parseBoundary(query.to, true)    : new Date()
 });
 
 // Order statuses that represent a sale no longer counted as GST-liable.
@@ -100,6 +110,20 @@ function reversalEventDate(order) {
        for.
 
    Every consumer below must sum `sign * value`, never assume sign is +1. */
+// An order cancelled/returned on or before the return-filing date (20th of
+// the month after it was placed) for its own month never reached a filed
+// return, so the invoice is simply void — it's no sale and no later credit
+// note is needed. Without this, a September order cancelled on 5 Oct was still
+// counted as a September sale (and then also pushed as a -1 adjustment into the
+// next period). After the 20th, the existing credit-note style logic applies.
+function isVoidedBeforeFiling(order) {
+  if (!REVERSED_STATUSES.includes(order.status)) return false;
+  const placedIST = new Date(new Date(order.createdAt).getTime() + IST_OFFSET_MS);
+  // 23:59:59.999 IST on the 20th of the following month, as a real UTC instant
+  const deadline = Date.UTC(placedIST.getUTCFullYear(), placedIST.getUTCMonth() + 1, 20, 23, 59, 59, 999) - IST_OFFSET_MS;
+  return reversalEventDate(order).getTime() <= deadline;
+}
+
 async function getPeriodOrders(from, to, storeId) {
   const storeFilter = storeId ? { 'items.storeId': storeId } : {};
   const projection = 'orderNumber customer shippingAddress billing taxType items status returnRequest createdAt updatedAt invoiceUrl payment';
@@ -115,6 +139,7 @@ async function getPeriodOrders(from, to, storeId) {
 
   const rows = [];
   for (const o of inPeriod) {
+    if (isVoidedBeforeFiling(o)) continue; // void before filing → not a sale
     if (REVERSED_STATUSES.includes(o.status)) {
       const evt = reversalEventDate(o);
       if (evt >= from && evt <= to) continue; // same-period reversal → net zero, omit
@@ -122,6 +147,7 @@ async function getPeriodOrders(from, to, storeId) {
     rows.push({ ...o, _gstSign: 1 });
   }
   for (const o of priorReversed) {
+    if (isVoidedBeforeFiling(o)) continue; // never reported, so nothing to adjust
     const evt = reversalEventDate(o);
     if (evt >= from && evt <= to) {
       rows.push({ ...o, _gstSign: -1, isAdjustment: true });
