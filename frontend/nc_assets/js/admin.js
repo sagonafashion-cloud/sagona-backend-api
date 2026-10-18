@@ -642,7 +642,10 @@ async function loadProducts() {
   if (status)   params.set('status', status);
 
   try {
-    const data = await api(`/products?${params}`);
+    // Admin endpoint (all statuses) — the public /products route only ever
+    // returns active products, which made the status filter below a no-op
+    // and hid draft products entirely.
+    const data = await api(`/admin/products?${params}`);
     const products = Array.isArray(data) ? data : (data.data || []);
     renderProducts(products);
   } catch {
@@ -800,7 +803,7 @@ async function saveProduct(editId = null) {
 
 window.editProduct = async (id) => {
   try {
-    const data = await api(`/products/${id}`);
+    const data = await api(`/admin/products/${id}`);
     const p    = data.data || data;
 
     // Pre-populate _uploadedUrls with the product's existing images
@@ -912,7 +915,7 @@ const GARMENT_FIELDS = [
 
 window.openSizingConfig = async function(productId) {
   try {
-    const data = await api(`/products/${productId}`);
+    const data = await api(`/admin/products/${productId}`);
     const p    = data.data || data;
     const meas = p.garmentMeasurements || [];
     const getMeas = (size, field) => meas.find(m => m.size === size)?.[field] || '';

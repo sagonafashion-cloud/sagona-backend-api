@@ -14,7 +14,20 @@ const purchaseInvoiceItemSchema = new mongoose.Schema({
   // catalog doesn't sell at (services, packaging, raw material, a
   // compensation-cess item, etc.); reusing the product enum here would
   // reject legitimate vendor invoices whenever the two rate sets diverge.
-  gstRate: { type: Number, min: 0, max: 100, default: 0 }
+  gstRate: { type: Number, min: 0, max: 100, default: 0 },
+
+  /* ── product-flow fields (all optional; used when the invoice is submitted
+        to create/update draft products — see the purchase→product flow) ── */
+  // Stable per-line id, generated server-side; products link back to it.
+  lineKey:      { type: String, trim: true },
+  // Cost price = vendor rate excluding GST (input tax credit is claimed
+  // separately, so GST paid to the vendor is not part of product cost).
+  costPrice:    { type: Number, min: 0 },
+  sellingPrice: { type: Number, min: 0 }, // GST-inclusive, as charged to customers
+  mrp:          { type: Number, min: 0 },
+  sku:          { type: String, trim: true },
+  // Set once a product has been created/updated from this line.
+  productId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Product' }
 }, { _id: false });
 
 const purchaseBillingSchema = new mongoose.Schema({
@@ -80,8 +93,13 @@ const purchaseInvoiceSchema = new mongoose.Schema(
     // Soft-delete/void pattern for a financial record — never hard-deleted,
     // so a cancelled entry stays available for audit trail and doesn't
     // silently disappear from historical GST reports that already included it.
-    status: { type: String, enum: ['active', 'cancelled'], default: 'active' },
+    // 'draft' = read from a vendor invoice but not yet verified by a super
+    // admin. Every report/list consumer filters on status:'active', so drafts
+    // are automatically excluded from GST until verified and submitted. The
+    // default stays 'active' so the existing manual create flow is unchanged.
+    status: { type: String, enum: ['draft', 'active', 'cancelled'], default: 'active' },
     cancelledAt: { type: Date },
+    submittedAt: { type: Date },
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' }
   },

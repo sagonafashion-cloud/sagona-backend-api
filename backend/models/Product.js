@@ -65,6 +65,16 @@ const productSchema = new mongoose.Schema(
     careInstructions: { type: String, trim: true },
     weight: { type: Number, min: 0 }, // grams
 
+    /* ── purchase-invoice link (all optional; set only for products created
+          from a verified vendor purchase invoice — see PurchaseInvoice.js) ── */
+    purchaseInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'PurchaseInvoice' },
+    // Stable id of the invoice line this product came from, so re-submitting
+    // an invoice can never create a duplicate product for the same line.
+    purchaseLineKey: { type: String, trim: true },
+    // The vendor's raw line text (e.g. "6838 PEACH - SHERWANI BRIDGES - 01-10"),
+    // kept for the content admin's reference. `name` is the customer-facing title.
+    vendorDescription: { type: String, trim: true },
+
     /* ── lifecycle ── */
     status: {
       type: String,

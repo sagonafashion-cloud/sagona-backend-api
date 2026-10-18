@@ -130,6 +130,43 @@ export const deleteProduct = async (req, res) => {
    ADMIN PANEL (AdminUser roles)
 ═══════════════════════════════════ */
 
+// Admin read paths. The public GET /api/products routes deliberately only
+// ever return status:'active', so the admin Products screen (which already
+// offers a status filter) could never actually show or open draft/out-of-stock/
+// archived products. These mirror the public handlers but honour the status
+// filter ("" = all statuses). costPrice stays select:false, so it's never
+// returned here — super_admin reads it via the dedicated cost-price endpoint.
+export const adminListProducts = async (req, res) => {
+  try {
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 30);
+    const skip  = (page - 1) * limit;
+
+    const filter = buildListQuery({ ...req.query, status: req.query.status || 'any' });
+    if (!req.query.status) delete filter.status; // no status filter → every status
+
+    const [data, total] = await Promise.all([
+      Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Product.countDocuments(filter)
+    ]);
+
+    res.json({ success: true, data, total, page, limit });
+  } catch (err) {
+    console.error('adminListProducts:', err);
+    res.status(500).json({ success: false, message: 'Unable to fetch products' });
+  }
+};
+
+export const adminGetProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    res.json({ success: true, data: product });
+  } catch {
+    res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+};
+
 export const adminCreateProduct = async (req, res) => {
   try {
     const {
