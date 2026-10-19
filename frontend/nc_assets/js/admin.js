@@ -812,11 +812,23 @@ window.editProduct = async (id) => {
 
     openModal(`
       <h2 style="font-size:18px;margin-bottom:20px">Edit Product</h2>
+      ${p.purchaseInvoiceId ? `
+      <div style="margin-bottom:14px;padding:10px;background:#f5f5f0;font-size:12px;line-height:1.6">
+        <strong>From purchase invoice.</strong> Vendor description: <em>${escapeHtml(p.vendorDescription) || '—'}</em><br>
+        ${p.status === 'active' ? '' : `To make it Active you need:
+        ${[
+          [p.name && p.name !== p.vendorDescription, 'customer-facing name'],
+          [(p.images?.length || p.image), 'image'],
+          [(p.description || '').trim(), 'description'],
+          [p.category, 'category'],
+          [p.ageGroup, 'age group']
+        ].map(([ok, label]) => `<span style="color:${ok ? '#2e7d32' : '#b26a00'}">${ok ? '✓' : '○'} ${label}</span>`).join(' &nbsp; ')}`}
+      </div>` : ''}
       <div class="form-2col">
         <div><label>Name *</label><input id="mp-name" type="text" value="${escapeHtml(p.name) || ''}"></div>
         <div><label>SKU</label><input id="mp-sku" type="text" value="${escapeHtml(p.sku) || ''}"></div>
-        <div><label>Price (₹) *</label><input id="mp-price" type="number" value="${p.price || ''}"></div>
-        <div><label>MRP (₹)</label><input id="mp-mrp" type="number" value="${p.mrp || ''}"></div>
+        <div><label>Price (₹) *${p.purchaseInvoiceId && _adminUser?.role !== 'super_admin' ? ' <span style="opacity:.6;font-weight:400">— set at invoice</span>' : ''}</label><input id="mp-price" type="number" value="${p.price || ''}" ${p.purchaseInvoiceId && _adminUser?.role !== 'super_admin' ? 'readonly' : ''}></div>
+        <div><label>MRP (₹)</label><input id="mp-mrp" type="number" value="${p.mrp || ''}" ${p.purchaseInvoiceId && _adminUser?.role !== 'super_admin' ? 'readonly' : ''}></div>
         ${_adminUser?.role === 'super_admin' ? `<div><label>Cost Price (₹) <span style="opacity:.6;font-weight:400">— visible to super admin only</span></label><input id="mp-cost" type="number" min="0" placeholder="Loading…"></div>` : ''}
         <div><label>Stock</label><input id="mp-stock" type="number" min="0" value="${p.stock ?? 0}"></div>
         <div>

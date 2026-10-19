@@ -110,11 +110,14 @@ export const extractPurchaseInvoice = async (req, res) => {
   } catch (err) {
     console.error('extractPurchaseInvoice:', err.message);
     const status = err.code === 'NOT_CONFIGURED' ? 503 : 422;
+    // This endpoint is super_admin-only, so surfacing the reason is safe and
+    // makes billing/key/format problems diagnosable without server logs.
+    const reason = String(err.message || 'unknown error').slice(0, 200);
     res.status(status).json({
       success: false,
       message: err.code === 'NOT_CONFIGURED'
         ? err.message
-        : 'Could not read this invoice automatically. Please enter the details manually.'
+        : `Could not read this invoice automatically (${err.status ? 'AI service ' + err.status + ': ' : ''}${reason}). Please enter the details manually.`
     });
   }
 };

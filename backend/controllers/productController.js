@@ -251,6 +251,36 @@ export const adminUpdateProduct = async (req, res) => {
       update.costPrice = costPrice;
     }
 
+    // Products created from a purchase invoice (purchaseInvoiceId set) have
+    // their commercial terms set by the super admin at invoice stage. Other
+    // roles keep editing content/stock, but price/MRP are locked (silently
+    // dropped, like costPrice above), and Draft→Active is gated on the
+    // content being finished. Products NOT linked to an invoice are untouched.
+    const existing = await Product.findById(req.params.id)
+      .select('purchaseInvoiceId vendorDescription name description image images category ageGroup price status');
+    if (!existing) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    if (existing.purchaseInvoiceId) {
+      if (req.adminUser?.role !== 'super_admin') {
+        delete update.price;
+        delete update.mrp;
+      }
+      if (update.status === 'active' && existing.status !== 'active') {
+        const merged = (k) => (update[k] !== undefined ? update[k] : existing[k]);
+        const missing = [];
+        const name = String(merged('name') || '').trim();
+        if (!name || name === String(existing.vendorDescription || '').trim()) missing.push('a customer-facing product name (still the vendor description)');
+        const imgs = merged('images');
+        if (!(Array.isArray(imgs) && imgs.length) && !merged('image')) missing.push('at least one product image');
+        if (!String(merged('description') || '').trim()) missing.push('a product description');
+        if (!merged('category')) missing.push('a category');
+        if (!merged('ageGroup')) missing.push('an age group');
+        if (missing.length) {
+          return res.status(400).json({ success: false, message: `Cannot activate yet. Add: ${missing.join(', ')}.` });
+        }
+      }
+    }
+
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       update,
