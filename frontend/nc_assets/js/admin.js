@@ -1628,7 +1628,15 @@ function piItemRowHtml(item = {}) {
       <input class="pi-item-unit" type="number" min="0" placeholder="Unit price" value="${item.unitPrice ?? ''}">
       <input class="pi-item-taxable" type="number" min="0" placeholder="Taxable value *" value="${item.taxableValue ?? ''}">
       <input class="pi-item-rate" type="number" min="0" max="100" placeholder="GST %" value="${item.gstRate ?? ''}">
-      <button type="button" class="btn ghost pi-item-remove" style="padding:5px 8px;font-size:10px">✕</button>
+      <button type="button" class="btn ghost pi-item-remove" style="padding:5px 8px;font-size:10px" ${item.productId ? 'disabled title="A product was already created from this line"' : ''}>✕</button>
+    </div>
+    <div class="pi-item-row2" style="display:grid;grid-template-columns:1fr 1fr 1fr 1.2fr 2fr;gap:6px;margin:-2px 0 12px;align-items:center;padding-bottom:8px;border-bottom:1px dashed #ddd">
+      <input class="pi-item-cost" type="number" min="0" step="0.01" placeholder="Cost price ex-GST (₹)" title="Your buying price per unit, excluding GST. Super admin only." value="${item.costPrice ?? item.unitPrice ?? ''}">
+      <input class="pi-item-sell" type="number" min="0" step="0.01" placeholder="Selling price (₹, incl. GST)" title="Price customers pay per unit" value="${item.sellingPrice ?? ''}">
+      <input class="pi-item-mrp" type="number" min="0" step="0.01" placeholder="MRP (₹)" value="${item.mrp ?? ''}">
+      <input class="pi-item-sku" placeholder="SKU (optional)" value="${escapeHtml(item.sku) || ''}">
+      <input type="hidden" class="pi-item-key" value="${escapeHtml(item.lineKey) || ''}">
+      <span style="font-size:11px;color:var(--gray)">${item.productId ? '✓ Product created' : 'Cost · Selling · MRP · SKU'}</span>
     </div>`;
 }
 
@@ -1685,6 +1693,13 @@ function showPurchaseInvoiceModal(inv = null) {
     <label>Notes</label>
     <textarea id="pi-notes" rows="2">${escapeHtml(inv?.notes) || ''}</textarea>
 
+    <div style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;padding:10px;background:#f5f5f0;font-size:12px;line-height:1.5">
+      <input type="checkbox" id="pi-make-products" ${inv ? '' : 'checked'} style="margin-top:3px">
+      <label for="pi-make-products" style="margin:0;font-size:12px;letter-spacing:0;text-transform:none">
+        Create draft products from these lines (each needs a selling price and quantity). Drafts are not visible to customers until the product team activates them.
+      </label>
+    </div>
+
     <div class="form-actions">
       <button class="btn gold" id="pi-save">${inv ? 'Update' : 'Create'} Invoice</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -1698,7 +1713,9 @@ function showPurchaseInvoiceModal(inv = null) {
     if (!e.target.classList.contains('pi-item-remove')) return;
     const rows = document.querySelectorAll('.pi-item-row');
     if (rows.length <= 1) { toast('At least one line item required', 'error'); return; }
-    e.target.closest('.pi-item-row').remove();
+    const row = e.target.closest('.pi-item-row');
+    row.nextElementSibling?.classList.contains('pi-item-row2') && row.nextElementSibling.remove();
+    row.remove();
   });
 
   document.getElementById('pi-attachment-file').addEventListener('change', async (e) => {
@@ -1765,14 +1782,23 @@ function showPurchaseInvoiceModal(inv = null) {
     if (!vendorName) { toast('Vendor name required', 'error'); return; }
     if (!invoiceNumber || !invoiceDate) { toast('Invoice number and date required', 'error'); return; }
 
-    const items = Array.from(document.querySelectorAll('.pi-item-row')).map((row) => ({
-      description:  row.querySelector('.pi-item-desc').value.trim(),
-      hsnCode:      row.querySelector('.pi-item-hsn').value.trim() || undefined,
-      qty:          Number(row.querySelector('.pi-item-qty').value) || undefined,
-      unitPrice:    Number(row.querySelector('.pi-item-unit').value) || undefined,
-      taxableValue: Number(row.querySelector('.pi-item-taxable').value) || 0,
-      gstRate:      Number(row.querySelector('.pi-item-rate').value) || 0
-    }));
+    const items = Array.from(document.querySelectorAll('.pi-item-row')).map((row) => {
+      const r2 = row.nextElementSibling;
+      const n = (sel) => { const v = r2?.querySelector(sel)?.value; return v === '' || v === undefined ? undefined : Number(v); };
+      return {
+        description:  row.querySelector('.pi-item-desc').value.trim(),
+        hsnCode:      row.querySelector('.pi-item-hsn').value.trim() || undefined,
+        qty:          Number(row.querySelector('.pi-item-qty').value) || undefined,
+        unitPrice:    Number(row.querySelector('.pi-item-unit').value) || undefined,
+        taxableValue: Number(row.querySelector('.pi-item-taxable').value) || 0,
+        gstRate:      Number(row.querySelector('.pi-item-rate').value) || 0,
+        costPrice:    n('.pi-item-cost'),
+        sellingPrice: n('.pi-item-sell'),
+        mrp:          n('.pi-item-mrp'),
+        sku:          r2?.querySelector('.pi-item-sku')?.value.trim() || undefined,
+        lineKey:      r2?.querySelector('.pi-item-key')?.value || undefined
+      };
+    });
     if (!items.length || items.some((it) => !it.description || it.taxableValue < 0)) {
       toast('Each line item needs a description and a taxable value', 'error');
       return;
@@ -1797,13 +1823,36 @@ function showPurchaseInvoiceModal(inv = null) {
       notes:         document.getElementById('pi-notes').value.trim() || undefined
     };
 
+    const saveBtn = document.getElementById('pi-save');
+    saveBtn.disabled = true;
+    let saved;
     try {
-      if (inv) await api(`/admin/purchase-invoices/${inv._id}`, { method: 'PUT', body: JSON.stringify(payload) });
-      else     await api('/admin/purchase-invoices', { method: 'POST', body: JSON.stringify(payload) });
-      toast('Purchase invoice saved', 'success');
-      closeModal();
-      loadPurchaseInvoices();
-    } catch (err) { toast(err.message || 'Save failed', 'error'); }
+      saved = inv
+        ? await api(`/admin/purchase-invoices/${inv._id}`, { method: 'PUT', body: JSON.stringify(payload) })
+        : await api('/admin/purchase-invoices', { method: 'POST', body: JSON.stringify(payload) });
+    } catch (err) {
+      saveBtn.disabled = false;
+      toast(err.message || 'Save failed', 'error');
+      return;
+    }
+    toast('Purchase invoice saved', 'success');
+
+    // Step 2 — create draft products for lines that don't have one yet.
+    if (document.getElementById('pi-make-products')?.checked) {
+      try {
+        const id = (saved.data || saved)._id;
+        const r = await api(`/admin/purchase-invoices/${id}/submit`, { method: 'POST' });
+        toast(r.message || 'Draft products created', 'success');
+      } catch (err) {
+        // Invoice is saved; products weren't. Reopen it so the admin can fix and save again.
+        toast(err.message, 'error');
+        loadPurchaseInvoices();
+        window.editPurchaseInvoice((saved.data || saved)._id);
+        return;
+      }
+    }
+    closeModal();
+    loadPurchaseInvoices();
   });
 }
 

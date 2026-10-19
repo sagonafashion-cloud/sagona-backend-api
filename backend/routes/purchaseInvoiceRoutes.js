@@ -6,7 +6,8 @@ import {
   createPurchaseInvoice,
   updatePurchaseInvoice,
   cancelPurchaseInvoice,
-  extractPurchaseInvoice
+  extractPurchaseInvoice,
+  submitPurchaseInvoice
 } from '../controllers/purchaseInvoiceController.js';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import { validate, mongoIdParam, createPurchaseInvoiceRules } from '../middleware/validate.js';
@@ -50,6 +51,7 @@ router.post('/', createPurchaseInvoiceRules, validate, createPurchaseInvoice);
 // here; the controller itself validates taxType/items shape when those
 // fields are actually part of the update.
 router.put('/:id', mongoIdParam('id'), validate, updatePurchaseInvoice);
+router.post('/:id/submit', mongoIdParam('id'), validate, submitPurchaseInvoice);
 router.patch('/:id/cancel', mongoIdParam('id'), validate, cancelPurchaseInvoice);
 
 export default router;
