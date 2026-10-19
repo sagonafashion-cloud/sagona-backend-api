@@ -524,9 +524,54 @@ document.getElementById('order-status-filter')?.addEventListener('change', () =>
 /* ══════════════════════════════════════
    RETURNS
 ══════════════════════════════════════ */
+// Returned goods wait here until someone inspects them: "Add to stock" puts
+// them back on sale; "Write off" records them as unsellable (no stock change).
+async function loadHeldReturns(afterEl) {
+  let box = document.getElementById('held-returns-list');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'held-returns-list';
+    box.style.marginTop = '28px';
+    afterEl.insertAdjacentElement('afterend', box);
+  }
+  try {
+    const res = await api('/admin/orders/held-returns');
+    const orders = res.data || [];
+    if (!orders.length) { box.innerHTML = ''; return; }
+    const canDecide = ['super_admin', 'store_manager'].includes(_adminUser?.role);
+    box.innerHTML = `
+      <h3 style="font-size:15px;margin-bottom:6px">Returned items awaiting inspection</h3>
+      <p style="font-size:12px;color:var(--gray);margin-bottom:10px">These are not back in stock yet. Check the condition, then add them to stock or write them off.</p>
+      <div class="admin-card"><table class="admin-table">
+        <thead><tr><th>ORDER #</th><th>ITEMS</th><th>ACTION</th></tr></thead>
+        <tbody>${orders.map((o) => `
+          <tr>
+            <td style="font-weight:500;color:var(--gold)">${escapeHtml(o.orderNumber)}</td>
+            <td style="font-size:13px">${(o.items || []).map((i) => `${escapeHtml(i.name || 'Item')}${i.size ? ' (' + escapeHtml(i.size) + ')' : ''} × ${Number(i.qty) || 1}`).join('<br>')}</td>
+            <td>${canDecide ? `
+              <button onclick="window.decideReturnStock('${o._id}','release')" style="padding:6px 12px;background:#1D9E75;color:#fff;border:none;cursor:pointer;font-size:11px;border-radius:3px">ADD TO STOCK</button>
+              <button onclick="window.decideReturnStock('${o._id}','discard')" style="padding:6px 12px;background:transparent;color:#E24B4A;border:0.5px solid #E24B4A;cursor:pointer;font-size:11px;border-radius:3px;margin-left:6px">WRITE OFF</button>` : '—'}</td>
+          </tr>`).join('')}
+        </tbody></table></div>`;
+  } catch { box.innerHTML = ''; }
+}
+
+window.decideReturnStock = async function(orderId, decision) {
+  const msg = decision === 'release'
+    ? 'Add these returned items back to sellable stock?'
+    : 'Write off these items? They will NOT be added back to stock.';
+  if (!confirm(msg)) return;
+  try {
+    const r = await api(`/admin/orders/${orderId}/return-stock`, { method: 'POST', body: JSON.stringify({ decision }) });
+    toast(r.message || 'Done', 'success');
+    loadReturns();
+  } catch (err) { toast('Failed: ' + err.message, 'error'); }
+};
+
 async function loadReturns() {
   const list = document.getElementById('returns-list');
   list.innerHTML = '<div class="loading">Loading…</div>';
+  loadHeldReturns(list);
 
   try {
     const res = await api('/admin/orders/returns');

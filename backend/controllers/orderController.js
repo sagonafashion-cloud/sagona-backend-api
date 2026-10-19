@@ -8,7 +8,26 @@ import { buildTimelineEntry, calcEstimatedDelivery } from '../utils/orderTimelin
 import { computeOrderTotals } from '../utils/orderCalculator.js';
 import { escapeRegex } from './productController.js';
 import { logAdminActivity } from '../utils/activityLogger.js';
+import { restoreOrderStock, holdReturnedStock } from '../utils/stockRestore.js';
 import crypto from 'crypto';
+
+// Stock side-effects of a status change. Cancelled before dispatch → goods
+// never left, so restock automatically. Anything coming back after dispatch
+// (returned, or cancelled after shipping/delivery) is held for inspection —
+// never auto-restocked, since it may be damaged. Failures are logged, never
+// thrown: the order status change itself must not fail because of this.
+async function applyStockEffects(order, prevStatus, nextStatus) {
+  try {
+    const preDispatch = ['placed', 'confirmed', 'packed'];
+    if (nextStatus === 'cancelled' && preDispatch.includes(prevStatus)) {
+      await restoreOrderStock(order._id);
+    } else if (nextStatus === 'returned' || (nextStatus === 'cancelled' && !preDispatch.includes(prevStatus))) {
+      await holdReturnedStock(order._id);
+    }
+  } catch (err) {
+    console.error('applyStockEffects:', order.orderNumber, err.message);
+  }
+}
 
 /* ═══════════════════════════════════
    CREATE ORDER (customer)
@@ -323,6 +342,7 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
+    if (prevStatus !== status) await applyStockEffects(order, prevStatus, status);
 
     logAdminActivity(req, 'order.status_update', {
       targetType: 'Order',
@@ -374,8 +394,10 @@ export const cancelOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage' });
     }
 
+    const prevStatus = order.status;
     order.status = 'cancelled';
     await order.save();
+    await applyStockEffects(order, prevStatus, 'cancelled');
     sendStatusUpdate(order).catch(() => {});
 
     res.json({ success: true, message: 'Order cancelled successfully' });
@@ -485,6 +507,7 @@ export const adminInitiateReturn = async (req, res) => {
       { status: 'returned', notes: newNotes },
       { new: true }
     );
+    await applyStockEffects(order, existing.status, 'returned');
 
     logAdminActivity(req, 'order.admin_return_initiate', {
       targetType: 'Order',
@@ -514,6 +537,51 @@ export const getPendingReturns = async (req, res) => {
 };
 
 /* ═══════════════════════════════════
+   ADMIN — RETURNED GOODS AWAITING INSPECTION
+═══════════════════════════════════ */
+export const getHeldReturns = async (req, res) => {
+  try {
+    const orders = await Order.find({ returnStockStatus: 'held' })
+      .sort({ updatedAt: -1 })
+      .select('orderNumber customer.name items status returnRequest updatedAt')
+      .lean();
+    res.json({ success: true, data: orders, total: orders.length });
+  } catch (err) {
+    console.error('getHeldReturns:', err);
+    res.status(500).json({ success: false, message: 'Failed to load held returns' });
+  }
+};
+
+// decision: 'release' → goods passed inspection, add back to sellable stock.
+//           'discard' → damaged/unsellable, stock is NOT restored.
+export const decideReturnStock = async (req, res) => {
+  try {
+    const { decision } = req.body;
+    if (!['release', 'discard'].includes(decision)) {
+      return res.status(400).json({ success: false, message: 'decision must be release or discard' });
+    }
+    const order = await Order.findById(req.params.id).select('orderNumber returnStockStatus');
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.returnStockStatus !== 'held') {
+      return res.status(400).json({ success: false, message: 'This order has no returned stock awaiting a decision' });
+    }
+
+    if (decision === 'release') await restoreOrderStock(order._id);
+    await Order.updateOne({ _id: order._id }, { $set: { returnStockStatus: decision === 'release' ? 'released' : 'discarded' } });
+
+    logAdminActivity(req, 'order.return_stock_decision', {
+      targetType: 'Order',
+      targetId: order._id,
+      details: { orderNumber: order.orderNumber, decision }
+    });
+    res.json({ success: true, message: decision === 'release' ? 'Returned items added back to stock' : 'Returned items written off' });
+  } catch (err) {
+    console.error('decideReturnStock:', err);
+    res.status(500).json({ success: false, message: 'Failed to record decision' });
+  }
+};
+
+/* ═══════════════════════════════════
    ADMIN — APPROVE / REJECT RETURN
 ═══════════════════════════════════ */
 export const actionReturn = async (req, res) => {
@@ -535,6 +603,7 @@ export const actionReturn = async (req, res) => {
     order.returnRequest.resolvedAt = new Date();
     order.status = action === 'approved' ? 'returned' : 'delivered';
     await order.save();
+    if (action === 'approved') await applyStockEffects(order, 'return_requested', 'returned');
 
     logAdminActivity(req, 'order.return_action', {
       targetType: 'Order',

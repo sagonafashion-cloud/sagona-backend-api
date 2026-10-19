@@ -125,7 +125,14 @@ const orderSchema = new mongoose.Schema(
     returnRequest:     returnRequestSchema,
 
     invoiceUrl: { type: String },
-    notes: { type: String }
+    notes: { type: String },
+
+    // Stock bookkeeping. stockRestoredAt is set (atomically, once) when the
+    // order's items were added back to inventory, so a cancel/return can never
+    // restock twice. Returned goods are 'held' until a super admin / store
+    // manager inspects them and releases them to stock or discards them.
+    stockRestoredAt:   { type: Date },
+    returnStockStatus: { type: String, enum: ['held', 'released', 'discarded'] }
   },
   { timestamps: true }
 );

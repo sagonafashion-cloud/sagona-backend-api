@@ -1,5 +1,5 @@
 import express from 'express';
-import { getOrders, createManualOrder, updateOrderStatus, adminInitiateReturn, getPendingReturns, actionReturn } from '../controllers/orderController.js';
+import { getOrders, createManualOrder, updateOrderStatus, adminInitiateReturn, getPendingReturns, actionReturn, getHeldReturns, decideReturnStock } from '../controllers/orderController.js';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import { validate, mongoIdParam } from '../middleware/validate.js';
 
@@ -12,6 +12,8 @@ router.post('/:id/return', adminProtect, requireRole('super_admin', 'store_manag
 
 // Return request management
 router.get('/returns',              adminProtect, requireRole('super_admin', 'store_manager', 'viewer'), getPendingReturns);
-router.put('/:id/return-action',    adminProtect, requireRole('super_admin', 'store_manager'), mongoIdParam('id'), validate, actionReturn);
+router.get('/held-returns',         adminProtect, requireRole('super_admin', 'store_manager', 'viewer'), getHeldReturns);
+router.post('/:id/return-stock',    adminProtect, requireRole('super_admin', 'store_manager'), mongoIdParam('id'), validate, decideReturnStock);
+router.put('/:id/return-action',   adminProtect, requireRole('super_admin', 'store_manager'), mongoIdParam('id'), validate, actionReturn);
 
 export default router;
