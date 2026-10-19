@@ -1,6 +1,7 @@
 import PurchaseInvoice from '../models/PurchaseInvoice.js';
 import { gstRates } from '../utils/taxCalculator.js';
 import { logAdminActivity } from '../utils/activityLogger.js';
+import { extractInvoice } from '../utils/invoiceExtractor.js';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -46,6 +47,43 @@ const pickFields = (body = {}) => {
     invoiceType, taxType, items, cess, paymentStatus, attachmentUrl, notes
   } = body;
   return { vendor, invoiceNumber, invoiceDate, placeOfSupply, reverseCharge, invoiceType, taxType, items, cess, paymentStatus, attachmentUrl, notes };
+};
+
+// POST /api/admin/purchase-invoices/extract  (multipart, field "file")
+// Reads a vendor invoice photo/PDF with AI and returns an UNSAVED draft for the
+// super admin to verify in the Add Invoice form. Saves nothing; on any failure
+// the client falls back to manual entry, so the existing flow is never blocked.
+export const extractPurchaseInvoice = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    const { draft, warnings, usage } = await extractInvoice(req.file.buffer);
+
+    // Soft duplicate warning (no DB constraint by design — see model note).
+    if (draft.invoiceNumber) {
+      const dupQuery = { invoiceNumber: draft.invoiceNumber, status: { $ne: 'cancelled' } };
+      if (draft.vendor?.gstin) dupQuery['vendor.gstin'] = draft.vendor.gstin;
+      else if (draft.vendor?.name) dupQuery['vendor.name'] = draft.vendor.name;
+      const dup = await PurchaseInvoice.findOne(dupQuery).select('_id invoiceNumber invoiceDate').lean();
+      if (dup) warnings.unshift(`An invoice numbered ${dup.invoiceNumber} from this vendor already exists. Saving again would double-count it.`);
+    }
+
+    logAdminActivity(req, 'purchase_invoice.extract', {
+      targetType: 'PurchaseInvoice',
+      details: { lines: draft.items.length, ...usage }
+    });
+
+    res.json({ success: true, data: draft, warnings });
+  } catch (err) {
+    console.error('extractPurchaseInvoice:', err.message);
+    const status = err.code === 'NOT_CONFIGURED' ? 503 : 422;
+    res.status(status).json({
+      success: false,
+      message: err.code === 'NOT_CONFIGURED'
+        ? err.message
+        : 'Could not read this invoice automatically. Please enter the details manually.'
+    });
+  }
 };
 
 export const listPurchaseInvoices = async (req, res) => {

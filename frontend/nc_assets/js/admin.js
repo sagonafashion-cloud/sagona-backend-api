@@ -1677,6 +1677,10 @@ function showPurchaseInvoiceModal(inv = null) {
     <input type="file" id="pi-attachment-file" accept="image/*,application/pdf">
     <input type="hidden" id="pi-attachment-url" value="${escapeHtml(inv?.attachmentUrl) || ''}">
     <div id="pi-attachment-preview" style="margin:6px 0;font-size:11px;color:var(--gray)">${inv?.attachmentUrl ? 'Existing attachment on file.' : ''}</div>
+    ${inv ? '' : `
+    <button type="button" class="btn ghost" id="pi-ai-read" style="margin-bottom:8px">Read invoice automatically</button>
+    <span style="font-size:11px;color:var(--gray)">Choose the file above, then click. Fills the form below for you to verify — nothing is saved until you click Create.</span>
+    <div id="pi-ai-warnings" style="display:none;margin:8px 0;padding:10px;border:1px solid #d9a441;background:#fff8e6;font-size:12px;line-height:1.5"></div>`}
 
     <label>Notes</label>
     <textarea id="pi-notes" rows="2">${escapeHtml(inv?.notes) || ''}</textarea>
@@ -1713,6 +1717,44 @@ function showPurchaseInvoiceModal(inv = null) {
     } catch (err) {
       preview.textContent = '';
       toast('Attachment upload failed: ' + (err.message || 'unknown error'), 'error');
+    }
+  });
+
+  document.getElementById('pi-ai-read')?.addEventListener('click', async (ev) => {
+    const btn = ev.currentTarget;
+    const file = document.getElementById('pi-attachment-file').files?.[0];
+    if (!file) { toast('Choose the invoice file first', 'error'); return; }
+    const warnBox = document.getElementById('pi-ai-warnings');
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Reading… (10–30 sec)';
+    warnBox.style.display = 'none';
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api('/admin/purchase-invoices/extract', { method: 'POST', body: fd });
+      const d = res.data;
+      const set = (id, v) => { if (v !== null && v !== undefined && v !== '') document.getElementById(id).value = v; };
+      set('pi-vendor-name', d.vendor?.name);
+      set('pi-vendor-gstin', d.vendor?.gstin);
+      set('pi-vendor-state', d.vendor?.state);
+      set('pi-pos', d.placeOfSupply);
+      set('pi-invnum', d.invoiceNumber);
+      set('pi-invdate', d.invoiceDate);
+      if (d.taxType) document.getElementById('pi-taxtype').value = d.taxType;
+      document.getElementById('pi-reverse').checked = !!d.reverseCharge;
+      set('pi-cess', d.printedTotals?.cess);
+      if (d.items?.length) {
+        document.getElementById('pi-items').innerHTML = d.items.map(piItemRowHtml).join('');
+      }
+      const warnings = res.warnings || [];
+      warnBox.innerHTML = '<strong>Please verify before saving.</strong>' +
+        (warnings.length ? '<ul style="margin:6px 0 0 18px">' + warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('') + '</ul>' : ' No automatic checks failed, but compare each field with the invoice.');
+      warnBox.style.display = 'block';
+      toast('Invoice read — please verify the details', 'success');
+    } catch (err) {
+      toast(err.message || 'Could not read the invoice — enter details manually', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = label;
     }
   });
 
