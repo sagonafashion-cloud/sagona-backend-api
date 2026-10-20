@@ -1,3 +1,5 @@
+import { invoiceToken } from './invoiceToken.js';
+
 // Same escaping pattern used in routes/supportRoutes.js — user/admin-entered
 // free text (names, addresses, item/product names) is interpolated straight
 // into these HTML email templates, so it needs escaping before insertion.
@@ -9,7 +11,8 @@ const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '
 // never worked. This route regenerates the PDF from the order's own data
 // on request, so it works with no login session, exactly like this link
 // needs to for someone reading the email.
-const invoiceDownloadUrl = (orderNumber) => `https://sagona-backend-api.onrender.com/api/invoices/${encodeURIComponent(orderNumber)}`;
+const invoiceDownloadUrl = (orderNumber) =>
+  `https://sagona-backend-api.onrender.com/api/invoices/${encodeURIComponent(orderNumber)}?t=${invoiceToken(orderNumber)}`;
 
 /* ── shared layout ── */
 const layout = (title, body) => `<!DOCTYPE html>
