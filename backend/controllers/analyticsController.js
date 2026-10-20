@@ -189,14 +189,18 @@ export const getInventoryAlerts = async (req, res) => {
     // low stock, risking slow responses/large payloads.
     const limit = Math.min(200, parseInt(req.query.limit) || 100);
 
+    // Checkout sells from top-level `stock` (products without variants) or
+    // `variants[].stock` — NOT stores[]. The original query only looked at
+    // variants/stores, so a non-variant product running out never showed up.
     const data = await Product.find({
       status: 'active',
       $or: [
         { 'variants.stock': { $lte: threshold } },
-        { 'stores.stock': { $lte: threshold } }
+        { 'stores.stock': { $lte: threshold } },
+        { variants: { $size: 0 }, stock: { $lte: threshold } }
       ]
     })
-    .select('name sku category variants stores status')
+    .select('name sku category variants stores stock status')
     .limit(limit)
     .lean();
 
