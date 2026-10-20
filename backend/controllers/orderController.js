@@ -43,7 +43,7 @@ async function applyStockEffects(order, prevStatus, nextStatus) {
 // unique index rejects one of them. Re-running the whole transaction recomputes
 // the number from the (now higher) count, so the customer's order still goes
 // through instead of failing. Only duplicate-orderNumber errors are retried.
-async function withOrderNumberRetry(run, maxAttempts = 4) {
+export async function withOrderNumberRetry(run, maxAttempts = 4) {
   for (let attempt = 1; ; attempt++) {
     try {
       return await run();
