@@ -9,10 +9,29 @@ const id   = new URLSearchParams(location.search).get('id');
 const INR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 /* ── add to cart ── */
+// Units of this product/size actually available (stock is tracked either on the
+// product itself or per size/colour variant).
+const availableStock = (p, size, colour) => {
+  if (p.variants?.length) {
+    const v = p.variants.find((x) => x.size === size &&
+      String(x.colour || '').toLowerCase() === String(colour || '').toLowerCase());
+    // Variants without a colour on the PDP: fall back to any variant of that size.
+    const bySize = p.variants.filter((x) => x.size === size);
+    return v ? Number(v.stock ?? 0) : bySize.reduce((n, x) => n + Number(x.stock ?? 0), 0);
+  }
+  return Number(p.stock ?? 0);
+};
+
 const addToCart = (p, size, colour) => {
   const cart = getCart();
   const key  = `${p._id}_${size || ''}_${colour || ''}`;
   const item = cart.find((i) => i.key === key);
+  const max  = Math.min(20, availableStock(p, size, colour));
+  if (max <= 0) return false;
+  if (item && item.quantity >= max) {
+    window.alert(`Only ${max} available — you already have ${item.quantity} in your bag.`);
+    return false;
+  }
   if (item) item.quantity++;
   else cart.push({
     key,
@@ -36,6 +55,7 @@ const addToCart = (p, size, colour) => {
   // open drawer if present
   document.getElementById('cart-drawer')?.classList.add('active');
   if (window.refreshCartDrawer) window.refreshCartDrawer();
+  return true;
 };
 
 /* ── accordion logic ── */
@@ -107,6 +127,13 @@ async function checkPincode(pincode) {
   const sizes = [...new Set((p.variants || []).map((v) => v.size).filter(Boolean))];
   const hasSizes = sizes.length > 0;
 
+  // Stock: the whole product is sold out when no unit is left anywhere
+  // (non-variant products use `stock`, variant products sum their variants).
+  const totalStock = (p.variants?.length)
+    ? p.variants.reduce((n, v) => n + Number(v.stock ?? 0), 0)
+    : Number(p.stock ?? 0);
+  const soldOut = totalStock <= 0;
+
   // Price line
   const mrpHtml = p.mrp && p.mrp > p.price
     ? `<span class="pdp-mrp">${INR(p.mrp)}</span>` : '';
@@ -148,10 +175,13 @@ async function checkPincode(pincode) {
         ${hasSizes ? `
         <div class="size-label">Select Size</div>
         <div class="size-options">
-          ${sizes.map((s) => `<button class="size-btn" data-size="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
+          ${sizes.map((s) => {
+            const sizeOut = availableStock(p, s, null) <= 0;
+            return `<button class="size-btn" data-size="${escapeHtml(s)}" ${sizeOut ? 'disabled style="opacity:.4;text-decoration:line-through;cursor:not-allowed" title="Out of stock"' : ''}>${escapeHtml(s)}</button>`;
+          }).join('')}
         </div>` : ''}
 
-        <button id="add-btn" class="btn gold">Add to Bag</button>
+        <button id="add-btn" class="btn gold" ${soldOut ? 'disabled style="opacity:.55;cursor:not-allowed"' : ''}>${soldOut ? 'Sold Out' : 'Add to Bag'}</button>
         <button id="wish-btn" class="btn ghost" style="width:100%;margin-bottom:24px;">♡ Save to Wishlist</button>
 
         <!-- PINCODE CHECKER -->
@@ -179,7 +209,7 @@ async function checkPincode(pincode) {
   `;
 
   /* ── events ── */
-  let selectedSize   = sizes[0] || null;
+  let selectedSize   = sizes.find((x) => availableStock(p, x, null) > 0) || sizes[0] || null;
   let selectedColour = null;
 
   // thumbnail click
@@ -200,10 +230,11 @@ async function checkPincode(pincode) {
     });
   });
   // pre-select first size
-  document.querySelector('.size-btn')?.classList.add('active');
+  document.querySelector(`.size-btn[data-size="${selectedSize}"]`)?.classList.add('active');
 
   // add to bag
   document.getElementById('add-btn').addEventListener('click', () => {
+    if (soldOut) return;
     if (hasSizes && !selectedSize) {
       document.querySelector('.size-options').style.outline = '2px solid var(--gold)';
       return;
@@ -266,7 +297,7 @@ async function checkPincode(pincode) {
       url:            window.location.href,
       priceCurrency:  'INR',
       price:          p.price,
-      availability:   p.status === 'active'
+      availability:   (p.status === 'active' && !soldOut)
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
       seller:         { '@type': 'Organization', name: 'Sagona' }
@@ -276,6 +307,18 @@ async function checkPincode(pincode) {
   sd.type = 'application/ld+json';
   sd.text = JSON.stringify(schema);
   document.head.appendChild(sd);
+
+  // Canonical / description / og:url per product. The static HTML ships a
+  // canonical of /product.html (no id), which told search engines every product
+  // is the same page.
+  const productUrl = `https://sagona.in/product.html?id=${encodeURIComponent(p._id)}`;
+  let canon = document.querySelector('link[rel="canonical"]');
+  if (!canon) { canon = document.createElement('link'); canon.rel = 'canonical'; document.head.appendChild(canon); }
+  canon.href = productUrl;
+  document.querySelector('meta[property="og:url"]')?.setAttribute('content', productUrl);
+  const plainDesc = String(p.description || '').replace(/\s+/g, ' ').trim();
+  const metaDesc = (plainDesc ? `${p.name} — ${plainDesc}` : `${p.name} by Sagona — premium kidswear crafted in India.`).slice(0, 160);
+  document.querySelector('meta[name="description"]')?.setAttribute('content', metaDesc);
 
   // Update OG tags with real product data
   document.querySelector('meta[property="og:title"]')?.setAttribute('content', `${p.name} | SAGONA`);
