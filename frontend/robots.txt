@@ -1,4 +1,8 @@
 User-agent: *
 Disallow: /admin.html
+Disallow: /cart.html
+Disallow: /checkout.html
+Disallow: /order-success.html
+Disallow: /account.html
 
 Sitemap: https://sagona.in/sitemap.xml
