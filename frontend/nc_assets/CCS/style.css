@@ -2005,3 +2005,11 @@ body.home-page .header { display: none; }
   align-items: center; margin-bottom: 24px;
 }
 .modal-header h3 { font-size: 18px; }
+
+/* ─── Mobile: keep floating WhatsApp / chat buttons from covering page content ─── */
+@media (max-width: 768px) {
+  .whatsapp-fab { width: 44px; height: 44px; right: 12px; bottom: 76px; }
+  .whatsapp-fab svg { width: 24px; height: 24px; }
+  /* room at the bottom of every page so the last button/row can scroll clear of the FABs */
+  body { padding-bottom: 130px; }
+}

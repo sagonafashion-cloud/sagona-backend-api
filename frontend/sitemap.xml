@@ -5,5 +5,7 @@
   <url><loc>https://sagona.in/product.html?id=6a8624b0a7cb533b2ea51662</loc><priority>0.8</priority></url>
   <url><loc>https://sagona.in/returns.html</loc><priority>0.4</priority></url>
   <url><loc>https://sagona.in/support.html</loc><priority>0.4</priority></url>
+  <url><loc>https://sagona.in/terms.html</loc><priority>0.3</priority></url>
+  <url><loc>https://sagona.in/shipping.html</loc><priority>0.4</priority></url>
   <url><loc>https://sagona.in/privacy.html</loc><priority>0.3</priority></url>
 </urlset>

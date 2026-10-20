@@ -18,6 +18,10 @@ function toast(msg, type = '') {
   setTimeout(() => el.remove(), 2700);
 }
 
+// Older builds kept the admin JWT in localStorage (readable by any script on the
+// origin). Current code uses sessionStorage only, so remove any leftover copy.
+try { localStorage.removeItem('admin_token'); } catch { /* storage unavailable */ }
+
 /* ── admin fetch (uses admin_token) ── */
 async function api(path, opts = {}) {
   const token = sessionStorage.getItem('admin_token');
