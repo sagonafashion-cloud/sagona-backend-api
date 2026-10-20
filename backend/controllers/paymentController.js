@@ -197,6 +197,18 @@ export const razorpayWebhook = async (req, res) => {
       const capturedAmountPaise = payload?.payment?.entity?.amount;
       if (rzpOrderId) {
         const order = await Order.findOne({ 'payment.razorpayOrderId': rzpOrderId });
+        if (!order) {
+          // Money captured but no order exists (shopper closed the tab, or order
+          // creation failed after payment). Make it loud so it can be refunded
+          // or fulfilled by hand instead of going unnoticed.
+          console.error('PAID PAYMENT WITH NO ORDER — needs manual follow-up:', {
+            razorpayOrderId: rzpOrderId,
+            razorpayPaymentId: payload?.payment?.entity?.id,
+            amountPaise: capturedAmountPaise,
+            email: payload?.payment?.entity?.email,
+            contact: payload?.payment?.entity?.contact
+          });
+        }
         // Idempotency + amount cross-check — never mark paid on amount mismatch or twice.
         if (order && order.payment?.status !== 'paid') {
           const expectedPaise = Math.round(order.billing.grandTotal * 100);

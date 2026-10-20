@@ -408,7 +408,15 @@ form.addEventListener('submit', async (e) => {
         email:   auth?.user?.email,
         contact: document.getElementById('phone')?.value
       },
-      theme: { color: '#C9A84C' }
+      theme: { color: '#C9A84C' },
+      // Shopper closed the payment window without paying: unlock the button,
+      // otherwise it stays on "Placing order…" until they reload the page.
+      modal: {
+        ondismiss: () => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Place Order';
+        }
+      }
     });
 
     rzp.on('payment.failed', () => {
