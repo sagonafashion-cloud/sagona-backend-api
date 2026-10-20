@@ -46,15 +46,25 @@ export const sendEmail = async ({ to, subject, html }) => {
 const _otpStore = new Map();
 
 export const storeOtp = (email, otp) => {
-  _otpStore.set(email.toLowerCase(), { otp, expiry: Date.now() + 15 * 60 * 1000 });
+  _otpStore.set(email.toLowerCase(), { otp, expiry: Date.now() + 15 * 60 * 1000, attempts: 0 });
 };
 
+// A 6-digit code has only 1,000,000 values, so wrong guesses must be capped:
+// after MAX_OTP_ATTEMPTS misses the code is destroyed and a new one has to be
+// requested (which is itself rate-limited per IP).
+const MAX_OTP_ATTEMPTS = 5;
+
 export const verifyOtp = (email, otp) => {
-  const entry = _otpStore.get(email.toLowerCase());
+  const key = email.toLowerCase();
+  const entry = _otpStore.get(key);
   if (!entry) return false;
-  if (Date.now() > entry.expiry) { _otpStore.delete(email.toLowerCase()); return false; }
-  if (String(entry.otp) !== String(otp)) return false;
-  _otpStore.delete(email.toLowerCase()); // single-use
+  if (Date.now() > entry.expiry) { _otpStore.delete(key); return false; }
+  if (String(entry.otp) !== String(otp)) {
+    entry.attempts = (entry.attempts || 0) + 1;
+    if (entry.attempts >= MAX_OTP_ATTEMPTS) _otpStore.delete(key);
+    return false;
+  }
+  _otpStore.delete(key); // single-use
   return true;
 };
 
