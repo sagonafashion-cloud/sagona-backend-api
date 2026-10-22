@@ -132,6 +132,9 @@ document.body.appendChild(drawer);
 const msgs    = drawer.querySelector('#sagi-messages');
 const input   = drawer.querySelector('#sagi-input');
 const sendBtn = drawer.querySelector('#sagi-send');
+// Shown whenever the assistant can't answer (service down, network error) so a
+// shopper is never left at a dead end — points them to a human.
+const FALLBACK_MSG = "Sorry, I can't answer right now. Please message us on WhatsApp (+91 90996 90446) or email care@sagona.in and we'll help.";
 let   sessionId = localStorage.getItem('sagi_session') || null;
 let   isOpen  = false;
 let   busy    = false;
@@ -224,22 +227,22 @@ drawer.querySelector('#sagi-form').addEventListener('submit', async (e) => {
           assistantEl.textContent += data.content;
           msgs.scrollTop = msgs.scrollHeight;
         } else if (data.type === 'error') {
-          assistantEl.textContent = data.content;
+          assistantEl.textContent = FALLBACK_MSG;
         }
         // 'done' type — nothing to do
       }
     }
 
     if (!assistantEl.textContent.trim()) {
-      assistantEl.textContent = 'Sorry, I couldn\'t get a response. Please try again.';
+      assistantEl.textContent = FALLBACK_MSG;
     }
 
   } catch (err) {
     removeTyping();
     if (assistantEl) {
-      assistantEl.textContent = 'Connection error. Please try again.';
+      assistantEl.textContent = FALLBACK_MSG;
     } else {
-      addMsg('assistant', 'Connection error. Please try again.');
+      addMsg('assistant', FALLBACK_MSG);
     }
     console.error('[SAGi]', err);
   } finally {

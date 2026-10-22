@@ -9,6 +9,14 @@ import { computeOrderTotals } from '../utils/orderCalculator.js';
 import { escapeRegex } from './productController.js';
 import { logAdminActivity } from '../utils/activityLogger.js';
 import { restoreOrderStock, holdReturnedStock } from '../utils/stockRestore.js';
+import { invoiceToken } from '../utils/invoiceToken.js';
+
+// Signed, working invoice link for the logged-in owner (web/app). The legacy
+// `invoiceUrl` points at Cloudinary, which blocks public delivery of PDFs.
+const withInvoiceLink = (orderDoc) => {
+  const o = typeof orderDoc.toObject === 'function' ? orderDoc.toObject() : orderDoc;
+  return { ...o, invoiceLink: `https://sagona-backend-api.onrender.com/api/invoices/${encodeURIComponent(o.orderNumber)}?t=${invoiceToken(o.orderNumber)}` };
+};
 import crypto from 'crypto';
 
 // Stock side-effects of a status change. Cancelled before dispatch → goods
@@ -26,6 +34,24 @@ async function applyStockEffects(order, prevStatus, nextStatus) {
     }
   } catch (err) {
     console.error('applyStockEffects:', order.orderNumber, err.message);
+  }
+}
+
+
+// Order numbers are derived from the current order count in a pre-save hook, so
+// two checkouts landing in the same instant can compute the same number and the
+// unique index rejects one of them. Re-running the whole transaction recomputes
+// the number from the (now higher) count, so the customer's order still goes
+// through instead of failing. Only duplicate-orderNumber errors are retried.
+export async function withOrderNumberRetry(run, maxAttempts = 4) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      const dupOrderNumber = err?.code === 11000 &&
+        /orderNumber/.test(`${JSON.stringify(err.keyPattern || {})}${err.message || ''}`);
+      if (!dupOrderNumber || attempt >= maxAttempts) throw err;
+    }
   }
 }
 
@@ -131,7 +157,7 @@ export const createOrder = async (req, res) => {
     const session = await mongoose.startSession();
     let order;
     try {
-      await session.withTransaction(async () => {
+      await withOrderNumberRetry(() => session.withTransaction(async () => {
         const created = await Order.create([{
           customer: {
             userId: orderUser._id,
@@ -182,7 +208,7 @@ export const createOrder = async (req, res) => {
         order.timeline = [buildTimelineEntry('placed', '', 'system')];
         order.estimatedDelivery = calcEstimatedDelivery(new Date(), 5);
         await order.save({ session });
-      });
+      }));
     } finally {
       session.endSession();
     }
@@ -220,7 +246,7 @@ export const getMyOrders = async (req, res) => {
       Order.countDocuments({ 'customer.userId': req.user._id })
     ]);
 
-    res.json({ success: true, data, total, page, limit });
+    res.json({ success: true, data: data.map(withInvoiceLink), total, page, limit });
   } catch (err) {
     console.error('getMyOrders:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch orders' });
@@ -246,7 +272,7 @@ export const getOrderById = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    res.json({ success: true, data: order });
+    res.json({ success: true, data: withInvoiceLink(order) });
   } catch {
     res.status(400).json({ success: false, message: 'Invalid order id' });
   }
@@ -313,6 +339,17 @@ export const updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     const prevStatus = order.status;
+
+    // Cancelled and returned are final. Re-opening one would put an order back
+    // into the live pipeline after its stock was already restored/held and its
+    // GST reversal recorded, leaving stock, reports and the customer out of sync.
+    // To re-sell, place a new order.
+    if (['cancelled', 'returned'].includes(prevStatus) && status !== prevStatus) {
+      return res.status(400).json({
+        success: false,
+        message: `A ${prevStatus} order can't be changed to "${status}". Create a new order instead.`
+      });
+    }
     order.status = status;
 
     // Build and append timeline entry

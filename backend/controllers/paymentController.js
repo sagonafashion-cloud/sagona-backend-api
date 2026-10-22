@@ -5,6 +5,7 @@ import Store from '../models/Store.js';
 import { generateAndUploadInvoice } from '../utils/invoiceGenerator.js';
 import { sendOrderConfirmation } from '../utils/emailService.js';
 import { computeOrderTotals } from '../utils/orderCalculator.js';
+import PendingCheckout from '../models/PendingCheckout.js';
 
 /* ── helpers ── */
 export const getRazorpayInstance = () => {
@@ -47,6 +48,29 @@ export const createRazorpayOrder = async (req, res) => {
       receipt: `sagona_${Date.now()}`,
       notes: { userId: req.user ? String(req.user._id) : 'guest' }
     });
+
+    // Snapshot of what is being paid for, so a captured payment can never end up
+    // without an order (see utils/paymentReconciler.js). Best-effort: a failure
+    // here must never block the shopper from paying.
+    try {
+      await PendingCheckout.create({
+        razorpayOrderId: order.id,
+        userId: req.user?._id,
+        items: (items || []).map((i) => ({
+          productId: String(i.productId || ''), qty: Number(i.qty || i.quantity || 1),
+          size: i.size, colour: i.colour, storeId: i.storeId ? String(i.storeId) : undefined, sku: i.sku
+        })),
+        shippingAddress,
+        contact: {
+          name: shippingAddress?.name,
+          email: String(req.body.email || shippingAddress?.email || '').toLowerCase().trim(),
+          phone: shippingAddress?.phone
+        },
+        expectedPaise: amountInPaise
+      });
+    } catch (snapshotErr) {
+      console.error('PendingCheckout snapshot failed (payment continues):', snapshotErr.message);
+    }
 
     res.json({ success: true, data: order });
   } catch (err) {
@@ -197,6 +221,18 @@ export const razorpayWebhook = async (req, res) => {
       const capturedAmountPaise = payload?.payment?.entity?.amount;
       if (rzpOrderId) {
         const order = await Order.findOne({ 'payment.razorpayOrderId': rzpOrderId });
+        if (!order) {
+          // Money captured but no order exists (shopper closed the tab, or order
+          // creation failed after payment). Make it loud so it can be refunded
+          // or fulfilled by hand instead of going unnoticed.
+          console.error('PAID PAYMENT WITH NO ORDER — needs manual follow-up:', {
+            razorpayOrderId: rzpOrderId,
+            razorpayPaymentId: payload?.payment?.entity?.id,
+            amountPaise: capturedAmountPaise,
+            email: payload?.payment?.entity?.email,
+            contact: payload?.payment?.entity?.contact
+          });
+        }
         // Idempotency + amount cross-check — never mark paid on amount mismatch or twice.
         if (order && order.payment?.status !== 'paid') {
           const expectedPaise = Math.round(order.billing.grandTotal * 100);

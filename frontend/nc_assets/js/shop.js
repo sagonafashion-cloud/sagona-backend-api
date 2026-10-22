@@ -26,9 +26,23 @@ const sortSelect  = document.getElementById('sort');
 let allProducts = [];
 
 /* ── add to cart ── */
+// Total units on hand: variant products sum their variants, others use `stock`.
+const stockOf = (product) => (product.variants?.length
+  ? product.variants.reduce((n, v) => n + Number(v.stock ?? 0), 0)
+  : Number(product.stock ?? 0));
+
 const addToCart = (product) => {
+  // Products sold by size need a size chosen — send the shopper to the product
+  // page instead of adding a size-less line the server would reject at checkout.
+  if (product.variants?.length) {
+    location.href = `product.html?id=${encodeURIComponent(product._id)}`;
+    return;
+  }
+  const available = Math.min(20, stockOf(product));
+  if (available <= 0) { toast('Sorry, this item is sold out', 'error'); return; }
   const cart  = getCart();
   const found = cart.find((i) => i.id === product._id);
+  if (found && found.quantity >= available) { toast(`Only ${available} available`, 'error'); return; }
   if (found) found.quantity += 1;
   else cart.push({ id: product._id, name: product.name, price: product.price, image: product.image || product.images?.[0], quantity: 1 });
   saveCart(cart);
@@ -102,7 +116,9 @@ function render(products) {
     const mrp   = p.mrp && p.mrp > p.price ? `<span class="price-mrp">${INR(p.mrp)}</span>` : '';
     const isNew  = (Date.now() - new Date(p.createdAt)) < 15 * 24 * 3600 * 1000;
     const isSale = p.mrp && p.mrp > p.price;
-    const badge  = isSale
+    const badge  = stockOf(p) <= 0
+      ? `<span class="badge">Sold out</span>`
+      : isSale
       ? `<span class="badge badge-sale">Sale</span>`
       : isNew ? `<span class="badge badge-new">New</span>` : '';
 
@@ -115,7 +131,7 @@ function render(products) {
           <img class="img-hover" src="${sanitizeUrl(img2)}" alt="${escapeHtml(p.name)}" loading="lazy">
         </a>
         <div class="product-card-actions">
-          <button class="btn-quick add" data-id="${p._id}">Add to Bag</button>
+          <button class="btn-quick add" data-id="${p._id}" ${stockOf(p) <= 0 ? 'disabled style="opacity:.6;cursor:not-allowed"' : ''}>${stockOf(p) <= 0 ? 'Sold Out' : (p.variants?.length ? 'Select Size' : 'Add to Bag')}</button>
           <button class="btn-wish  wish" data-id="${p._id}">♡</button>
         </div>
       </div>

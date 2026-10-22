@@ -11,8 +11,10 @@ router.get('/sitemap.xml', async (_req, res) => {
     const staticPages = [
       { url: '',                priority: '1.0', changefreq: 'daily' },
       { url: 'shop.html',      priority: '0.9', changefreq: 'daily' },
-      { url: 'login.html',     priority: '0.5', changefreq: 'monthly' },
-      { url: 'register.html',  priority: '0.5', changefreq: 'monthly' },
+      // login/register are noindex pages, so they don't belong in a sitemap.
+      { url: 'returns.html',   priority: '0.4', changefreq: 'monthly' },
+      { url: 'shipping.html',  priority: '0.4', changefreq: 'monthly' },
+      { url: 'terms.html',     priority: '0.3', changefreq: 'monthly' },
       { url: 'privacy.html',   priority: '0.3', changefreq: 'monthly' },
       { url: 'support.html',   priority: '0.4', changefreq: 'monthly' },
     ];

@@ -164,6 +164,8 @@ export interface Order {
   billing?: { subtotal: number; shippingCharge: number; cgst: number; sgst: number; igst: number; grandTotal: number };
   payment?: { method: 'COD' | 'ONLINE' | 'MANUAL'; status: 'pending' | 'paid' | 'failed' | 'refunded' };
   invoiceUrl?: string;
+  /** Signed backend link that actually downloads the invoice PDF (invoiceUrl is legacy). */
+  invoiceLink?: string;
   timeline?: TimelineEntry[];
   shipments?: Shipment[];
   estimatedDelivery?: string;

@@ -46,6 +46,10 @@ const buildListQuery = (query) => {
    PUBLIC
 ═══════════════════════════════════ */
 
+// Fields that must never appear in the PUBLIC product API: per-customer sizing
+// feedback (contains user ids) and internal purchase-invoice linkage.
+const PUBLIC_HIDDEN_FIELDS = '-sizingFeedback -purchaseInvoiceId -purchaseLineKey -vendorDescription -__v';
+
 export const getProducts = async (req, res) => {
   try {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
@@ -61,7 +65,7 @@ export const getProducts = async (req, res) => {
                : { createdAt: -1 };
 
     const [data, total] = await Promise.all([
-      Product.find(filter).sort(sort).skip(skip).limit(limit).populate('stores.storeId', 'name city'),
+      Product.find(filter).select(PUBLIC_HIDDEN_FIELDS).sort(sort).skip(skip).limit(limit).populate('stores.storeId', 'name city'),
       Product.countDocuments(filter)
     ]);
 
@@ -74,7 +78,7 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findOne({ _id: req.params.id, status: 'active' }).populate('stores.storeId', 'name city state');
+    const product = await Product.findOne({ _id: req.params.id, status: 'active' }).select(PUBLIC_HIDDEN_FIELDS).populate('stores.storeId', 'name city state');
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
     res.json({ success: true, data: product });
   } catch {

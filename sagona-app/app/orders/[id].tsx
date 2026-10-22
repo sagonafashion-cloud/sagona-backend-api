@@ -103,8 +103,8 @@ export default function OrderDetailScreen() {
           <View style={[styles.row, styles.totalRow]}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalValue}>₹{(order.billing?.grandTotal ?? order.total ?? 0).toLocaleString('en-IN')}</Text></View>
         </View>
 
-        {order.invoiceUrl && (
-          <TouchableOpacity style={styles.invoiceBtn} onPress={() => Linking.openURL(order.invoiceUrl!)}>
+        {(order.invoiceLink || order.invoiceUrl) && (
+          <TouchableOpacity style={styles.invoiceBtn} onPress={() => Linking.openURL((order.invoiceLink || order.invoiceUrl)!)}>
             <Ionicons name="document-outline" size={18} color={colors.gold} />
             <Text style={styles.invoiceBtnText}>Download Invoice</Text>
           </TouchableOpacity>

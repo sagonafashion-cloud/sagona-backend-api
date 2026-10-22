@@ -42,6 +42,14 @@ export async function computeOrderTotals(items = [], shippingAddress = {}) {
         err.statusCode = 400;
         throw err;
       }
+    } else if (Number(product.stock ?? 0) < qty) {
+      // Non-variant products: check top-level stock BEFORE a payment is created,
+      // not only inside the order transaction (which runs after money is taken).
+      const err = new Error(Number(product.stock) > 0
+        ? `Only ${product.stock} of "${product.name}" left in stock`
+        : `"${product.name}" is sold out`);
+      err.statusCode = 400;
+      throw err;
     }
 
     let storeState = '';

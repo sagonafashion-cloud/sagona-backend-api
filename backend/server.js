@@ -11,6 +11,7 @@ import hpp from 'hpp';
 import * as Sentry from '@sentry/node';
 
 import { connectDB } from './config/db.js';
+import { startPaymentReconciler } from './utils/paymentReconciler.js';
 import { validateEnv } from './utils/validateEnv.js';
 
 // ── Customer routes ────────────────────────────────────────
@@ -220,6 +221,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Safety net for captured-but-unrecorded payments. Inert unless PAYMENT_RECONCILER=on.
+startPaymentReconciler();
 
 // ── Keep-alive (Render free tier cold-start mitigation) ────
 // Render stops a free web service after ~15 min with no inbound traffic; the

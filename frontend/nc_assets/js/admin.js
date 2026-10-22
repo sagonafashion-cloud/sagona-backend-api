@@ -18,6 +18,10 @@ function toast(msg, type = '') {
   setTimeout(() => el.remove(), 2700);
 }
 
+// Older builds kept the admin JWT in localStorage (readable by any script on the
+// origin). Current code uses sessionStorage only, so remove any leftover copy.
+try { localStorage.removeItem('admin_token'); } catch { /* storage unavailable */ }
+
 /* ── admin fetch (uses admin_token) ── */
 async function api(path, opts = {}) {
   const token = sessionStorage.getItem('admin_token');
@@ -1939,8 +1943,8 @@ async function loadAnalytics() {
     const [revData, statusData, topData, invData] = await Promise.allSettled([
       api('/admin/analytics/revenue?period=daily&days=30'),
       api('/admin/analytics/orders'),
-      api('/admin/analytics/top-products?limit=8'),
-      api('/admin/analytics/inventory?threshold=5')
+      api('/admin/analytics/products/top?limit=8'),
+      api('/admin/analytics/inventory/alerts?threshold=5')
     ]);
 
     // Revenue
@@ -1962,7 +1966,7 @@ async function loadAnalytics() {
           labels: top.map((t) => t.name || t._id?.slice(-8)),
           datasets: [{
             label: 'Revenue (₹)',
-            data:  top.map((t) => t.totalRevenue || 0),
+            data:  top.map((t) => t.revenue || 0),
             backgroundColor: '#C9A84C'
           }]
         },
@@ -1979,7 +1983,7 @@ async function loadAnalytics() {
     const alerts = invData.value?.data || [];
     const invBody = document.getElementById('inventory-body');
     invBody.innerHTML = alerts.length
-      ? alerts.map((p) => `<tr><td>${escapeHtml(p.name)}</td><td style="font-size:11px;color:var(--gray)">${escapeHtml(p.sku) || '—'}</td><td><span style="color:#dc2626;font-weight:600">${p.stock ?? '?'}</span></td></tr>`).join('')
+      ? alerts.map((p) => `<tr><td>${escapeHtml(p.name)}</td><td style="font-size:11px;color:var(--gray)">${escapeHtml(p.sku) || '—'}</td><td><span style="color:#dc2626;font-weight:600">${p.variants?.length ? Math.min(...p.variants.map((v) => v.stock ?? 0)) : (p.stock ?? '?')}</span></td></tr>`).join('')
       : `<tr><td colspan="3" class="loading">All products well-stocked.</td></tr>`;
 
   } catch (err) { console.error('loadAnalytics:', err); }

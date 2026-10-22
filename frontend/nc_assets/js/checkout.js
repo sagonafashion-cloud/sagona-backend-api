@@ -357,11 +357,11 @@ form.addEventListener('submit', async (e) => {
     /* ── Razorpay flow ── */
     // Amount is computed and verified server-side from the cart's real product
     // prices — we only send items/shippingAddress, never a trusted amount.
-    const { items, shippingAddress } = buildPayload();
+    const { items, shippingAddress, email: contactEmail } = buildPayload();
 
     const rzpOrderRes = await request('/payment/create-order', {
       method: 'POST',
-      body:   JSON.stringify({ items, shippingAddress })
+      body:   JSON.stringify({ items, shippingAddress, email: contactEmail })
     });
 
     const keyRes = await request('/payment/key');
@@ -408,7 +408,15 @@ form.addEventListener('submit', async (e) => {
         email:   auth?.user?.email,
         contact: document.getElementById('phone')?.value
       },
-      theme: { color: '#C9A84C' }
+      theme: { color: '#C9A84C' },
+      // Shopper closed the payment window without paying: unlock the button,
+      // otherwise it stays on "Placing order…" until they reload the page.
+      modal: {
+        ondismiss: () => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Place Order';
+        }
+      }
     });
 
     rzp.on('payment.failed', () => {

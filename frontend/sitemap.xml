@@ -1,24 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-  <url>
-    <loc>https://sagona.in/</loc>
-    <priority>1.0</priority>
-  </url>
-
-  <url>
-    <loc>https://sagona.in/shop.html</loc>
-    <priority>0.9</priority>
-  </url>
-
-  <url>
-    <loc>https://sagona.in/cart.html</loc>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://sagona.in/wishlist.html</loc>
-    <priority>0.7</priority>
-  </url>
-
+  <url><loc>https://sagona.in/</loc><priority>1.0</priority></url>
+  <url><loc>https://sagona.in/shop.html</loc><priority>0.9</priority></url>
+  <url><loc>https://sagona.in/product.html?id=6a8624b0a7cb533b2ea51662</loc><priority>0.8</priority></url>
+  <url><loc>https://sagona.in/returns.html</loc><priority>0.4</priority></url>
+  <url><loc>https://sagona.in/support.html</loc><priority>0.4</priority></url>
+  <url><loc>https://sagona.in/terms.html</loc><priority>0.3</priority></url>
+  <url><loc>https://sagona.in/shipping.html</loc><priority>0.4</priority></url>
+  <url><loc>https://sagona.in/privacy.html</loc><priority>0.3</priority></url>
 </urlset>

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://via.placeholder.com https://www.googletagmanager.com; connect-src 'self' https://sagona-backend-api.onrender.com http://localhost:5000 https://www.google-analytics.com https://region1.google-analytics.com https://cdn.jsdelivr.net https://storage.googleapis.com https://tfhub.dev https://www.kaggle.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://via.placeholder.com https://www.googletagmanager.com; connect-src 'self' https://sagona-backend-api.onrender.com https://www.google-analytics.com https://region1.google-analytics.com https://cdn.jsdelivr.net https://storage.googleapis.com https://tfhub.dev https://www.kaggle.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
+  <meta name="robots" content="noindex, nofollow">
   <title>Bag | SAGONA</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/nc_assets/CCS/style.css">
@@ -62,6 +63,25 @@
     // since cart items in localStorage don't carry each product's GST rate.
     const gstSlabMap = {};
 
+    // productId -> { stock, variants } from the same public product fetch.
+    // Used only to stop the shopper from putting more in the bag than we have
+    // (the server still enforces stock at order time).
+    const stockMap = {};
+    const MAX_QTY_PER_ITEM = 20; // matches backend/utils/orderCalculator.js
+
+    // How many units of this cart line can actually be bought. null = unknown
+    // (product fetch failed) — then only the hard 20 cap applies.
+    function availableFor(item) {
+      const info = stockMap[item.id || item._id];
+      if (!info) return null;
+      if (info.variants.length) {
+        const v = info.variants.find((x) => x.size === item.size &&
+          String(x.colour || '').toLowerCase() === String(item.colour || '').toLowerCase());
+        return v ? Number(v.stock ?? 0) : 0;
+      }
+      return info.stock;
+    }
+
     async function loadGstSlabs(cart) {
       const ids = [...new Set(cart.map((i) => i.id || i._id).filter(Boolean))];
       await Promise.all(ids.map(async (id) => {
@@ -72,6 +92,7 @@
           if (json?.data && typeof json.data.gstSlab === 'number') {
             gstSlabMap[id] = json.data.gstSlab;
           }
+          if (json?.data) stockMap[id] = { stock: Number(json.data.stock ?? 0), variants: json.data.variants || [] };
         } catch { /* informational display only — silently skip on failure */ }
       }));
     }
@@ -89,7 +110,19 @@
 
     function render() {
       const root = document.getElementById('cart-root');
-      const cart = getCart();
+      let cart = getCart();
+
+      // Clamp quantities to what's in stock (and the 20 cap) once stock is known.
+      let clamped = false;
+      cart = cart.map((i) => {
+        const avail = availableFor(i);
+        const max = Math.min(MAX_QTY_PER_ITEM, avail === null ? MAX_QTY_PER_ITEM : Math.max(avail, 0));
+        if (max > 0 && i.quantity > max) { clamped = true; return { ...i, quantity: max }; }
+        if (max === 0 && i.quantity > MAX_QTY_PER_ITEM) { clamped = true; return { ...i, quantity: MAX_QTY_PER_ITEM }; }
+        return i;
+      });
+      if (clamped) saveCart(cart);
+      const soldOutItems = cart.filter((i) => availableFor(i) === 0);
 
       if (!cart.length) {
         root.innerHTML = `
@@ -129,6 +162,8 @@
                   <div class="item-info">
                     <h4>${escapeHtml(item.name)}</h4>
                     ${item.colour ? `<p>${escapeHtml(item.colour)}</p>` : ''}
+                    ${availableFor(item) === 0 ? '<p style="color:#b42318;font-weight:600">Sold out — please remove this item</p>'
+                      : (availableFor(item) !== null && availableFor(item) <= 5 && item.quantity >= availableFor(item)) ? `<p style="color:#b26a00">Only ${availableFor(item)} left</p>` : ''}
                   </div>
                 </div>
               </td>
@@ -155,7 +190,9 @@
           <div class="summary-row total"><span>Total</span><span style="color:var(--gold)">${INR(total)}</span></div>
           <p class="gst-note">Includes GST: ${INR(gstAmt)} (already part of the price shown, not an extra charge)</p>
           <p class="gst-note">* GST is included in the displayed price; exact split shown at checkout</p>
-          <a href="checkout.html" class="btn gold" style="display:block;text-align:center;margin-top:20px">Proceed to Checkout</a>
+          ${soldOutItems.length
+            ? '<span class="btn gold" style="display:block;text-align:center;margin-top:20px;opacity:.5;cursor:not-allowed" aria-disabled="true">Remove sold-out items to continue</span>'
+            : '<a href="checkout.html" class="btn gold" style="display:block;text-align:center;margin-top:20px">Proceed to Checkout</a>'}
           <a href="shop.html" class="btn ghost" style="display:block;text-align:center;margin-top:8px">Continue Shopping</a>
         </div>`;
     }
@@ -170,7 +207,12 @@
       let cart = getCart();
 
       if (e.target.dataset.type === 'plus') {
-        cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: i.quantity + 1 } : i);
+        cart = cart.map((i) => {
+          if ((i.key || i.id) !== key) return i;
+          const avail = availableFor(i);
+          const max = Math.min(MAX_QTY_PER_ITEM, avail === null ? MAX_QTY_PER_ITEM : avail);
+          return { ...i, quantity: Math.min(i.quantity + 1, Math.max(max, 1)) };
+        });
       }
       if (e.target.dataset.type === 'minus') {
         cart = cart.map((i) => (i.key || i.id) === key ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i);
