@@ -88,6 +88,15 @@ export function validateEnv() {
     );
   }
 
+  // Referral module: optional. Only warn (never block boot) if it is switched on
+  // without an encryption key; promoter PAN/bank/KYC endpoints return 503 until set.
+  if (process.env.REFERRAL_ENABLED === 'true') {
+    const k = (process.env.REFERRAL_ENC_KEY || '').trim();
+    if (!/^[0-9a-fA-F]{64}$/.test(k) && k.length < 32) {
+      warnings.push('REFERRAL_ENC_KEY is missing or too short (64 hex chars or 32+ characters) — promoter PAN/bank/KYC storage is unavailable until it is set.');
+    }
+  }
+
   if (process.env.NODE_ENV === 'production' && (!process.env.CORS_ORIGINS || !process.env.CORS_ORIGINS.trim())) {
     errors.push(
       'CORS_ORIGINS is not set while NODE_ENV=production — with no allowlist, cross-origin ' +

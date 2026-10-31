@@ -1,0 +1,318 @@
+{
+  "intra_single_5pct": {
+    "tax": {
+      "taxType": "intra",
+      "processedItems": [
+        {
+          "name": "Kids Kurta",
+          "unitPrice": 750,
+          "qty": 1,
+          "gstSlab": 5,
+          "mrp": 1500,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 750,
+          "taxableAmount": 714.29,
+          "gstAmount": 35.71,
+          "discount": 750,
+          "cgst": 17.86,
+          "sgst": 17.86,
+          "igst": 0
+        }
+      ],
+      "subtotal": 750,
+      "discount": 750,
+      "taxableAmount": 714.29,
+      "cgst": 17.86,
+      "sgst": 17.86,
+      "igst": 0,
+      "totalTax": 35.72,
+      "grandTotal": 750
+    },
+    "billing": {
+      "subtotal": 750,
+      "shippingCharge": 99,
+      "taxableAmount": 714.29,
+      "cgst": 17.86,
+      "sgst": 17.86,
+      "igst": 0,
+      "grandTotal": 849
+    },
+    "invoiceTextSha256": "8db6031756fab519e5d1d84b8021b9c30bc1b96e96efb6eb3c97184e0bde7129",
+    "invoiceText": "SAGONA Radhe Complex Haridwar, Uttarakhand - 249403 GSTIN: 05CZOPK4885L2ZJ TAX INVOICE Invoice No: SAG-GOLDEN-intra_single_5pct Date: 1/10/2026 Order Date: 1/10/2026 Reverse Charge: No BILL TO QA Test X, Uttarakhand, 249403 Ph: 9999999999 Place of Supply: Uttarakhand PAYMENT Method: COD Status: pending # Description HSN Qty Price Taxable Val CGST% CGST SGST% SGST 1 Kids Kurta (M) 6109 1 Rs. 750.00 Rs. 714.29 2.5% Rs. 17.86 2.5% Rs. 17.86 Subtotal (GST-incl.) Rs. 750.00 Shipping Rs. 99.00 Grand Total Rs. 849.00 Includes GST — CGST Rs. 17.86 + SGST Rs. 17.86 (already part of the price above) This is a computer-generated invoice and does not require a physical signature. -- 1 of 1 --"
+  },
+  "inter_single_5pct": {
+    "tax": {
+      "taxType": "inter",
+      "processedItems": [
+        {
+          "name": "Kids Kurta",
+          "unitPrice": 750,
+          "qty": 1,
+          "gstSlab": 5,
+          "mrp": 1500,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 750,
+          "taxableAmount": 714.29,
+          "gstAmount": 35.71,
+          "discount": 750,
+          "cgst": 0,
+          "sgst": 0,
+          "igst": 35.71
+        }
+      ],
+      "subtotal": 750,
+      "discount": 750,
+      "taxableAmount": 714.29,
+      "cgst": 0,
+      "sgst": 0,
+      "igst": 35.71,
+      "totalTax": 35.71,
+      "grandTotal": 750
+    },
+    "billing": {
+      "subtotal": 750,
+      "shippingCharge": 99,
+      "taxableAmount": 714.29,
+      "cgst": 0,
+      "sgst": 0,
+      "igst": 35.71,
+      "grandTotal": 849
+    },
+    "invoiceTextSha256": "a55a638333c55d1ed0f3ad5782c6583076e336b7dbdb4bce6caa5ef77a60d86f",
+    "invoiceText": "SAGONA Radhe Complex Haridwar, Uttarakhand - 249403 GSTIN: 05CZOPK4885L2ZJ TAX INVOICE Invoice No: SAG-GOLDEN-inter_single_5pct Date: 1/10/2026 Order Date: 1/10/2026 Reverse Charge: No BILL TO QA Test X, Delhi, 249403 Ph: 9999999999 Place of Supply: Delhi PAYMENT Method: COD Status: pending # Description HSN Qty Price Taxable Val IGST% IGST 1 Kids Kurta (M) 6109 1 Rs. 750.00 Rs. 714.29 5% Rs. 35.71 Subtotal (GST-incl.) Rs. 750.00 Shipping Rs. 99.00 Grand Total Rs. 849.00 Includes GST — IGST Rs. 35.71 (already part of the price above) This is a computer-generated invoice and does not require a physical signature. -- 1 of 1 --"
+  },
+  "intra_multi_mixed": {
+    "tax": {
+      "taxType": "intra",
+      "processedItems": [
+        {
+          "name": "Shirt",
+          "unitPrice": 1299,
+          "qty": 2,
+          "gstSlab": 5,
+          "mrp": 1299,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 2598,
+          "taxableAmount": 2474.29,
+          "gstAmount": 123.71,
+          "discount": 0,
+          "cgst": 61.86,
+          "sgst": 61.86,
+          "igst": 0
+        },
+        {
+          "name": "Jeans",
+          "unitPrice": 2799,
+          "qty": 1,
+          "gstSlab": 18,
+          "mrp": 3499,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 2799,
+          "taxableAmount": 2372.03,
+          "gstAmount": 426.97,
+          "discount": 700,
+          "cgst": 213.48,
+          "sgst": 213.48,
+          "igst": 0
+        },
+        {
+          "name": "Belt",
+          "unitPrice": 499,
+          "qty": 3,
+          "gstSlab": 0,
+          "mrp": 499,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 1497,
+          "taxableAmount": 1497,
+          "gstAmount": 0,
+          "discount": 0,
+          "cgst": 0,
+          "sgst": 0,
+          "igst": 0
+        }
+      ],
+      "subtotal": 6894,
+      "discount": 700,
+      "taxableAmount": 6343.32,
+      "cgst": 275.34,
+      "sgst": 275.34,
+      "igst": 0,
+      "totalTax": 550.68,
+      "grandTotal": 6894
+    },
+    "billing": {
+      "subtotal": 6894,
+      "shippingCharge": 0,
+      "taxableAmount": 6343.32,
+      "cgst": 275.34,
+      "sgst": 275.34,
+      "igst": 0,
+      "grandTotal": 6894
+    },
+    "invoiceTextSha256": "bd57156f658a5b0de5c3071b54275a3c813857e133e3bf4ae57680f08afaf210",
+    "invoiceText": "SAGONA Radhe Complex Haridwar, Uttarakhand - 249403 GSTIN: 05CZOPK4885L2ZJ TAX INVOICE Invoice No: SAG-GOLDEN-intra_multi_mixed Date: 1/10/2026 Order Date: 1/10/2026 Reverse Charge: No BILL TO QA Test X, uttarakhand, 249403 Ph: 9999999999 Place of Supply: uttarakhand PAYMENT Method: COD Status: pending # Description HSN Qty Price Taxable Val CGST% CGST SGST% SGST 1 Shirt (M) 6109 2 Rs. 2598.00 Rs. 2474.29 2.5% Rs. 61.86 2.5% Rs. 61.86 2 Jeans (M) 6109 1 Rs. 2799.00 Rs. 2372.03 9% Rs. 213.48 9% Rs. 213.48 3 Belt (M) 6109 3 Rs. 1497.00 Rs. 1497.00 0% Rs. 0.00 0% Rs. 0.00 Subtotal (GST-incl.) Rs. 6894.00 Shipping Rs. 0.00 Grand Total Rs. 6894.00 Includes GST — CGST Rs. 275.34 + SGST Rs. 275.34 (already part of the price above) This is a computer-generated invoice and does not require a physical signature. -- 1 of 1 --"
+  },
+  "inter_multi_mixed": {
+    "tax": {
+      "taxType": "inter",
+      "processedItems": [
+        {
+          "name": "Shirt",
+          "unitPrice": 1299,
+          "qty": 2,
+          "gstSlab": 5,
+          "mrp": 1299,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 2598,
+          "taxableAmount": 2474.29,
+          "gstAmount": 123.71,
+          "discount": 0,
+          "cgst": 0,
+          "sgst": 0,
+          "igst": 123.71
+        },
+        {
+          "name": "Jeans",
+          "unitPrice": 2799,
+          "qty": 1,
+          "gstSlab": 18,
+          "mrp": 3499,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 2799,
+          "taxableAmount": 2372.03,
+          "gstAmount": 426.97,
+          "discount": 700,
+          "cgst": 0,
+          "sgst": 0,
+          "igst": 426.97
+        }
+      ],
+      "subtotal": 5397,
+      "discount": 700,
+      "taxableAmount": 4846.32,
+      "cgst": 0,
+      "sgst": 0,
+      "igst": 550.68,
+      "totalTax": 550.68,
+      "grandTotal": 5397
+    },
+    "billing": {
+      "subtotal": 5397,
+      "shippingCharge": 0,
+      "taxableAmount": 4846.32,
+      "cgst": 0,
+      "sgst": 0,
+      "igst": 550.68,
+      "grandTotal": 5397
+    },
+    "invoiceTextSha256": "f01c585b91880fcfb857533aa1cac4b9861c3f90a894ebd8a07819fac628793d",
+    "invoiceText": "SAGONA Radhe Complex Haridwar, Uttarakhand - 249403 GSTIN: 05CZOPK4885L2ZJ TAX INVOICE Invoice No: SAG-GOLDEN-inter_multi_mixed Date: 1/10/2026 Order Date: 1/10/2026 Reverse Charge: No BILL TO QA Test X, Maharashtra, 249403 Ph: 9999999999 Place of Supply: Maharashtra PAYMENT Method: COD Status: pending # Description HSN Qty Price Taxable Val IGST% IGST 1 Shirt (M) 6109 2 Rs. 2598.00 Rs. 2474.29 5% Rs. 123.71 2 Jeans (M) 6109 1 Rs. 2799.00 Rs. 2372.03 18% Rs. 426.97 Subtotal (GST-incl.) Rs. 5397.00 Shipping Rs. 0.00 Grand Total Rs. 5397.00 Includes GST — IGST Rs. 550.68 (already part of the price above) This is a computer-generated invoice and does not require a physical signature. -- 1 of 1 --"
+  },
+  "odd_paise_rounding": {
+    "tax": {
+      "taxType": "intra",
+      "processedItems": [
+        {
+          "name": "Tee",
+          "unitPrice": 333,
+          "qty": 3,
+          "gstSlab": 5,
+          "mrp": 333,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 999,
+          "taxableAmount": 951.43,
+          "gstAmount": 47.57,
+          "discount": 0,
+          "cgst": 23.79,
+          "sgst": 23.79,
+          "igst": 0
+        },
+        {
+          "name": "Cap",
+          "unitPrice": 199,
+          "qty": 7,
+          "gstSlab": 18,
+          "mrp": 199,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 1393,
+          "taxableAmount": 1180.51,
+          "gstAmount": 212.49,
+          "discount": 0,
+          "cgst": 106.25,
+          "sgst": 106.25,
+          "igst": 0
+        }
+      ],
+      "subtotal": 2392,
+      "discount": 0,
+      "taxableAmount": 2131.94,
+      "cgst": 130.04,
+      "sgst": 130.04,
+      "igst": 0,
+      "totalTax": 260.08,
+      "grandTotal": 2392
+    },
+    "billing": {
+      "subtotal": 2392,
+      "shippingCharge": 99,
+      "taxableAmount": 2131.94,
+      "cgst": 130.04,
+      "sgst": 130.04,
+      "igst": 0,
+      "grandTotal": 2491
+    },
+    "invoiceTextSha256": "675e6d8d8cd9c7e646583177eadde236cd60232fc6b7a68fb051008ab6443860",
+    "invoiceText": "SAGONA Radhe Complex Haridwar, Uttarakhand - 249403 GSTIN: 05CZOPK4885L2ZJ TAX INVOICE Invoice No: SAG-GOLDEN-odd_paise_rounding Date: 1/10/2026 Order Date: 1/10/2026 Reverse Charge: No BILL TO QA Test X, Uttarakhand, 249403 Ph: 9999999999 Place of Supply: Uttarakhand PAYMENT Method: COD Status: pending # Description HSN Qty Price Taxable Val CGST% CGST SGST% SGST 1 Tee (M) 6109 3 Rs. 999.00 Rs. 951.43 2.5% Rs. 23.79 2.5% Rs. 23.79 2 Cap (M) 6109 7 Rs. 1393.00 Rs. 1180.51 9% Rs. 106.25 9% Rs. 106.25 Subtotal (GST-incl.) Rs. 2392.00 Shipping Rs. 99.00 Grand Total Rs. 2491.00 Includes GST — CGST Rs. 130.04 + SGST Rs. 130.04 (already part of the price above) This is a computer-generated invoice and does not require a physical signature. -- 1 of 1 --"
+  },
+  "nil_rated": {
+    "tax": {
+      "taxType": "inter",
+      "processedItems": [
+        {
+          "name": "Handkerchief",
+          "unitPrice": 99,
+          "qty": 2,
+          "gstSlab": 0,
+          "mrp": 99,
+          "hsnCode": "6109",
+          "size": "M",
+          "lineTotal": 198,
+          "taxableAmount": 198,
+          "gstAmount": 0,
+          "discount": 0,
+          "cgst": 0,
+          "sgst": 0,
+          "igst": 0
+        }
+      ],
+      "subtotal": 198,
+      "discount": 0,
+      "taxableAmount": 198,
+      "cgst": 0,
+      "sgst": 0,
+      "igst": 0,
+      "totalTax": 0,
+      "grandTotal": 198
+    },
+    "billing": {
+      "subtotal": 198,
+      "shippingCharge": 99,
+      "taxableAmount": 198,
+      "cgst": 0,
+      "sgst": 0,
+      "igst": 0,
+      "grandTotal": 297
+    },
+    "invoiceTextSha256": "c07b7f3e6201c0b0a4c131ca0a0c1f84bc6d375d8a537245fe7b1968c1622d76",
+    "invoiceText": "SAGONA Radhe Complex Haridwar, Uttarakhand - 249403 GSTIN: 05CZOPK4885L2ZJ TAX INVOICE Invoice No: SAG-GOLDEN-nil_rated Date: 1/10/2026 Order Date: 1/10/2026 Reverse Charge: No BILL TO QA Test X, Delhi, 249403 Ph: 9999999999 Place of Supply: Delhi PAYMENT Method: COD Status: pending # Description HSN Qty Price Taxable Val IGST% IGST 1 Handkerchief (M) 6109 2 Rs. 198.00 Rs. 198.00 0% Rs. 0.00 Subtotal (GST-incl.) Rs. 198.00 Shipping Rs. 99.00 Grand Total Rs. 297.00 Includes GST — IGST Rs. 0.00 (already part of the price above) This is a computer-generated invoice and does not require a physical signature. -- 1 of 1 --"
+  }
+}
