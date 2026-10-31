@@ -207,6 +207,17 @@ app.use('/api/admin/purchase-invoices', purchaseInvoiceRoutes);
 app.use('/api',                 homepageRoutes);
 app.post('/api/admin/chat',     adminProtect, adminChat);
 
+// ── Referral & promoter programme (additive, off unless REFERRAL_ENABLED=true) ──
+// With the flag off none of these modules are even loaded, so the live checkout,
+// invoices, GST reports and admin panel behave exactly as before.
+if (process.env.REFERRAL_ENABLED === 'true') {
+  const { default: referralAdminRoutes } = await import('./routes/referralAdminRoutes.js');
+  const { default: referralPublicRoutes } = await import('./routes/referralPublicRoutes.js');
+  app.use('/api/admin/promoters', referralAdminRoutes);
+  app.use('/api/referral',        referralPublicRoutes);
+  console.log('[referral] module loaded (REFERRAL_ENABLED=true)');
+}
+
 // ── Sitemap (public, no auth) ──────────────────────────────
 app.use('/', sitemapRoutes);
 
