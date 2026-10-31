@@ -179,13 +179,20 @@ async function startApp() {
     `${_adminUser?.name || ''} · ${_adminUser?.role || ''}`;
   initNav();
   showSection('dashboard');
+  // Referral programme: reveal the menu item only if the server has it enabled
+  // and this role may use it (404 when the module is off, 403 for other roles).
+  if (['super_admin', 'finance_manager'].includes(_adminUser?.role)) {
+    api('/admin/promoters/ping')
+      .then(() => { const n = document.getElementById('nav-promoters'); if (n) n.style.display = ''; })
+      .catch(() => { /* module off or not permitted: keep the menu item hidden */ });
+  }
   startInactivityWatch();
 }
 
 /* ══════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════ */
-const SECTIONS = ['dashboard','orders','returns','products','stores','homepage','analytics','gst','purchaseInvoices','users'];
+const SECTIONS = ['dashboard','orders','returns','products','stores','homepage','analytics','gst','purchaseInvoices','promoters','users'];
 
 function initNav() {
   document.getElementById('admin-nav').addEventListener('click', (e) => {
@@ -199,7 +206,9 @@ function initNav() {
 
 function showSection(name) {
   SECTIONS.forEach((s) => {
-    document.getElementById(`section-${s}`).style.display = s === name ? 'block' : 'none';
+    // Null-safe: a section whose markup is not on the page (e.g. admin.html not yet re-uploaded) is skipped.
+    const el = document.getElementById(`section-${s}`);
+    if (el) el.style.display = s === name ? 'block' : 'none';
   });
   document.getElementById('topbar-section').textContent = name.charAt(0).toUpperCase() + name.slice(1);
 
@@ -213,6 +222,10 @@ function showSection(name) {
     analytics: loadAnalytics,
     gst:       () => {},
     purchaseInvoices: loadPurchaseInvoices,
+    promoters: async () => {
+      const m = await import('./admin-referral.js?v=20261031-p1');
+      await m.loadPromoters({ api, toast, openModal, closeModal });
+    },
     users:     loadAdminUsers
   };
   loaders[name]?.();

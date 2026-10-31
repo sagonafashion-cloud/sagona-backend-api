@@ -167,6 +167,7 @@
       <div class="admin-nav-item" data-section="analytics">📈 Analytics</div>
       <div class="admin-nav-item" data-section="gst">🧾 GST Reports</div>
       <div class="admin-nav-item" data-section="purchaseInvoices">📥 Purchase Invoices</div>
+      <div class="admin-nav-item" data-section="promoters" id="nav-promoters" style="display:none">🤝 Promoters</div>
       <div class="admin-nav-item" data-section="users">👤 Admin Users</div>
     </nav>
 
@@ -444,6 +445,12 @@
         </div>
       </div>
 
+      <!-- ── PROMOTERS (referral programme; hidden unless enabled on the server) ── -->
+      <div id="section-promoters" style="display:none">
+        <div class="section-header"><h2>Promoters &amp; Referral Codes</h2></div>
+        <div id="ref-root"><div class="loading">Loading…</div></div>
+      </div>
+
       <!-- ── ADMIN USERS ── -->
       <div id="section-users" style="display:none">
         <div class="section-header">
@@ -474,6 +481,6 @@
 
 <div id="toast-container"></div>
 
-<script type="module" src="/nc_assets/js/admin.js?v=20261019-stock-phase5"></script>
+<script type="module" src="/nc_assets/js/admin.js?v=20261031-referral-p1"></script>
 </body>
 </html>
