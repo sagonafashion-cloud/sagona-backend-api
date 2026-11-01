@@ -1,7 +1,7 @@
 import Order from '../models/Order.js';
 import Store from '../models/Store.js';
 import PurchaseInvoice from '../models/PurchaseInvoice.js';
-import { gstRates, splitInclusivePrice } from '../utils/taxCalculator.js';
+import { gstRates, splitInclusivePrice, chargedLineAmount } from '../utils/taxCalculator.js';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 
@@ -170,7 +170,7 @@ async function getPeriodOrders(from, to, storeId) {
 // only accumulates qty/taxable amount per line, then derives cgst/sgst/igst
 // from taxableAmt + gstSlab + taxType via gstRates(), the same per-line tax
 // math already used by the Phase 4 summary builders.
-function computeHsnRows(orders) {
+export function computeHsnRows(orders) {
   const groups = new Map();
   for (const o of orders) {
     for (const item of o.items || []) {
@@ -182,7 +182,7 @@ function computeHsnRows(orders) {
         });
       }
       const g = groups.get(key);
-      const lineAmt = Number(item.unitPrice || 0) * Number(item.qty || 0);
+      const lineAmt = chargedLineAmount(item);
       g.totalQty += o._gstSign * Number(item.qty || 0);
       g.lineTotal += o._gstSign * lineAmt; // GST-inclusive amount actually charged
     }
@@ -334,7 +334,7 @@ export const getGstr3b = async (req, res) => {
 function splitOrderNilVsTaxable(order) {
   let nilAmt = 0, taxableAmt = 0;
   for (const item of order.items || []) {
-    const lineAmt = Number(item.unitPrice || 0) * Number(item.qty || 0);
+    const lineAmt = chargedLineAmount(item);
     if (Number(item.gstSlab || 0) === 0) {
       nilAmt += lineAmt; // nil-rated — no GST to reverse out, price IS the taxable value
     } else {

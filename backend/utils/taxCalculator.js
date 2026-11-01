@@ -52,7 +52,9 @@ export function calculateTax(lineItems, storeState, customerState) {
       ? 'intra'
       : 'inter';
 
-  let subtotal      = 0; // GST-inclusive amount actually charged — this IS the grand total (before shipping)
+  let subtotal      = 0; // GST-inclusive LIST value (before any referral discount)
+  let charged       = 0; // GST-inclusive amount actually charged — this IS the grand total (before shipping)
+  let totalRefDisc  = 0;
   let totalDiscount = 0;
   let totalTaxable  = 0;
   let totalCgst     = 0;
@@ -65,12 +67,16 @@ export function calculateTax(lineItems, storeState, customerState) {
     const mrp        = Number(item.mrp || unitPrice);
     const gstSlab    = Number(item.gstSlab || 0);
 
-    const lineTotal = unitPrice * qty; // price is GST-inclusive — this is what's charged
+    const lineList  = unitPrice * qty;            // list value (GST-inclusive)
+    const refDisc   = Number(item.referralDiscount || 0);
+    const lineTotal = refDisc > 0 ? chargedLineAmount({ unitPrice, qty, referralDiscount: refDisc }) : lineList; // what's charged
     const discount  = Math.max(0, (mrp - unitPrice) * qty);
 
     const { taxableAmt, gstAmount, cgst, sgst, igst } = splitInclusivePrice(lineTotal, gstSlab, taxType);
 
-    subtotal      += lineTotal;
+    subtotal      += lineList;
+    charged       += lineTotal;
+    totalRefDisc  += refDisc;
     totalDiscount += discount;
     totalTaxable  += taxableAmt;
     totalCgst     += cgst;
@@ -90,7 +96,7 @@ export function calculateTax(lineItems, storeState, customerState) {
   const taxableAmount = round2(totalTaxable);
   // Price is already GST-inclusive — grand total is just the sum of item prices.
   // GST (cgst/sgst/igst) is informational/derived, NOT added on top.
-  const grandTotal = round2(subtotal);
+  const grandTotal = round2(charged);
 
   return {
     taxType,
@@ -102,6 +108,7 @@ export function calculateTax(lineItems, storeState, customerState) {
     sgst:          round2(totalSgst),
     igst:          round2(totalIgst),
     totalTax:      round2(totalCgst + totalSgst + totalIgst),
+    ...(totalRefDisc > 0 ? { referralDiscount: round2(totalRefDisc) } : {}),
     grandTotal
   };
 }
@@ -117,6 +124,21 @@ export function gstRates(gstSlab, taxType) {
     return { cgstRate: gstSlab / 2, sgstRate: gstSlab / 2, igstRate: 0 };
   }
   return { cgstRate: 0, sgstRate: 0, igstRate: gstSlab };
+}
+
+/**
+ * GST-inclusive amount actually CHARGED for an order line:
+ *   unitPrice x qty  minus  the referral discount allocated to that line (if any).
+ * Every consumer that derives tax from a line (invoice, GST reports, analytics,
+ * emails) must use this helper instead of multiplying unitPrice x qty itself, so a
+ * referral discount reduces the taxable value everywhere (CGST Act s.15(3)(a)).
+ * With no `referralDiscount` on the item the result is exactly unitPrice x qty,
+ * i.e. identical to the legacy behaviour.
+ */
+export function chargedLineAmount(item) {
+  const list = Number(item?.unitPrice || 0) * Number(item?.qty || 0);
+  const disc = Number(item?.referralDiscount || 0);
+  return disc > 0 ? Math.round((list - disc) * 100) / 100 : list;
 }
 
 const round2 = (n) => Math.round(n * 100) / 100;

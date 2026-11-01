@@ -18,7 +18,10 @@ const orderItemSchema = new mongoose.Schema({
   // creation would fail for any item priced under the new 40% slab.
   gstSlab: { type: Number, enum: [0, 5, 12, 18, 28, 40], default: 0 },
   hsnCode: { type: String },
-  storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store' }
+  storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store' },
+  // Referral discount allocated to this line (rupees, GST-inclusive). Absent on
+  // every non-referral order. Charged amount = unitPrice x qty - referralDiscount.
+  referralDiscount: { type: Number }
 }, { _id: false });
 
 const shippingAddressSchema = new mongoose.Schema({
@@ -39,7 +42,10 @@ const billingSchema = new mongoose.Schema({
   cgst: { type: Number, default: 0 },
   sgst: { type: Number, default: 0 },
   igst: { type: Number, default: 0 },
-  grandTotal: { type: Number, default: 0 }
+  grandTotal: { type: Number, default: 0 },
+  // Referral programme (absent unless a code was applied)
+  referralDiscount: { type: Number },
+  referralCode: { type: String }
 }, { _id: false });
 
 const paymentSchema = new mongoose.Schema({

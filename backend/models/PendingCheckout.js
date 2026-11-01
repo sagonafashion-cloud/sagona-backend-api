@@ -21,6 +21,15 @@ const pendingCheckoutSchema = new mongoose.Schema(
     contact: { name: String, email: String, phone: String }, // guest contact details
     notes: String,
     expectedPaise: { type: Number },
+    // Referral discount agreed at create-order time (absent for normal checkouts).
+    // It is honoured when the order is created, because the shopper already paid
+    // the discounted amount.
+    referral: {
+      codeId: { type: mongoose.Schema.Types.ObjectId },
+      code: String,
+      discountPaise: Number,
+      lineDiscountsPaise: [Number]
+    },
     // created        — waiting for the browser to place the order
     // order_created  — an Order exists for this payment (by browser or reconciler)
     // unpaid         — checked with Razorpay, no captured payment (abandoned)

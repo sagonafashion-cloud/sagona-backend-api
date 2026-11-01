@@ -236,6 +236,12 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // Safety net for captured-but-unrecorded payments. Inert unless PAYMENT_RECONCILER=on.
 startPaymentReconciler();
 
+// Referral commission sweeper (daily-ish, idempotent). Not started unless REFERRAL_ENABLED=true.
+if (process.env.REFERRAL_ENABLED === 'true') {
+  const { startReferralJobs } = await import('./services/referral/jobs.js');
+  startReferralJobs();
+}
+
 // ── Keep-alive (Render free tier cold-start mitigation) ────
 // Render stops a free web service after ~15 min with no inbound traffic; the
 // next visitor then waits 20–60s for a cold start, which reads as "the site is

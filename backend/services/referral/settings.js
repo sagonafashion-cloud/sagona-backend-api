@@ -17,6 +17,9 @@ export const SETTING_DEFS = {
   tds_annual_threshold_paise:   { def: 0,            check: (v) => Number.isInteger(v) && v >= 0 },
   gst_on_commission_bps:        { def: 1800,         check: (v) => Number.isInteger(v) && v >= 0 && v <= 10000 },
   reevaluate_gst_slab:          { def: false,        check: (v) => typeof v === 'boolean' },
+  slab_threshold_paise:         { def: 250000,       check: (v) => Number.isInteger(v) && v > 0 },   // per-piece value at/below which the low rate applies (CA to confirm)
+  slab_low_rate:                { def: 5,            check: (v) => [0, 5, 12, 18, 28, 40].includes(v) },
+  slab_high_rate:               { def: 18,           check: (v) => [0, 5, 12, 18, 28, 40].includes(v) },
   fraud_velocity_orders_24h:    { def: 5,            check: (v) => Number.isInteger(v) && v >= 1 },
   fraud_return_rate_alert_pct:  { def: 40,           check: (v) => typeof v === 'number' && v > 0 && v <= 100 },
   agreement_template_version:   { def: 'v1',         check: (v) => typeof v === 'string' && v.length > 0 && v.length <= 20 },

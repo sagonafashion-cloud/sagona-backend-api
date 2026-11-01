@@ -2,6 +2,10 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 
+// Amount actually charged for an order line: list value minus any referral discount.
+// $ifNull makes this identical to unitPrice x qty for every order without a discount.
+const LINE_CHARGED = { $subtract: [{ $multiply: ['$items.unitPrice', '$items.qty'] }, { $ifNull: ['$items.referralDiscount', 0] }] };
+
 /* ── date helpers ── */
 const parseDateRange = (query) => {
   const now = new Date();
@@ -79,7 +83,7 @@ export const getOrderAnalytics = async (req, res) => {
       pipeline = [
         { $match: match },
         { $unwind: '$items' },
-        { $group: { _id: '$items.storeId', count: { $sum: 1 }, revenue: { $sum: { $multiply: ['$items.unitPrice', '$items.qty'] } } } },
+        { $group: { _id: '$items.storeId', count: { $sum: 1 }, revenue: { $sum: LINE_CHARGED } } },
         { $lookup: { from: 'stores', localField: '_id', foreignField: '_id', as: 'store' } },
         { $project: { store: { $arrayElemAt: ['$store.name', 0] }, count: 1, revenue: 1 } }
       ];
@@ -125,7 +129,7 @@ export const getTopProducts = async (req, res) => {
           _id: '$items.productId',
           name: { $first: '$items.name' },
           sku: { $first: '$items.sku' },
-          revenue: { $sum: { $multiply: ['$items.unitPrice', '$items.qty'] } },
+          revenue: { $sum: LINE_CHARGED },
           qty: { $sum: '$items.qty' }
         }
       },
@@ -228,7 +232,7 @@ export const getGstSummary = async (req, res) => {
         $group: {
           _id: '$items.hsnCode',
           totalQty: { $sum: '$items.qty' },
-          taxableAmount: { $sum: { $multiply: ['$items.unitPrice', '$items.qty'] } },
+          taxableAmount: { $sum: LINE_CHARGED },
           cgst: { $sum: '$billing.cgst' },
           sgst: { $sum: '$billing.sgst' },
           igst: { $sum: '$billing.igst' }

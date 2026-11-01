@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { v2 as cloudinary } from 'cloudinary';
-import { splitInclusivePrice } from './taxCalculator.js';
+import { splitInclusivePrice, chargedLineAmount } from './taxCalculator.js';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -146,7 +146,7 @@ export async function generateInvoice(order, store) {
 
   for (const item of order.items || []) {
     const gstSlab   = item.gstSlab || 0;
-    const lineTotal = item.unitPrice * item.qty; // GST-inclusive — what was actually charged
+    const lineTotal = chargedLineAmount(item); // GST-inclusive — what was actually charged (after any referral discount)
     const { taxableAmt, cgst, sgst, igst } = splitInclusivePrice(lineTotal, gstSlab, taxType);
 
     const cgstRate = taxType === 'intra' ? gstSlab / 2 : 0;
@@ -184,6 +184,7 @@ export async function generateInvoice(order, store) {
 
   const totalsData = [
     ['Subtotal (GST-incl.)', INR(billing.subtotal || billing.taxableAmount)],
+    ...(billing.referralDiscount > 0 ? [[`Referral discount${billing.referralCode ? ` (${billing.referralCode})` : ''}`, `-${INR(billing.referralDiscount)}`]] : []),
     ['Shipping',             INR(billing.shippingCharge || 0)],
     ...(billing.discount ? [['Savings vs MRP', `-${INR(billing.discount)}`]] : []),
     ['Grand Total',          INR(billing.grandTotal)]

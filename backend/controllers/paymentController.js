@@ -33,7 +33,10 @@ export const createRazorpayOrder = async (req, res) => {
   try {
     const { items, shippingAddress } = req.body;
 
-    const { billing } = await computeOrderTotals(items, shippingAddress);
+    // Referral (optional): the discount is part of the amount Razorpay will charge.
+    const { referralOptsForPaymentOrder, snapshotOf } = await import('../services/referral/orderHook.js');
+    const referralOpts = await referralOptsForPaymentOrder(req);
+    const { billing, referral } = await computeOrderTotals(items, shippingAddress, referralOpts);
     const amountInPaise = Math.round(billing.grandTotal * 100);
 
     if (amountInPaise < 100) {
@@ -66,7 +69,8 @@ export const createRazorpayOrder = async (req, res) => {
           email: String(req.body.email || shippingAddress?.email || '').toLowerCase().trim(),
           phone: shippingAddress?.phone
         },
-        expectedPaise: amountInPaise
+        expectedPaise: amountInPaise,
+        ...(referral ? { referral: snapshotOf(referral) } : {})
       });
     } catch (snapshotErr) {
       console.error('PendingCheckout snapshot failed (payment continues):', snapshotErr.message);
@@ -75,7 +79,7 @@ export const createRazorpayOrder = async (req, res) => {
     res.json({ success: true, data: order });
   } catch (err) {
     console.error('createRazorpayOrder:', err);
-    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Unable to create payment order' });
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Unable to create payment order', ...(err.referralInvalid ? { referralInvalid: true } : {}) });
   }
 };
 

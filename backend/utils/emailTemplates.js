@@ -1,3 +1,4 @@
+import { chargedLineAmount } from './taxCalculator.js';
 import { invoiceToken } from './invoiceToken.js';
 
 // Same escaping pattern used in routes/supportRoutes.js — user/admin-entered
@@ -90,7 +91,7 @@ const itemsTable = (items = []) => `
       </td>
       <td style="padding:12px;border-bottom:1px solid #E8E5E0;text-align:center;">${item.qty}</td>
       <td style="padding:12px;border-bottom:1px solid #E8E5E0;text-align:right;color:#C9A84C;">
-        ${INR(item.unitPrice * item.qty)}
+        ${INR(chargedLineAmount(item))}
       </td>
     </tr>`).join('')}
   </tbody>
@@ -107,6 +108,11 @@ const billingBlock = (billing = {}, taxType = 'intra') => `
     <td style="padding:6px 0;color:#555550;">Subtotal (GST-incl.)</td>
     <td style="padding:6px 0;text-align:right;">${INR(billing.subtotal)}</td>
   </tr>
+  ${billing.referralDiscount > 0 ? `
+  <tr>
+    <td style="padding:6px 0;color:#555550;">Referral discount${billing.referralCode ? ` (${escapeHtml(billing.referralCode)})` : ''}</td>
+    <td style="padding:6px 0;text-align:right;color:#16a34a;">-${INR(billing.referralDiscount)}</td>
+  </tr>` : ''}
   ${billing.shippingCharge > 0 ? `
   <tr>
     <td style="padding:6px 0;color:#555550;">Shipping</td>

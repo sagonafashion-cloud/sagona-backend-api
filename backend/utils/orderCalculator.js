@@ -6,7 +6,7 @@ import { calculateTax } from './taxCalculator.js';
  * Recomputes order items and billing entirely from trusted server-side data
  * (product prices, GST slabs) — never from client-supplied prices/amounts.
  */
-export async function computeOrderTotals(items = [], shippingAddress = {}) {
+export async function computeOrderTotals(items = [], shippingAddress = {}, opts = {}) {
   if (!items.length) {
     const err = new Error('Order items required');
     err.statusCode = 400;
@@ -63,7 +63,7 @@ export async function computeOrderTotals(items = [], shippingAddress = {}) {
       storeState = store.state || '';
     }
 
-    enrichedItems.push({
+    const enriched = {
       productId: product._id,
       name: product.name,
       sku: item.sku || product.sku,
@@ -76,7 +76,21 @@ export async function computeOrderTotals(items = [], shippingAddress = {}) {
       hsnCode: product.hsnCode,
       storeId: item.storeId,
       storeState
-    });
+    };
+    // Referral-only metadata, attached as NON-enumerable properties so the returned
+    // items (and anything spread/serialised from them) are exactly as before.
+    Object.defineProperty(enriched, '_category', { value: product.category, enumerable: false });
+    Object.defineProperty(enriched, '_onSale',   { value: Number(product.mrp || 0) > Number(product.price || 0), enumerable: false });
+    enrichedItems.push(enriched);
+  }
+
+  // Optional referral discount (only when a code / agreed snapshot is passed in).
+  // Sets item.referralDiscount, which calculateTax subtracts per line before
+  // deriving GST, so the discount reduces the taxable value as the law requires.
+  let referral = null;
+  if (opts?.referral) {
+    const { applyReferral } = await import('../services/referral/applyReferral.js');
+    referral = await applyReferral(enrichedItems, opts.referral);
   }
 
   const subtotalRaw = enrichedItems.reduce((s, i) => s + i.unitPrice * i.qty, 0);
@@ -95,6 +109,10 @@ export async function computeOrderTotals(items = [], shippingAddress = {}) {
     igst:          tax.igst,
     grandTotal:    tax.grandTotal + shippingCharge
   };
+  if (referral) {
+    billing.referralDiscount = tax.referralDiscount;
+    billing.referralCode = referral.code;
+  }
 
-  return { enrichedItems, billing, taxType: tax.taxType };
+  return { enrichedItems, billing, taxType: tax.taxType, referral };
 }

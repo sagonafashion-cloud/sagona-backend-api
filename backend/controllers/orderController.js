@@ -67,7 +67,12 @@ export const createOrder = async (req, res) => {
       notes
     } = req.body;
 
-    const { enrichedItems, billing, taxType } = await computeOrderTotals(items, shippingAddress);
+    // Referral (optional, additive): resolves to undefined — and the legacy path below
+    // is untouched — unless the programme is on AND a code / paid snapshot applies.
+    const { referralOptsForOrder, itemMetaOf } = await import('../services/referral/orderHook.js');
+    const referralOpts = await referralOptsForOrder(req, payment?.razorpayOrderId);
+
+    const { enrichedItems, billing, taxType, referral } = await computeOrderTotals(items, shippingAddress, referralOpts);
 
     const paymentMethod = payment?.method || 'COD';
     let paymentSubdoc = { method: 'COD', status: 'pending' };
@@ -200,6 +205,13 @@ export const createOrder = async (req, res) => {
           }
         }
 
+        // Referral snapshot + commission accrual: same transaction, so the order can
+        // never exist half-recorded (any failure here rolls back the order and its stock).
+        if (referral) {
+          const { recordReferral } = await import('../services/referral/recordReferral.js');
+          await recordReferral({ order, referral, itemMeta: itemMetaOf(enrichedItems), session });
+        }
+
         // Loyalty: 1 point per ₹100
         const loyaltyEarned = Math.floor(billing.grandTotal / 100);
         await User.findByIdAndUpdate(orderUser._id, { $inc: { loyaltyPoints: loyaltyEarned } }, { session });
@@ -227,7 +239,7 @@ export const createOrder = async (req, res) => {
     res.status(201).json({ success: true, data: order });
   } catch (err) {
     console.error('createOrder:', err);
-    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Create order failed' });
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Create order failed', ...(err.referralInvalid ? { referralInvalid: true } : {}) });
   }
 };
 

@@ -80,7 +80,10 @@ export async function reconcileOne(p, deps = realDeps()) {
   try {
     totals = await d.computeOrderTotals(
       p.items.map((i) => ({ productId: i.productId, qty: i.qty, size: i.size, colour: i.colour, storeId: i.storeId, sku: i.sku })),
-      p.shippingAddress || {}
+      p.shippingAddress || {},
+      p.referral?.codeId
+        ? { referral: { snapshot: p.referral, customer: { phone: p.contact?.phone, email: p.contact?.email }, mode: 'order' } }
+        : undefined
     );
   } catch (e) {
     d.log.error('PAYMENT RECONCILER: paid but cannot rebuild order —', { razorpayOrderId: p.razorpayOrderId, paymentId: captured.id, reason: e.message });
@@ -118,6 +121,11 @@ export async function reconcileOne(p, deps = realDeps()) {
           ? await d.Product.updateOne({ _id: item.productId, stock: { $gte: item.qty } }, { $inc: { stock: -item.qty } }, { session })
           : await d.Product.updateOne({ _id: item.productId, variants: { $elemMatch: { size: item.size, colour: item.colour, stock: { $gte: item.qty } } } }, { $inc: { 'variants.$.stock': -item.qty } }, { session });
         if (!reserved.modifiedCount) throw Object.assign(new Error('Stock no longer available'), { statusCode: 409 });
+      }
+      if (totals.referral) {
+        const { recordReferral } = await import('../services/referral/recordReferral.js');
+        const meta = enrichedItems.map((i) => ({ category: i._category }));
+        await recordReferral({ order, referral: totals.referral, itemMeta: meta, session });
       }
       order.timeline = [d.buildTimelineEntry('confirmed', '', 'system')];
       order.estimatedDelivery = d.calcEstimatedDelivery(new Date(), 5);
