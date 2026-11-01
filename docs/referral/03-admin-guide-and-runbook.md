@@ -67,3 +67,17 @@ Manage promoters, their KYC and agreement status, referral codes, commission rat
 4. Set `REFERRAL_ENC_KEY`, then `REFERRAL_ENABLED=true`, enable in Settings, create a test code.
 
 **Rollback:** set `REFERRAL_ENABLED=false` (or the in-panel switch). Existing referred orders and ledger rows are kept untouched; legacy paths run byte-identically (golden test).
+
+---
+
+## Phase 3 runbook: paying promoters
+
+1. **Settings first (with your CA):** `tds_enabled`, `tds_section`, `tds_rate_bps`, `tds_annual_threshold_paise`, `gst_on_commission_bps`, `store_state_code`, `min_payout_paise`. On each promoter set "TDS applicable" and "GST on commission applicable" as advised. All ship OFF/zero.
+2. **Payouts tab > Ready to pay now.** Anyone ineligible shows the reason. Fix the cause (KYC, agreement, bank details, PAN/GSTIN) and refresh.
+3. **Create draft batch.** Nothing is reserved yet; you can cancel freely.
+4. **Approve.** Commission is deducted from payable balances. If a balance dropped meanwhile (return/adjustment) that item is dropped, not overpaid; create a new batch for it.
+5. **Download bank file**, upload it to your bank (the file holds account numbers: delete it afterwards). Bank transfer happens outside Sagona; the system never moves money.
+6. **Mark paid** with each UTR. If the bank rejects one, click **Failed** with the reason: funds return to the promoter's payable balance.
+7. **Month end:** download Payouts CSV for your accountant; TDS CSV for the TDS return working; send promoters their statement (Statements section).
+
+**Rollback / safety:** a draft or approved batch can be cancelled (funds returned by `payout_void`). A paid batch cannot be cancelled; correct it with a ledger adjustment and note.

@@ -11,14 +11,15 @@ import { makeAppendOnly } from './appendOnly.js';
 //   accrual_eligible (+, payable)   ... and into payable once the window passes
 //   reversal_cancel / reversal_return / reversal_fraud (-, pending or payable)
 //   adjustment (+/-)  manual, super_admin only, reason mandatory
-//   payout (-, payable)  added in Phase 3
+//   payout (-, payable)       funds reserved when a payout batch is approved
+//   payout_void (+, payable)  returns the funds if a payout fails / is cancelled before payment
 const ledgerSchema = new mongoose.Schema({
   promoterId: { type: mongoose.Schema.Types.ObjectId, ref: 'Promoter', required: true },
   orderId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
   orderReferralLineId: { type: mongoose.Schema.Types.ObjectId, ref: 'OrderReferralLine' },
   entryType:  { type: String, required: true, enum: [
     'accrual_pending', 'release_pending', 'accrual_eligible',
-    'reversal_cancel', 'reversal_return', 'reversal_fraud', 'adjustment', 'payout'] },
+    'reversal_cancel', 'reversal_return', 'reversal_fraud', 'adjustment', 'payout', 'payout_void'] },
   bucket:     { type: String, required: true, enum: ['pending', 'payable'] },
   amountPaise:{ type: Number, required: true },
   reason:     { type: String, maxlength: 300 },

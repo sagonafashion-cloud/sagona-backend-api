@@ -76,3 +76,27 @@ Success `200 { success:true, data:{ code, discount, newTotal } }` (rupees). **An
 | GET | `/ledger` | Ledger entries, filters promoter/bucket/type/date |
 | GET | `/ledger/balances` | Pending / payable per promoter |
 | POST | `/ledger/adjust` | Manual adjustment `{promoterId, amountPaise (signed), bucket, reason}`; reason mandatory; audit-logged |
+
+---
+
+## Phase 3 endpoints (`/api/admin/promoters/...`)
+
+Reads: super_admin + finance_manager. Writes and the bank file: super_admin only.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/payouts/preview` | Per promoter: commission, GST, TDS, net, eligibility and the exact blockers. Writes nothing |
+| GET | `/payouts` | Batches (latest 100) |
+| POST | `/payouts` | Create a DRAFT batch from eligible promoters. Optional `{promoterIds[], note}` |
+| GET | `/payouts/:id` | Batch with items |
+| POST | `/payouts/:id/approve` | Reserve funds in the ledger. Items whose balance dropped since drafting are cancelled, never overpaid |
+| POST | `/payouts/:id/paid` | `{payments:[{itemId, utr}]}`; UTR 6-40 chars |
+| POST | `/payouts/:id/cancel` | Draft or approved batches; returns reserved funds |
+| GET | `/payouts/:id/bank-file` | CSV with full account numbers (approved batch only; strictly audited) |
+| POST | `/payout-items/:itemId/fail` | `{reason}` (min 5 chars); returns funds to payable |
+| GET | `/statements/:promoterId?from&to` | Opening, earned, reversals, adjustments, paid out, closing (pending/payable). No customer data |
+| GET | `/exports/payouts?fy&status` | Accounting CSV (masked PAN/GSTIN) |
+| GET | `/exports/tds?fy` | TDS working CSV with full PAN (strictly audited) |
+
+A promoter is payable only if: active, KYC verified, agreement signed, bank details present, payable >= `min_payout_paise`, not already in an open batch, GSTIN + state present when GST applies, PAN present when TDS applies.
+All CSV cells starting with `= + - @` are prefixed with `'` to block spreadsheet formula injection.

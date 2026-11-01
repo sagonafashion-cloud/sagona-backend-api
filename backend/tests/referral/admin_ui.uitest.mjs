@@ -19,6 +19,15 @@ async function setup({ canWrite=true, pingFails=false, promoters=[], codes=[] }=
     if (path.startsWith('/admin/promoters/rates')) return { data: [] };
     if (path.startsWith('/admin/promoters/settings')) return { data:{ settings:{ enabled:false, return_window_days:10, min_payout_paise:50000, payout_day:5, commission_base:'NET_EX_GST', margin_guard_max_pct:40, margin_guard_mode:'warn', tds_enabled:false, tds_section:'', tds_rate_bps:0, tds_annual_threshold_paise:0, gst_on_commission_bps:1800, reevaluate_gst_slab:false, fraud_velocity_orders_24h:5, fraud_return_rate_alert_pct:40, agreement_template_version:'v1', agreement_grace_days:30, terms_url:'/x', support_contact:'' } } };
     if (path.startsWith('/admin/promoters/codes')) return { data: codes, warnings: [], ...(opts.method==='POST' ? { data:{ codes:['A','B'] } } : {}) };
+    if (path.startsWith('/admin/promoters/payouts/preview')) return { fy:'2026-27', data: [
+      { promoterId:'p1', name:'Asha', eligible:true, blockers:[], grossPaise:100000, gstPaise:18000, tdsPaise:10000, netPaise:108000 },
+      { promoterId:'p2', name:'<b>Bela</b>', eligible:false, blockers:['KYC not verified'], grossPaise:90000, gstPaise:0, tdsPaise:0, netPaise:90000 }] };
+    if (path.match(/^\/admin\/promoters\/payouts\/b1\/bank-file/)) return 'Ref,Amount\r\nSAG/PO/1,1080.00\r\n';
+    if (path.match(/^\/admin\/promoters\/payouts\/b1$/)) return { data:{ _id:'b1', batchNo:'PB/2026-27/0001', status:'approved', items:[{ _id:'i1', voucherNo:'SAG/PO/2026-27/0001', promoterName:'Asha', grossPaise:100000, gstPaise:18000, tdsPaise:10000, netPaise:108000, status:'approved' }] } };
+    if (path.match(/^\/admin\/promoters\/payouts\/b1\/approve/)) return { data:{ approved:1, dropped:0 } };
+    if (path.match(/^\/admin\/promoters\/payouts(\?|$)/) && opts.method!=='POST') return { data:[{ _id:'b1', batchNo:'PB/2026-27/0001', createdAt:'2026-11-03', itemCount:1, grossPaise:100000, netPaise:108000, status:'approved' }] };
+    if (path.startsWith('/admin/promoters/statements/')) return { data:{ summary:{ openingPaise:0, accruedPaise:5000, reversedPaise:0, adjustedPaise:0, paidOutPaise:-5000, closingPaise:0, pendingClosingPaise:0, payableClosingPaise:0 } } };
+    if (path.startsWith('/admin/promoters/exports/')) return 'a,b\r\n1,2\r\n';
     if (path.startsWith('/admin/promoters/audit')) return { data: [] };
     if (path.startsWith('/admin/promoters/orders')) return { data: [{ _id:'r1', orderNumber:'SAG-1', orderDate:'2026-11-02', orderStatus:'delivered', promoter:'Asha', code:'RHEA25', customer:'B*** ******3210', grossPaise:50000, discountPaise:5000, taxablePaise:42857, gstPaise:2143, shippingPaise:9900, commissionPaise:4286, flags:{}, referralStatus:'applied' }] };
     if (path.startsWith('/admin/promoters/ledger/balances')) return { data: [{ promoterId:'p1', name:'Asha', pendingPaise:4286, payablePaise:1000 }] };
@@ -37,7 +46,7 @@ const setv = (w, id, v) => { const el=w.document.getElementById(id); el.value=v;
 let s = await setup({ canWrite:false, promoters:[{ _id:'1', name:'<img src=x onerror=alert(1)>', mobile:'9876543210', status:'active', kycStatus:'verified', agreementStatus:'signed', pan:'XXXXXX234F', gstRegistered:false }] });
 t('promoter name is escaped (no injected <img>)', !s.w.document.querySelector('#ref-body img') && s.w.document.getElementById('ref-body').innerHTML.includes('&lt;img'));
 t('read-only role: no Add button', !s.w.document.getElementById('ref-add-promoter'));
-t('tabs rendered', s.w.document.querySelectorAll('#ref-tabs button').length===7);
+t('tabs rendered', s.w.document.querySelectorAll('#ref-tabs button').length===8);
 
 // 2. module off
 s = await setup({ pingFails:true });
@@ -104,6 +113,40 @@ t('adjustment: -25.5 rupees -> -2550 paise with reason and promoter', ap && ap.b
 s = await setup({ canWrite:false });
 click(s.w,'[data-tab="ledger"]'); await tick(100);
 t('read-only role: no adjustment form', !s.w.document.getElementById('adj-save'));
+
+
+// 6c. payouts tab
+s = await setup({ promoters:[{ _id:'p1', name:'Asha', status:'active' }] });
+const dl = []; s.w.URL.createObjectURL = (b) => { dl.push(b); return 'blob:x'; }; s.w.URL.revokeObjectURL = () => {};
+s.w.HTMLAnchorElement.prototype.click = function () { dl.push('a:' + this.download); };
+s.w.confirm = () => true; s.w.prompt = () => 'Bank rejected the transfer';
+click(s.w,'[data-tab="payouts"]'); await tick(100);
+const pt = s.w.document.getElementById('ref-body');
+t('payouts: preview shows net, blocker reason, and escapes names', /₹1,080/.test(pt.textContent) && /KYC not verified/.test(pt.textContent) && /&lt;b&gt;Bela/.test(pt.innerHTML) && !pt.querySelector('td > b:not(:only-child)')?.textContent.includes('Bela'));
+t('payouts: only eligible counted on create button', /Create draft batch \(1\)/.test(pt.textContent));
+click(s.w,'#po-create'); await tick(100);
+t('payouts: create posts to /payouts after confirm', !!s.calls.find(c=>c.method==='POST' && c.path==='/admin/promoters/payouts'));
+click(s.w,'[data-po-open="b1"]'); await tick(100);
+t('payouts: batch detail shows voucher, bank file + mark paid for approved', /SAG\/PO\/2026-27\/0001/.test(pt.textContent) && !!s.w.document.getElementById('po-bank') && !!s.w.document.getElementById('po-paid') && !s.w.document.getElementById('po-approve'));
+click(s.w,'#po-bank'); await tick(100);
+t('payouts: bank file downloaded as CSV', dl.includes('a:bank-file.csv'));
+click(s.w,'#po-paid'); await tick(60);
+t('payouts: mark paid without UTR is refused', !s.calls.find(c=>c.path.endsWith('/paid')) && s.toasts.some(x=>/UTR/.test(x[0])));
+s.w.document.querySelector('[data-utr="i1"]').value = 'UTR123456';
+click(s.w,'#po-paid'); await tick(100);
+const pd = s.calls.find(c=>c.path==='/admin/promoters/payouts/b1/paid');
+t('payouts: mark paid sends itemId + utr', pd && pd.body.payments[0].itemId==='i1' && pd.body.payments[0].utr==='UTR123456', JSON.stringify(pd?.body));
+click(s.w,'[data-po-open="b1"]'); await tick(100);
+click(s.w,'[data-po-fail="i1"]'); await tick(100);
+const fl = s.calls.find(c=>c.path==='/admin/promoters/payout-items/i1/fail');
+t('payouts: fail item sends reason', fl && fl.body.reason==='Bank rejected the transfer');
+click(s.w,'#st-go'); await tick(100);
+t('payouts: statement renders closing balance', /Closing balance/.test(s.w.document.getElementById('st-out').textContent));
+setv(s.w,'ex-fy','2026-27'); click(s.w,'#ex-tds'); await tick(100);
+t('payouts: TDS export requested with FY and downloaded', !!s.calls.find(c=>c.path==='/admin/promoters/exports/tds?fy=2026-27') && dl.includes('a:tds.csv'));
+s = await setup({ canWrite:false });
+click(s.w,'[data-tab="payouts"]'); await tick(100);
+t('payouts: read-only role has no create button', !s.w.document.getElementById('po-create'));
 
 // 7. other modals are not hijacked
 s = await setup({});

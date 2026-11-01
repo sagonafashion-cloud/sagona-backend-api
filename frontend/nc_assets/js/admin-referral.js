@@ -19,6 +19,7 @@ const SETTING_LABELS = {
   commission_base: ['Commission base', ['NET_EX_GST', 'LIST_EX_GST', 'NET_INCL_GST']],
   margin_guard_max_pct: ['Margin guard: max discount % + commission %', 'num'],
   margin_guard_mode: ['Margin guard mode', ['warn', 'block']],
+  store_state_code: ['Store GST state code (2 digits, e.g. 05)', 'text'],
   tds_enabled: ['TDS enabled (confirm with CA)', 'bool'],
   tds_section: ['TDS section label', 'text'],
   tds_rate_bps: ['TDS rate (%)', 'pct'],
@@ -64,7 +65,7 @@ export async function loadPromoters(ctx) {
     return;
   }
 
-  const TABS = [['promoters', 'Promoters'], ['codes', 'Referral Codes'], ['rates', 'Commission Rates'], ['orders', 'Referred Orders'], ['ledger', 'Commission Ledger'], ['settings', 'Settings'], ['audit', 'Audit Log']];
+  const TABS = [['promoters', 'Promoters'], ['codes', 'Referral Codes'], ['rates', 'Commission Rates'], ['orders', 'Referred Orders'], ['ledger', 'Commission Ledger'], ['payouts', 'Payouts'], ['settings', 'Settings'], ['audit', 'Audit Log']];
   const drawTabs = () => {
     document.getElementById('ref-tabs').innerHTML = TABS.map(([k, l]) =>
       `<button class="btn ${tab === k ? 'gold' : 'ghost'}" data-tab="${k}" style="padding:7px 14px;font-size:11px">${l}</button>`).join('');
@@ -289,6 +290,57 @@ export async function loadPromoters(ctx) {
       </tbody></table></div>`;
   }
 
+
+  /* ── Payouts (Phase 3): preview -> draft batch -> approve -> bank file -> mark paid ── */
+  const download = (name, text) => {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const statusPill = (s) => pill(s, s === 'paid', ['draft', 'approved'].includes(s));
+
+  async function showPayouts() {
+    body().innerHTML = '<div class="loading">Loading…</div>';
+    const [pv, bt, pr] = await Promise.all([call('/payouts/preview'), call('/payouts'), call('/?limit=100')]);
+    const eligible = pv.data.filter((x) => x.eligible);
+    body().innerHTML = `
+      <div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">Ready to pay now (financial year ${esc(pv.fy)})</b>
+        <table class="admin-table" style="margin-top:6px"><thead><tr><th>Promoter</th><th>Commission</th><th>GST</th><th>TDS</th><th>Net to pay</th><th>Status</th></tr></thead><tbody>
+        ${pv.data.map((x) => `<tr><td>${esc(x.name)}</td><td>${inr(x.grossPaise)}</td><td>${inr(x.gstPaise)}</td><td>${inr(x.tdsPaise)}</td><td><b>${inr(x.netPaise)}</b></td>
+          <td>${x.eligible ? pill('Eligible', true, false) : `<span style="font-size:11px;color:var(--gray)">${esc(x.blockers.join('; '))}</span>`}</td></tr>`).join('') || '<tr><td colspan="6" class="loading">Nothing payable yet.</td></tr>'}
+        </tbody></table>
+        ${canWrite ? `<div style="margin-top:10px;text-align:right"><button class="btn gold" id="po-create" ${eligible.length ? '' : 'disabled'}>Create draft batch (${eligible.length})</button></div>` : ''}
+      </div>
+      <div class="admin-card" style="margin-bottom:12px"><table class="admin-table"><thead><tr><th>Batch</th><th>Created</th><th>Items</th><th>Commission</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>
+        ${bt.data.map((b) => `<tr><td>${esc(b.batchNo)}</td><td>${d(b.createdAt)}</td><td>${b.itemCount}</td><td>${inr(b.grossPaise)}</td><td>${inr(b.netPaise)}</td><td>${statusPill(b.status)}</td>
+          <td><button class="btn" data-po-open="${esc(b._id)}">Open</button></td></tr>`).join('') || '<tr><td colspan="7" class="loading">No batches yet.</td></tr>'}
+      </tbody></table></div>
+      <div id="po-detail"></div>
+      <div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">Statements and accounting exports</b>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:end">
+          <div><label>Promoter</label><select id="st-pr">${pr.data.map((p) => `<option value="${esc(p._id)}">${esc(p.name)}</option>`).join('')}</select></div>
+          <div><label>From</label><input id="st-from" type="date"></div><div><label>To</label><input id="st-to" type="date"></div>
+          <button class="btn" id="st-go">Show statement</button>
+          <div style="margin-left:auto"><label>Financial year</label><input id="ex-fy" placeholder="2026-27" style="width:90px"></div>
+          <button class="btn" id="ex-pay">Payouts CSV</button><button class="btn" id="ex-tds">TDS CSV</button>
+        </div><div id="st-out" style="margin-top:10px"></div></div>`;
+  }
+
+  async function openBatch(id) {
+    const { data: b } = await call(`/payouts/${id}`);
+    const box = document.getElementById('po-detail');
+    box.innerHTML = `<div class="admin-card" style="padding:12px;margin-bottom:12px" data-batch="${esc(b._id)}">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b>${esc(b.batchNo)} ${statusPill(b.status)}</b><span>
+        ${canWrite && b.status === 'draft' ? '<button class="btn gold" id="po-approve">Approve and reserve funds</button>' : ''}
+        ${canWrite && b.status === 'approved' ? '<button class="btn" id="po-bank">Download bank file</button> <button class="btn gold" id="po-paid">Mark paid</button>' : ''}
+        ${canWrite && ['draft', 'approved'].includes(b.status) ? '<button class="btn" id="po-cancel">Cancel batch</button>' : ''}</span></div>
+      <table class="admin-table" style="margin-top:8px"><thead><tr><th>Voucher</th><th>Promoter</th><th>Commission</th><th>GST</th><th>TDS</th><th>Net</th><th>Status</th><th>UTR</th><th></th></tr></thead><tbody>
+      ${b.items.map((i) => `<tr><td>${esc(i.voucherNo)}</td><td>${esc(i.promoterName)}</td><td>${inr(i.grossPaise)}</td><td>${inr(i.gstPaise)}</td><td>${inr(i.tdsPaise)}</td><td><b>${inr(i.netPaise)}</b></td><td>${statusPill(i.status)}</td>
+        <td>${i.status === 'approved' && canWrite ? `<input data-utr="${esc(i._id)}" placeholder="UTR" style="width:130px">` : esc(i.utr || '')}</td>
+        <td>${i.status === 'approved' && canWrite ? `<button class="btn" data-po-fail="${esc(i._id)}">Failed</button>` : esc(i.failureReason || '')}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
   /* ── Settings ── */
   async function showSettings() {
     const { data } = await call('/settings');
@@ -340,6 +392,7 @@ export async function loadPromoters(ctx) {
       else if (tab === 'rates') await showRates();
       else if (tab === 'orders') await showOrders();
       else if (tab === 'ledger') await showLedger();
+      else if (tab === 'payouts') await showPayouts();
       else if (tab === 'settings') await showSettings();
       else await showAudit();
     } catch (e) { body().innerHTML = `<div class="admin-card" style="padding:16px">Failed to load: ${esc(e.message)}</div>`; }
@@ -378,6 +431,49 @@ export async function loadPromoters(ctx) {
         if (!amt) return toast('Enter a non-zero amount', 'error');
         await call('/ledger/adjust', { method: 'POST', body: { promoterId: v('adj-pr'), amountPaise: amt, bucket: v('adj-bucket'), reason: v('adj-reason') } });
         toast('Adjustment recorded', 'success'); return showLedger();
+      }
+      if (t.id === 'po-create') {
+        if (!window.confirm('Create a draft payout batch for all eligible promoters? Nothing is paid or reserved until you approve it.')) return;
+        await call('/payouts', { method: 'POST', body: {} }); toast('Draft batch created', 'success'); return showPayouts();
+      }
+      if (t.dataset.poOpen) return openBatch(t.dataset.poOpen);
+      const bid = () => t.closest('[data-batch]')?.dataset.batch;
+      if (t.id === 'po-approve') {
+        if (!window.confirm('Approve this batch? The commission is deducted from each promoter\'s payable balance now.')) return;
+        const id = bid(); const r = await call(`/payouts/${id}/approve`, { method: 'POST', body: {} });
+        toast(`Approved ${r.data.approved}${r.data.dropped ? `, dropped ${r.data.dropped} (balance changed)` : ''}`, 'success'); await showPayouts(); return openBatch(id);
+      }
+      if (t.id === 'po-cancel') {
+        if (!window.confirm('Cancel this batch? Any reserved funds go back to the promoters\' payable balance.')) return;
+        await call(`/payouts/${bid()}/cancel`, { method: 'POST', body: {} }); toast('Batch cancelled', 'success'); return showPayouts();
+      }
+      if (t.id === 'po-bank') {
+        const csv = await call(`/payouts/${bid()}/bank-file`); download('bank-file.csv', csv); return toast('Bank file downloaded (contains account numbers: handle with care)', 'success');
+      }
+      if (t.id === 'po-paid') {
+        const payments = [...root.querySelectorAll('[data-utr]')].map((i) => ({ itemId: i.dataset.utr, utr: i.value.trim() })).filter((p) => p.utr);
+        if (!payments.length) return toast('Enter the UTR for each item you have paid', 'error');
+        const id = bid(); await call(`/payouts/${id}/paid`, { method: 'POST', body: { payments } });
+        toast('Marked paid', 'success'); await showPayouts(); return openBatch(id);
+      }
+      if (t.dataset.poFail) {
+        const reason = window.prompt('Why did this payment fail? (min 5 characters)'); if (!reason) return;
+        const id = bid(); await call(`/payout-items/${t.dataset.poFail}/fail`, { method: 'POST', body: { reason } });
+        toast('Marked failed; funds returned to payable', 'success'); await showPayouts(); return openBatch(id);
+      }
+      if (t.id === 'st-go') {
+        const q = new URLSearchParams(); const f = document.getElementById('st-from').value, to = document.getElementById('st-to').value;
+        if (f) q.set('from', f); if (to) q.set('to', to);
+        const { data } = await call(`/statements/${document.getElementById('st-pr').value}?${q}`); const x = data.summary;
+        document.getElementById('st-out').innerHTML = `<table class="admin-table"><tbody>
+          <tr><td>Opening balance</td><td>${inr(x.openingPaise)}</td></tr><tr><td>Commission earned</td><td>${inr(x.accruedPaise)}</td></tr>
+          <tr><td>Reversals (cancel/return)</td><td>${inr(x.reversedPaise)}</td></tr><tr><td>Adjustments</td><td>${inr(x.adjustedPaise)}</td></tr>
+          <tr><td>Paid out (net of voids)</td><td>${inr(x.paidOutPaise)}</td></tr><tr><td><b>Closing balance</b></td><td><b>${inr(x.closingPaise)}</b> (pending ${inr(x.pendingClosingPaise)}, payable ${inr(x.payableClosingPaise)})</td></tr></tbody></table>`;
+        return;
+      }
+      if (t.id === 'ex-pay' || t.id === 'ex-tds') {
+        const fy = document.getElementById('ex-fy').value.trim(); const q = fy ? `?fy=${encodeURIComponent(fy)}` : '';
+        const csv = await call(t.id === 'ex-pay' ? `/exports/payouts${q}` : `/exports/tds${q}`); return download(t.id === 'ex-pay' ? 'payouts.csv' : 'tds.csv', csv);
       }
       if (t.id === 'set-save') {
         const r = await call('/settings', { method: 'PUT', body: readSettings() });

@@ -71,3 +71,17 @@ All amounts are integer **paise**; rates are **bps**. Everything below is additi
 1. Invoice / GST taxable value = list price - referral discount (true trade discount). Commission never reduces invoice, GST or turnover.
 2. A balance is always the sum of ledger rows; nothing is updated in place.
 3. Whole-order returns only; return window starts at the admin-marked "delivered" timeline entry (default 10 days, setting `return_window_days`).
+
+---
+
+## Phase 3 additions (payouts)
+
+- `payoutbatches` — `batchNo` (`PB/<FY>/0001`), `fy`, `status` draft -> approved -> paid (or cancelled), totals, who created/approved/cancelled.
+- `payoutitems` — one per promoter per batch: `voucherNo` (`SAG/PO/<FY>/0001`, the payout voucher / self-invoice number), snapshot of commission, GST (CGST/SGST/IGST), TDS (base, rate, section), net, `status` draft/approved/paid/failed/cancelled, `utr`, `paidAt`, `failureReason`. Only masked PAN/GSTIN (last 4) are stored here.
+- `referralcounters` — atomic sequences for batch and voucher numbers, per financial year.
+- `commissionledger` gains entry type `payout_void` (+, payable) which returns funds when an approved payout fails or is cancelled. `payout` (-, payable) is written when a batch is **approved**.
+- New setting `store_state_code` (default `05`) decides CGST+SGST (same state) vs IGST.
+
+**Money flow:** draft (nothing reserved) -> approve (ledger `payout` debit per item, after re-checking the live balance) -> bank transfer outside the system -> mark paid with UTR. Failure/cancel before payment writes `payout_void`. Every step is idempotent (`<itemId>:payout`, `<itemId>:void`).
+
+**Tax maths** (all configurable, default OFF; confirm with your CA): net paid = commission + GST on commission - TDS. TDS is computed on commission excluding GST; with an annual threshold only the part of the payout that takes the financial-year total over the threshold is taxed. Payouts never touch customer invoices, store GST returns or turnover.

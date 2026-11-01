@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import * as c from '../controllers/referralAdminController.js';
+import * as pc from '../controllers/referralPayoutController.js';
 
 // Mounted at /api/admin/promoters ONLY when REFERRAL_ENABLED=true (see server.js).
 //
@@ -43,6 +44,20 @@ router.get('/orders', read, c.listReferredOrders);
 router.get('/ledger', read, c.listLedger);
 router.get('/ledger/balances', read, c.ledgerBalances);
 router.post('/ledger/adjust', write, c.adjustLedger);
+
+// payouts, statements, exports (declared before '/:id')
+router.get('/payouts/preview', read, pc.previewPayouts);
+router.get('/payouts', read, pc.listBatches);
+router.post('/payouts', write, pc.createBatch);
+router.get('/payouts/:id', read, pc.getBatch);
+router.post('/payouts/:id/approve', write, pc.approveBatch);
+router.post('/payouts/:id/paid', write, pc.markPaid);
+router.post('/payouts/:id/cancel', write, pc.cancelBatch);
+router.get('/payouts/:id/bank-file', write, pc.bankFile);          // full account numbers: super_admin only
+router.post('/payout-items/:itemId/fail', write, pc.failItem);
+router.get('/statements/:promoterId', read, pc.statement);
+router.get('/exports/payouts', read, pc.accountingExport);
+router.get('/exports/tds', read, pc.tdsExport);
 
 // commission rates (insert-only)
 router.get('/rates', read, c.listRates);
