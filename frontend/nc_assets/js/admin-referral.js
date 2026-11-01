@@ -25,6 +25,9 @@ const SETTING_LABELS = {
   tds_annual_threshold_paise: ['TDS annual threshold (₹)', 'rupees'],
   gst_on_commission_bps: ['GST on commission, registered promoters (%)', 'pct'],
   reevaluate_gst_slab: ['Re-evaluate GST slab on discounted price (CA to confirm)', 'bool'],
+  slab_threshold_paise: ['Slab threshold: per-piece value (₹) at or below which the low rate applies', 'rupees'],
+  slab_low_rate: ['Slab low rate (%)', 'int'],
+  slab_high_rate: ['Slab high rate (%)', 'int'],
   fraud_velocity_orders_24h: ['Fraud: orders per code per 24h', 'int'],
   fraud_return_rate_alert_pct: ['Fraud: return-rate alert %', 'num'],
   agreement_template_version: ['Current agreement version', 'text'],
@@ -61,7 +64,7 @@ export async function loadPromoters(ctx) {
     return;
   }
 
-  const TABS = [['promoters', 'Promoters'], ['codes', 'Referral Codes'], ['rates', 'Commission Rates'], ['settings', 'Settings'], ['audit', 'Audit Log']];
+  const TABS = [['promoters', 'Promoters'], ['codes', 'Referral Codes'], ['rates', 'Commission Rates'], ['orders', 'Referred Orders'], ['ledger', 'Commission Ledger'], ['settings', 'Settings'], ['audit', 'Audit Log']];
   const drawTabs = () => {
     document.getElementById('ref-tabs').innerHTML = TABS.map(([k, l]) =>
       `<button class="btn ${tab === k ? 'gold' : 'ghost'}" data-tab="${k}" style="padding:7px 14px;font-size:11px">${l}</button>`).join('');
@@ -243,6 +246,49 @@ export async function loadPromoters(ctx) {
       </tbody></table></div>`;
   }
 
+
+  /* ── Referred orders (read-only; customer shown masked) ── */
+  async function showOrders(promoterId = '', code = '') {
+    body().innerHTML = '<div class="loading">Loading…</div>';
+    const qs = new URLSearchParams({ limit: '100', ...(promoterId ? { promoterId } : {}), ...(code ? { code } : {}) });
+    const [res, pr] = await Promise.all([call(`/orders?${qs}`), call('/?limit=100')]);
+    body().innerHTML = `
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="ro-promoter" style="padding:7px"><option value="">All promoters</option>${pr.data.map((p) => `<option value="${esc(p._id)}" ${p._id === promoterId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+        <input id="ro-code" placeholder="Code" value="${esc(code)}" style="padding:7px;width:120px">
+        <button class="btn ghost" id="ro-go" style="padding:7px 12px;font-size:11px">Filter</button></div>
+      <div class="admin-card"><table class="admin-table"><thead><tr><th>Order</th><th>Date</th><th>Promoter</th><th>Code</th><th>Customer</th><th>List value</th><th>Discount</th><th>Taxable</th><th>GST</th><th>Shipping</th><th>Commission</th><th>Order status</th></tr></thead><tbody>
+      ${res.data.map((r) => `<tr><td>${esc(r.orderNumber)}</td><td>${d(r.orderDate)}</td><td>${esc(r.promoter)}</td><td><b>${esc(r.code)}</b></td><td>${esc(r.customer)}</td>
+        <td>${inr(r.grossPaise)}</td><td>-${inr(r.discountPaise)}</td><td>${inr(r.taxablePaise)}</td><td>${inr(r.gstPaise)}</td><td>${inr(r.shippingPaise)}</td>
+        <td>${inr(r.commissionPaise)}${r.flags?.noRate ? ' <span title="No commission rate was set for this order" style="color:#dc2626">⚠</span>' : ''}</td>
+        <td>${pill(r.orderStatus || '—', r.orderStatus === 'delivered', !['cancelled', 'returned'].includes(r.orderStatus))}${r.referralStatus === 'void' ? ' <span style="font-size:10px;color:var(--gray)">void</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="12" class="loading">No referred orders yet.</td></tr>'}
+      </tbody></table></div>`;
+  }
+
+  /* ── Commission ledger (append-only) ── */
+  async function showLedger(promoterId = '') {
+    body().innerHTML = '<div class="loading">Loading…</div>';
+    const [bal, led, pr] = await Promise.all([call('/ledger/balances'), call(`/ledger?limit=100${promoterId ? '&promoterId=' + promoterId : ''}`), call('/?limit=100')]);
+    const names = new Map(pr.data.map((p) => [p._id, p.name]));
+    body().innerHTML = `
+      <div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">Balances (sum of the ledger)</b>
+        <table class="admin-table" style="margin-top:6px"><thead><tr><th>Promoter</th><th>Pending (return window open)</th><th>Payable</th></tr></thead><tbody>
+        ${bal.data.map((b) => `<tr><td>${esc(b.name || b.promoterId)}</td><td>${inr(b.pendingPaise)}</td><td><b>${inr(b.payablePaise)}</b></td></tr>`).join('') || '<tr><td colspan="3" class="loading">No commission yet.</td></tr>'}
+        </tbody></table></div>
+      ${canWrite ? `<div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">Manual adjustment (adds a new entry; reason required; audited)</b>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:end">
+          <div><label>Promoter</label><select id="adj-pr">${pr.data.map((p) => `<option value="${esc(p._id)}">${esc(p.name)}</option>`).join('')}</select></div>
+          <div><label>Amount ₹ (negative to deduct)</label><input id="adj-amt" type="number" step="0.01" style="width:140px"></div>
+          <div><label>Bucket</label><select id="adj-bucket"><option value="payable">Payable</option><option value="pending">Pending</option></select></div>
+          <div style="flex:1"><label>Reason</label><input id="adj-reason" style="width:100%"></div>
+          <button class="btn gold" id="adj-save">Add entry</button></div></div>` : ''}
+      <div style="margin-bottom:8px"><select id="led-promoter" style="padding:7px"><option value="">All promoters</option>${pr.data.map((p) => `<option value="${esc(p._id)}" ${p._id === promoterId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="admin-card"><table class="admin-table"><thead><tr><th>When</th><th>Promoter</th><th>Type</th><th>Bucket</th><th>Amount</th><th>Reason</th></tr></thead><tbody>
+      ${led.data.map((e) => `<tr><td>${dt(e.eventAt)}</td><td>${esc(names.get(String(e.promoterId)) || '')}</td><td>${esc(e.entryType)}</td><td>${esc(e.bucket)}</td>
+        <td style="color:${e.amountPaise < 0 ? '#dc2626' : '#16a34a'}">${e.amountPaise < 0 ? '-' : '+'}${inr(Math.abs(e.amountPaise))}</td><td>${esc(e.reason) || ''}</td></tr>`).join('') || '<tr><td colspan="6" class="loading">Nothing yet.</td></tr>'}
+      </tbody></table></div>`;
+  }
+
   /* ── Settings ── */
   async function showSettings() {
     const { data } = await call('/settings');
@@ -292,6 +338,8 @@ export async function loadPromoters(ctx) {
       if (tab === 'promoters') await showPromoters();
       else if (tab === 'codes') await showCodes();
       else if (tab === 'rates') await showRates();
+      else if (tab === 'orders') await showOrders();
+      else if (tab === 'ledger') await showLedger();
       else if (tab === 'settings') await showSettings();
       else await showAudit();
     } catch (e) { body().innerHTML = `<div class="admin-card" style="padding:16px">Failed to load: ${esc(e.message)}</div>`; }
@@ -323,6 +371,14 @@ export async function loadPromoters(ctx) {
         const r = await call('/rates', { method: 'POST', body: { category: v('rt-cat') || undefined, promoterId: v('rt-pr') || undefined, rateBps: Math.round(Number(v('rt-rate')) * 100), effectiveFrom: v('rt-from') || undefined, note: v('rt-note') || undefined } });
         (r.warnings || []).forEach((w) => toast(w, 'error')); toast('Rate added', 'success'); return showRates();
       }
+      if (t.id === 'ro-go') return showOrders(document.getElementById('ro-promoter').value, document.getElementById('ro-code').value.trim());
+      if (t.id === 'adj-save') {
+        const v = (id) => document.getElementById(id).value.trim();
+        const amt = Math.round(Number(v('adj-amt')) * 100);
+        if (!amt) return toast('Enter a non-zero amount', 'error');
+        await call('/ledger/adjust', { method: 'POST', body: { promoterId: v('adj-pr'), amountPaise: amt, bucket: v('adj-bucket'), reason: v('adj-reason') } });
+        toast('Adjustment recorded', 'success'); return showLedger();
+      }
       if (t.id === 'set-save') {
         const r = await call('/settings', { method: 'PUT', body: readSettings() });
         toast(r.data.changed.length ? `Saved: ${r.data.changed.join(', ')}` : 'No changes', 'success'); return showSettings();
@@ -331,6 +387,8 @@ export async function loadPromoters(ctx) {
     root.addEventListener('change', act(async (e) => {
       if (e.target.id === 'code-status') return showCodes(e.target.value);
       if (e.target.id === 'aud-entity') return showAudit(e.target.value);
+      if (e.target.id === 'led-promoter') return showLedger(e.target.value);
+      if (e.target.id === 'ro-promoter') return showOrders(e.target.value, document.getElementById('ro-code').value.trim());
     }));
 
     modalBody.addEventListener('click', act(async (e) => {

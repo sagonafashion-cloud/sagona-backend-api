@@ -49,3 +49,25 @@ TDS and slab re-evaluation ship **off** and zero until the CA confirms.
 
 ## Rollback
 Setting `REFERRAL_ENABLED` to false (or removing it) stops the module from loading. The collections remain and are harmless. To remove entirely, drop the six collections and the GridFS bucket `promoter_docs`.
+
+---
+
+## Phase 2 additions (money path)
+
+All amounts are integer **paise**; rates are **bps**. Everything below is additive; no existing collection is altered except optional fields.
+
+**Existing collections, new optional fields (no defaults, absent on legacy orders)**
+- `orders.items[].referralDiscount` (rupees) — customer trade discount allocated to the line.
+- `orders.billing.referralDiscount`, `orders.billing.referralCode`.
+- `pendingcheckouts.referral` `{codeId, code, discountPaise, lineDiscountsPaise[]}` — the discount agreed at `create-order`, honoured when the paid order is created (webhook/verify/reconciler), even if the code changed meanwhile.
+
+**New collections**
+- `orderreferrals` — one per referred order: code, promoter, discount total, commission total, `commissionBaseRule`, hashed `customerKeys` (for per-customer limits; never shown to promoters), `flags` (`noRate`, `slabReevaluated`, `fraudHold`), `status` (`applied` / `void`).
+- `orderreferrallines` (append-only) — per item snapshot: gross, discount, charged, taxable, GST, HSN, rate bps and rate source used, commission base and amount.
+- `commissionledger` (append-only, signed paise) — buckets `pending` / `payable`; entry types `accrual_pending`, `eligible` (pending -> payable after the return window), `reversal_*` (cancel/return), `adjustment` (manual, reason required). Unique `idempotencyKey` makes every writer safe to retry.
+- `referraljobstates` — lease lock + last result for the sweeper.
+
+**Invariants**
+1. Invoice / GST taxable value = list price - referral discount (true trade discount). Commission never reduces invoice, GST or turnover.
+2. A balance is always the sum of ledger rows; nothing is updated in place.
+3. Whole-order returns only; return window starts at the admin-marked "delivered" timeline entry (default 10 days, setting `return_window_days`).

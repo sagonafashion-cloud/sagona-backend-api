@@ -56,3 +56,23 @@ All routes require an admin JWT. **Read** = `super_admin`, `finance_manager`. **
 
 ### Error codes
 401 not logged in; 403 role or 2FA; 404 not found; 409 conflict (duplicate, invalid state change); 422 validation; 503 encryption key not configured.
+
+---
+
+## Phase 2 endpoints
+
+### Public
+`POST /api/referral/validate` — rate limited (20 / 10 min / IP). Body `{ code, items:[{productId,qty,size?}], customer?:{phone,email} }`.
+Success `200 { success:true, data:{ code, discount, newTotal } }` (rupees). **Any** failure returns `400 { success:false, message:"This code is not valid for this order" }`: the response never reveals whether a code exists, expired, hit a limit, or is the buyer's own. Precise reason is logged server-side only. Programme off -> `404`.
+
+### Checkout integration
+- `POST /api/payment/create-order` and `POST /api/orders` accept optional `referralCode`. Stale/invalid at order time -> `409 { referralInvalid:true, message }`; the checkout page clears the code and asks the shopper to review the new total.
+- Responses/orders add `billing.referralDiscount`, `billing.referralCode` only when a code was applied.
+
+### Admin (`/api/admin/promoters/...`, reads: super_admin + finance_manager, writes: super_admin)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/orders` | Referred orders (customer masked), filters promoter/code/date |
+| GET | `/ledger` | Ledger entries, filters promoter/bucket/type/date |
+| GET | `/ledger/balances` | Pending / payable per promoter |
+| POST | `/ledger/adjust` | Manual adjustment `{promoterId, amountPaise (signed), bucket, reason}`; reason mandatory; audit-logged |

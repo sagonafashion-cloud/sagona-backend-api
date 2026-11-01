@@ -48,3 +48,22 @@ Manage promoters, their KYC and agreement status, referral codes, commission rat
 - Append-only protection is enforced by the application, not by database permissions.
 - KYC documents are limited to PDF/JPEG/PNG up to 5 MB each.
 - Tax rates and thresholds are settings, not facts; confirm them with your CA before enabling TDS or GST-on-commission.
+
+---
+
+## Phase 2 runbook
+
+**New settings (Promoters > Settings):** `commission_base` (NET_OF_GST default), `return_window_days` (10), `reevaluate_gst_slab` (off), `slab_threshold_paise`, `slab_low_rate`, `slab_high_rate`. Confirm tax-related ones with your CA before enabling.
+
+**Decisions to be aware of**
+- Free-shipping threshold is evaluated on the **list value (before referral discount)**, so a code never takes a shopper below free shipping. Change in `orderCalculator` if you prefer otherwise.
+- Existing quirk (not introduced by this work): checkout shows the birthday discount in the summary differently from what the server computes. Reported separately; untouched.
+- Commission sweeper runs every 6h (first run 90s after boot), only when `REFERRAL_ENABLED=true`. It is idempotent; safe to restart. Manual run: restart the service.
+
+**Deploy order (Phase 2)**
+1. Staging first (separate Render service + Atlas DB + Razorpay test keys). Place COD and online test orders with a code; verify invoice, GST report, ledger.
+2. Merge backend (flag still off) -> confirm legacy checkout unchanged.
+3. Upload `checkout.html`, `checkout.js`, `admin.html`, `admin.js`, `admin-referral.js` (cache-bust strings are already bumped).
+4. Set `REFERRAL_ENC_KEY`, then `REFERRAL_ENABLED=true`, enable in Settings, create a test code.
+
+**Rollback:** set `REFERRAL_ENABLED=false` (or the in-panel switch). Existing referred orders and ledger rows are kept untouched; legacy paths run byte-identically (golden test).

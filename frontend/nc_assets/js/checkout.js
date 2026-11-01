@@ -117,6 +117,13 @@ function getBirthdayDiscount(dateVal) {
     ? Math.round(subtotal * 0.1) : 0;
 }
 
+/* ── referral code (optional; hidden unless the server says the programme is on) ──
+   The browser never decides an amount: it sends the code + cart to /referral/validate
+   and displays exactly what the server answers. The order itself is re-validated by
+   the server when it is placed. */
+const REFERRAL_GENERIC = 'This code is not valid for this order';
+let referral = null;   // { code, discount, grandTotal, shippingCharge, taxableAmount }
+
 function updateTotal() {
   // Prices are GST-inclusive — GST is informational only and is NOT added on
   // top. Grand Total = (subtotal - birthday discount) + shipping.
@@ -125,6 +132,25 @@ function updateTotal() {
   const shipping  = taxable >= FREE_SHIP ? 0 : SHIP_CHARGE;
   const gstAmt    = Math.round(computeGstBreakdown());
   const grand     = taxable + shipping;
+
+  const refRow = document.getElementById('referral-row');
+  if (referral) {
+    // Server-quoted figures win over the local estimate (the server never applies the birthday offer).
+    const shipR = referral.shippingCharge;
+    const gstR  = Math.max(0, Math.round((subtotal - referral.discount) - referral.taxableAmount));
+    if (discountEl) discountEl.textContent = 0;
+    if (subtotalEl) subtotalEl.textContent = INR(subtotal);
+    if (shippingEl) shippingEl.innerHTML   = shipR === 0 ? '<span class="free">Free</span>' : INR(shipR);
+    if (gstEl)      gstEl.textContent      = INR(gstR);
+    if (totalEl)    totalEl.textContent    = referral.grandTotal;
+    if (refRow) {
+      refRow.style.display = 'flex';
+      document.getElementById('referral-row-label').textContent = `Referral discount (${referral.code})`;
+      document.getElementById('referral-discount-amt').textContent = `-${INR(referral.discount)}`;
+    }
+    return;
+  }
+  if (refRow) refRow.style.display = 'none';
 
   if (discountEl) discountEl.textContent = discount;
   if (subtotalEl) subtotalEl.textContent = INR(subtotal);
@@ -140,6 +166,73 @@ document.querySelector('#birthday')?.addEventListener('change', updateTotal);
 // never affects the Grand Total, which is already correct on first render).
 updateTotal();
 loadGstSlabs().then(updateTotal);
+
+/* ── referral UI ── */
+function setReferralMsg(text, ok) {
+  const el = document.getElementById('referral-msg');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.color = ok ? '#16a34a' : '#dc2626';
+}
+
+function clearReferral() {
+  referral = null;
+  const input = document.getElementById('referral-input');
+  if (input) input.value = '';
+  document.getElementById('referral-form')?.style.setProperty('display', 'none');
+  document.getElementById('referral-applied')?.style.setProperty('display', 'none');
+  document.getElementById('referral-toggle')?.style.setProperty('display', 'inline');
+  setReferralMsg('');
+  updateTotal();
+}
+
+async function applyReferralCode() {
+  const input = document.getElementById('referral-input');
+  const code = (input?.value || '').trim();
+  if (!code) { setReferralMsg('Enter a code', false); return; }
+  const btn = document.getElementById('referral-apply');
+  btn.disabled = true;
+  try {
+    const p = buildPayload();
+    const res = await fetch(`${API_BASE}/referral/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, items: p.items, shippingAddress: p.shippingAddress, email: p.email })
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) { setReferralMsg(json.message || REFERRAL_GENERIC, false); return; }
+    const b = json.data.billing;
+    referral = { code: json.data.code, discount: json.data.discount, grandTotal: b.grandTotal, shippingCharge: b.shippingCharge, taxableAmount: b.taxableAmount };
+    document.getElementById('referral-form').style.display = 'none';
+    document.getElementById('referral-toggle').style.display = 'none';
+    document.getElementById('referral-applied').style.display = 'block';
+    document.getElementById('referral-code-label').textContent = referral.code;
+    setReferralMsg('');
+    updateTotal();
+  } catch {
+    setReferralMsg('Could not check the code right now. Please try again.', false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+(async function initReferral() {
+  try {
+    const r = await fetch(`${API_BASE}/referral/status`);
+    if (!r.ok) return;                                    // 404 => programme off: field stays hidden
+    const j = await r.json();
+    if (!j?.data?.enabled) return;
+    document.getElementById('referral-box').style.display = 'block';
+    document.getElementById('referral-toggle').addEventListener('click', () => {
+      document.getElementById('referral-form').style.display = 'block';
+      document.getElementById('referral-toggle').style.display = 'none';
+      document.getElementById('referral-input').focus();
+    });
+    document.getElementById('referral-apply').addEventListener('click', applyReferralCode);
+    document.getElementById('referral-remove').addEventListener('click', clearReferral);
+    document.getElementById('referral-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyReferralCode(); } });
+  } catch { /* programme unavailable: leave the field hidden */ }
+})();
 
 /* ── pincode autofill ── */
 window.autofillAddress = (pincode) => fetchPincodeData(pincode, 'city', 'state', 'pincode-status');
@@ -237,7 +330,8 @@ function buildPayload() {
     email,
     shippingAddress,
     payment: { method },
-    discount
+    discount,
+    ...(referral ? { referralCode: referral.code } : {})
   };
 }
 
@@ -264,7 +358,9 @@ async function placeOrder(paymentMethod, razorpayIds = {}) {
     }
     const errData = await response.json().catch(() => ({}));
     const msg = errData.message || (errData.errors?.[0]?.msg) || `Order failed: ${response.status}`;
-    throw new Error(msg);
+    const orderErr = new Error(msg);
+    if (errData.referralInvalid) orderErr.referralInvalid = true;
+    throw orderErr;
   }
 
   const data = await response.json();
@@ -357,11 +453,11 @@ form.addEventListener('submit', async (e) => {
     /* ── Razorpay flow ── */
     // Amount is computed and verified server-side from the cart's real product
     // prices — we only send items/shippingAddress, never a trusted amount.
-    const { items, shippingAddress, email: contactEmail } = buildPayload();
+    const { items, shippingAddress, email: contactEmail, referralCode } = buildPayload();
 
     const rzpOrderRes = await request('/payment/create-order', {
       method: 'POST',
-      body:   JSON.stringify({ items, shippingAddress, email: contactEmail })
+      body:   JSON.stringify({ items, shippingAddress, email: contactEmail, ...(referralCode ? { referralCode } : {}) })
     });
 
     const keyRes = await request('/payment/key');
@@ -429,6 +525,15 @@ form.addEventListener('submit', async (e) => {
 
   } catch (err) {
     if (err.sessionExpired) return; // already redirecting to login
+    if (err.referralInvalid || err.message === REFERRAL_GENERIC) {
+      // The code stopped being valid between "Apply" and "Place order". Never charge a different
+      // amount silently: remove the code, show the new total, and let the shopper decide.
+      clearReferral();
+      alert('That referral code is no longer valid for this order, so it has been removed and your total has been updated. Please review the total and place the order again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Place Order';
+      return;
+    }
     console.error('checkout error:', err.message);
     alert(`Checkout failed: ${err.message}`);
     submitBtn.disabled = false;

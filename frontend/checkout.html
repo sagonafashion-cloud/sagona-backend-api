@@ -126,10 +126,23 @@
         </div>
 
         <div class="summary-row"><span>Subtotal (GST-incl.)</span><span id="checkout-subtotal">₹0</span></div>
+        <!-- Referral discount row + code box (hidden unless the programme is enabled on the server) -->
+        <div class="summary-row" id="referral-row" style="display:none;color:#16a34a"><span id="referral-row-label">Referral discount</span><span id="referral-discount-amt">-₹0</span></div>
         <div class="summary-row"><span>Shipping</span><span id="checkout-shipping">—</span></div>
         <div class="summary-row total">
           <span>Grand Total</span>
           <span style="color:var(--gold)">₹<span id="checkout-total">0</span></span>
+        </div>
+        <div id="referral-box" style="display:none;margin-top:14px;font-size:13px">
+          <button type="button" id="referral-toggle" style="background:none;border:none;padding:0;color:var(--gold);text-decoration:underline;cursor:pointer;font-size:13px">Have a referral code?</button>
+          <div id="referral-form" style="display:none;margin-top:6px">
+            <div style="display:flex;gap:6px">
+              <input id="referral-input" type="text" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="Enter code" style="flex:1;padding:8px;border:0.5px solid #E8E5E0;border-radius:4px;text-transform:uppercase" />
+              <button type="button" id="referral-apply" class="btn gold" style="padding:8px 14px">Apply</button>
+            </div>
+          </div>
+          <div id="referral-applied" style="display:none;margin-top:6px">Code applied: <strong id="referral-code-label"></strong> <button type="button" id="referral-remove" style="background:none;border:none;color:#dc2626;text-decoration:underline;cursor:pointer;font-size:12px">Remove</button></div>
+          <p id="referral-msg" style="margin-top:4px;font-size:12px"></p>
         </div>
         <p class="gst-note" style="font-size:11px;color:var(--gray);margin-top:6px">Includes GST: <span id="checkout-gst">₹0</span> (already part of the price shown, not an extra charge)</p>
         <p class="gst-note">* GST is included in the displayed price, calculated per product based on its GST category</p>
@@ -143,7 +156,7 @@
     </div>
   </main>
 
-  <script type="module" src="/nc_assets/js/checkout.js?v=20260920-gst"></script>
+  <script type="module" src="/nc_assets/js/checkout.js?v=20261102-referral"></script>
 
 </body>
 </html>
