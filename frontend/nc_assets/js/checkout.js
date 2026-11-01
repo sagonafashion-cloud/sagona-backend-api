@@ -186,10 +186,21 @@ function clearReferral() {
   updateTotal();
 }
 
-async function applyReferralCode() {
+const REF_TTL_MS = 30 * 86400000;
+function readStoredRef() {
+  try {
+    const v = JSON.parse(localStorage.getItem('sg_ref') || 'null');
+    if (v && /^[A-Z0-9]{3,24}$/.test(v.code) && Date.now() - v.at < REF_TTL_MS) return v.code;
+    if (v) localStorage.removeItem('sg_ref');
+  } catch { /* ignore */ }
+  return '';
+}
+const forgetStoredRef = () => { try { localStorage.removeItem('sg_ref'); } catch { /* ignore */ } };
+
+async function applyReferralCode(auto = false) {
   const input = document.getElementById('referral-input');
   const code = (input?.value || '').trim();
-  if (!code) { setReferralMsg('Enter a code', false); return; }
+  if (!code) { if (auto !== true) setReferralMsg('Enter a code', false); return; }
   const btn = document.getElementById('referral-apply');
   btn.disabled = true;
   try {
@@ -200,7 +211,10 @@ async function applyReferralCode() {
       body: JSON.stringify({ code, items: p.items, shippingAddress: p.shippingAddress, email: p.email })
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.success) { setReferralMsg(json.message || REFERRAL_GENERIC, false); return; }
+    if (!res.ok || !json.success) {
+      if (auto === true) { forgetStoredRef(); clearReferral(); return; }      // a link's code that no longer works: drop it quietly
+      setReferralMsg(json.message || REFERRAL_GENERIC, false); return;
+    }
     const b = json.data.billing;
     referral = { code: json.data.code, discount: json.data.discount, grandTotal: b.grandTotal, shippingCharge: b.shippingCharge, taxableAmount: b.taxableAmount };
     document.getElementById('referral-form').style.display = 'none';
@@ -210,7 +224,7 @@ async function applyReferralCode() {
     setReferralMsg('');
     updateTotal();
   } catch {
-    setReferralMsg('Could not check the code right now. Please try again.', false);
+    if (auto !== true) setReferralMsg('Could not check the code right now. Please try again.', false);
   } finally {
     btn.disabled = false;
   }
@@ -228,9 +242,16 @@ async function applyReferralCode() {
       document.getElementById('referral-toggle').style.display = 'none';
       document.getElementById('referral-input').focus();
     });
-    document.getElementById('referral-apply').addEventListener('click', applyReferralCode);
+    document.getElementById('referral-apply').addEventListener('click', () => applyReferralCode());
     document.getElementById('referral-remove').addEventListener('click', clearReferral);
     document.getElementById('referral-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyReferralCode(); } });
+    const linked = readStoredRef();               // arrived through a ?ref= link: apply it for the shopper
+    if (linked) {
+      document.getElementById('referral-input').value = linked;
+      document.getElementById('referral-form').style.display = 'block';
+      document.getElementById('referral-toggle').style.display = 'none';
+      await applyReferralCode(true);
+    }
   } catch { /* programme unavailable: leave the field hidden */ }
 })();
 
@@ -414,6 +435,7 @@ async function placeOrder(paymentMethod, razorpayIds = {}) {
     }))
   });
 
+  forgetStoredRef();                               // the order used (or declined) the linked code
   location.href = 'order-success.html';
 }
 

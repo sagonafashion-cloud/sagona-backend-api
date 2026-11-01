@@ -45,6 +45,8 @@ const promoterSchema = new mongoose.Schema({
   tdsApplicable:              { type: Boolean, default: false },
   gstOnCommissionApplicable:  { type: Boolean, default: false },
 
+  notifyEmail: { type: Boolean, default: true },        // promoter can switch programme emails off in the portal
+
   strikes: [{ _id: false, reason: String, at: { type: Date, default: Date.now }, by: String }],
 
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' }

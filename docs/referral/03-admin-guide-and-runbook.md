@@ -98,3 +98,19 @@ The customer's order and discount are not touched by either action.
 4. **Margin after commission** (super_admin only) uses each product's buying cost; sales for products with no cost on file are shown as excluded.
 
 **Tuning:** if flags are noisy, raise `fraud_velocity_orders_24h` or `fraud_return_rate_alert_pct` in Settings. Rules never delay a customer's order.
+
+---
+
+## Phase 5 runbook
+
+**Turn-on order:** deploy backend (flag still off) -> upload frontend files -> staging test -> then in Settings enable the programme, and separately `portal_enabled` when you want promoters to log in. Both are off until you switch them on.
+
+**Links:** give each promoter `https://sagona.in/?ref=THEIRCODE` (the portal shows it with a Copy button). Reports > Link performance shows clicks, orders and conversion. Clicks are approximate (one per browser session, no visitor tracking).
+
+**Promoter emails** (new order with their code, commission payable, commission reversed after cancel/return, payout paid) go out from the existing Resend setup every 6 hours, grouped into one email per type. They contain amounts only. Fraud flags and confirmed-fraud reversals are never emailed. If `RESEND_API_KEY` is missing the events stay queued and retry, up to 5 times. Promoters can switch emails off in their dashboard; you can switch all of them off with `notifications_enabled`.
+
+**Promoter portal:** promoters need an **email address on their record** (Promoters tab) to log in. They sign in with a code emailed to them. They see only their own numbers. To change bank/PAN details they contact you. To lock someone out, suspend them: it takes effect immediately.
+
+**Mobile app:** the checkout screen shows a referral box when the programme is on. This needs a new app build and store release; until then the app behaves as before. The app still estimates GST locally; when a code is applied it shows the server's total.
+
+**Upload list:** `promoter.html`, `nc_assets/js/promoter.js`, `nc_assets/js/config.js`, `nc_assets/js/checkout.js`, `checkout.html`, `admin.html`, `nc_assets/js/admin.js`, `nc_assets/js/admin-referral.js`.

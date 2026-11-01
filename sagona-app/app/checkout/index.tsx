@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,6 +17,10 @@ const SHIP_CHARGE = 99;
 
 type PaymentMethod = 'COD';
 
+// Same wording the server uses for every refusal: it never says why a code failed.
+const REFERRAL_GENERIC = 'This code is not valid for this order';
+type AppliedReferral = { code: string; discount: number; grandTotal: number };
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -34,10 +38,26 @@ export default function CheckoutScreen() {
   const [payment, setPayment] = useState<PaymentMethod>('COD');
   const [loading, setLoading] = useState(false);
 
+  // Referral code: the server decides everything (discount, totals); the app only shows it.
+  const [referralOn, setReferralOn] = useState(false);
+  const [referralInput, setReferralInput] = useState('');
+  const [referralBusy, setReferralBusy] = useState(false);
+  const [referralMsg, setReferralMsg] = useState('');
+  const [referral, setReferral] = useState<AppliedReferral | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    api.get('/referral/status')
+      .then((r) => { if (alive) setReferralOn(!!r.data?.data?.enabled); })
+      .catch(() => { /* 404 = programme off: the box stays hidden */ });
+    return () => { alive = false; };
+  }, []);
+
   const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
   const shipping = subtotal >= FREE_SHIP ? 0 : SHIP_CHARGE;
   const gst = Math.round((subtotal + shipping) * GST_RATE);
-  const total = subtotal + shipping + gst;
+  const estimatedTotal = subtotal + shipping + gst;
+  const total = referral ? referral.grandTotal : estimatedTotal;
 
   const validate = () => {
     if (!name || !phone || !line1 || !city || !state || !pincode) {
@@ -56,6 +76,26 @@ export default function CheckoutScreen() {
     if (!/^\d{6}$/.test(pincode)) { Alert.alert('Invalid pincode', 'Enter a 6-digit pincode'); return false; }
     return true;
   };
+
+  const buildOrderItems = () => items.map((i) => ({
+    productId: i.productId, name: i.name, image: i.image, size: i.size, colour: i.colour, price: i.price, qty: i.qty,
+  }));
+
+  const applyReferral = async () => {
+    const code = referralInput.trim();
+    if (!code) { setReferralMsg('Enter a code'); return; }
+    try {
+      setReferralBusy(true); setReferralMsg('');
+      const { data } = await api.post('/referral/validate', {
+        code, items: buildOrderItems(), shippingAddress: { name, phone, line1, line2, city, state, pincode }, email: user ? user.email : email,
+      });
+      setReferral({ code: data.data.code, discount: data.data.discount, grandTotal: data.data.billing.grandTotal });
+    } catch (e: any) {
+      setReferral(null);
+      setReferralMsg(e?.message || REFERRAL_GENERIC);
+    } finally { setReferralBusy(false); }
+  };
+  const removeReferral = () => { setReferral(null); setReferralInput(''); setReferralMsg(''); };
 
   const placeOrder = async () => {
     if (!validate()) return;
@@ -76,7 +116,7 @@ export default function CheckoutScreen() {
       const guestFields = !user ? { email } : {};
 
       if (payment === 'COD') {
-        await api.post('/orders', { items: orderItems, shippingAddress, payment: { method: 'COD' }, ...guestFields });
+        await api.post('/orders', { items: orderItems, shippingAddress, payment: { method: 'COD' }, ...guestFields, ...(referral ? { referralCode: referral.code } : {}) });
         clear();
         // Keep the Account tab's order list (and the return-request order
         // picker, which reads the same /orders/my endpoint) in sync with the
@@ -101,7 +141,14 @@ export default function CheckoutScreen() {
         Alert.alert('Online payment', 'Razorpay SDK integration requires native build.\nUse COD for now in Expo Go.');
       }
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      if (referral && err.message === REFERRAL_GENERIC) {
+        // The code stopped being valid between "Apply" and "Place order". Never charge a different
+        // amount silently: drop the code, show the normal total, let the shopper decide.
+        removeReferral();
+        Alert.alert('Referral code removed', 'That code can no longer be used on this order. Please review the total and place the order again.');
+      } else {
+        Alert.alert('Error', err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -141,11 +188,32 @@ export default function CheckoutScreen() {
           </TouchableOpacity>
         ))}
 
+        {referralOn && (
+          <View style={styles.summary}>
+            <Text style={styles.sectionTitle}>Referral code</Text>
+            {referral ? (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Code {referral.code} applied</Text>
+                <TouchableOpacity onPress={removeReferral}><Text style={styles.linkText}>Remove</Text></TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Input label="Have a referral code?" value={referralInput} onChangeText={setReferralInput} autoCapitalize="characters" placeholder="Enter code" />
+                <Button label={referralBusy ? 'Checking...' : 'Apply'} onPress={applyReferral} loading={referralBusy} />
+                {!!referralMsg && <Text style={styles.errorText}>{referralMsg}</Text>}
+              </>
+            )}
+          </View>
+        )}
+
         <View style={styles.summary}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
           <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>₹{subtotal.toLocaleString('en-IN')}</Text></View>
           <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>{shipping === 0 ? 'FREE' : `₹${shipping}`}</Text></View>
           <View style={styles.summaryRow}><Text style={styles.summaryLabel}>GST (5%)</Text><Text style={styles.summaryValue}>₹{gst.toLocaleString('en-IN')}</Text></View>
+          {referral && (
+            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Referral discount</Text><Text style={styles.summaryValue}>-₹{referral.discount.toLocaleString('en-IN')}</Text></View>
+          )}
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>₹{total.toLocaleString('en-IN')}</Text>
@@ -159,6 +227,8 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
+  linkText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.gold },
+  errorText: { fontFamily: fonts.body, fontSize: 13, color: '#dc2626', marginTop: spacing.sm },
   screen: { flex: 1, backgroundColor: colors.light },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   topTitle: { fontFamily: fonts.heading, fontSize: 18, color: colors.black },

@@ -119,3 +119,31 @@ All CSV cells starting with `= + - @` are prefixed with `'` to block spreadsheet
 Add `&format=csv` to liability, summary (GST rows), promoters and profit for a CSV. "Read" = super_admin + finance_manager.
 
 **Reconciliation checks:** order totals equal the sum of their lines; every commissioned line has its accrual; order discount equals the referral record; no negative pending/payable balance; releases balance to zero per line; payout ledger entries equal approved+paid payout items; code usage counters equal referral records; cancelled/returned orders have no unreversed commission (can show for up to one 6-hour sweep).
+
+---
+
+## Phase 5 endpoints
+
+### Public
+`POST /api/referral/click` `{code}` — always `204`, for any input (unknown, paused, malformed, programme off). Counts one click for an active code. 60 per 10 min per IP.
+
+### Promoter portal (`/api/promoter/...`, mounted only with `REFERRAL_ENABLED=true`, and `404` until the `portal_enabled` setting is on)
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/auth/request` `{email}` | Always the same answer. Emails a 6-digit code (valid 10 min) only to an active promoter. 5 / 15 min per IP, max 5 codes / hour / promoter |
+| POST | `/auth/verify` `{email, otp}` | Returns a 12-hour token. Single use, locked after 5 wrong tries, one generic error for every failure. 10 / 15 min per IP |
+| GET | `/me` | Name, email, **masked** mobile, last-4 of PAN/bank, KYC and agreement status |
+| PUT | `/me/notifications` `{notifyEmail:boolean}` | The only write |
+| GET | `/dashboard` | Pending, payable, in approved payout, paid to date, referred orders, 30-day clicks |
+| GET | `/codes` | Own codes with shareable `?ref=` link |
+| GET | `/orders` | Date, code, simple status, commission. **No customer data, no order number, no contents** |
+| GET | `/payouts` | Voucher, date, commission, GST, TDS, net, status; bank reference only once paid |
+| GET | `/statement?from&to` | Opening, earned, reversals, adjustments, paid out, closing |
+
+Security: tokens are signed with a key derived from `JWT_SECRET` plus audience `promoter-portal`, so customer/admin tokens are refused and promoter tokens are refused everywhere else. Every query is scoped to the logged-in promoter; no promoter id is ever read from the request. A suspended promoter loses access immediately.
+
+### Admin
+`GET /api/admin/promoters/reports/links?from&to[&format=csv]` — clicks vs referred orders and conversion per code.
+
+### Storefront
+Visiting any page with `?ref=CODE` stores the code for 30 days (localStorage `sg_ref`) and sends one click per browser session. Checkout prefills and applies it through the normal `/referral/validate` (server decides the discount); a code that no longer works is dropped silently. The stored link is forgotten after an order is placed.

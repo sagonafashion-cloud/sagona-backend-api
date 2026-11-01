@@ -152,3 +152,15 @@ export function reconcile({ refs, lines, ledger, orders, payoutItems, codes, cod
 
   return out;
 }
+
+/** Link performance: clicks vs referred orders per code. `clickRows`: [{codeId,clicks,day}] */
+export function linkPerformance({ clickRows, refs, orders, codes, names, from, to }) {
+  const by = new Map();
+  const get = (id) => { const k = String(id); if (!by.has(k)) by.set(k, { codeId: k, code: '', promoter: '', clicks: 0, orders: 0, conversionPct: 0 }); return by.get(k); };
+  for (const c of codes) { const r = get(c._id); r.code = c.code; r.promoter = names.get(String(c.promoterId)) || ''; }
+  for (const c of clickRows) if (inRange(`${c.day}T00:00:00+05:30`, from, to)) get(c.codeId).clicks += c.clicks;
+  for (const r of refs) if (inRange(r.createdAt, from, to) && active(orders, r.orderId)) get(r.referralCodeId).orders++;
+  return [...by.values()].filter((r) => r.clicks || r.orders)
+    .map((r) => ({ ...r, conversionPct: r.clicks ? Math.round((r.orders / r.clicks) * 10000) / 100 : 0 }))
+    .sort((a, b) => b.clicks - a.clicks);
+}

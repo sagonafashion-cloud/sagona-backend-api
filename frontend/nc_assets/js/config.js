@@ -80,3 +80,23 @@ export async function fetchPincodeData(pincode, cityFieldId, stateFieldId, statu
     return null;
   }
 }
+
+// ── Referral links: https://sagona.in/?ref=CODE ─────────────────────────────
+// Remembers the code for 30 days (checkout prefills it) and counts ONE click per browser
+// session. Only the code is sent; nothing about the visitor is stored or transmitted.
+// If the referral programme is off the server answers 404/204 and nothing happens.
+(function captureReferralLink() {
+  try {
+    const raw = new URLSearchParams(window.location.search).get('ref');
+    if (!raw) return;
+    const code = raw.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,24}$/.test(code)) return;
+    localStorage.setItem('sg_ref', JSON.stringify({ code, at: Date.now() }));
+    if (!sessionStorage.getItem('sg_ref_clicked')) {
+      sessionStorage.setItem('sg_ref_clicked', '1');
+      fetch(`${API_BASE}/referral/click`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }), keepalive: true
+      }).catch(() => {});
+    }
+  } catch { /* storage blocked: the link simply will not prefill */ }
+})();

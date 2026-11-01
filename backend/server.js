@@ -215,6 +215,8 @@ if (process.env.REFERRAL_ENABLED === 'true') {
   const { default: referralPublicRoutes } = await import('./routes/referralPublicRoutes.js');
   app.use('/api/admin/promoters', referralAdminRoutes);
   app.use('/api/referral',        referralPublicRoutes);
+  const { default: promoterPortalRoutes } = await import('./routes/promoterPortalRoutes.js');
+  app.use('/api/promoter',        promoterPortalRoutes);
   console.log('[referral] module loaded (REFERRAL_ENABLED=true)');
 }
 

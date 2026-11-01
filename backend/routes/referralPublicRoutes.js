@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { isProgrammeEnabled } from '../services/referral/settings.js';
-import { validateReferral } from '../controllers/referralPublicController.js';
+import { validateReferral, recordClick } from '../controllers/referralPublicController.js';
 
 // Code-guessing protection: tight per-IP budget on top of the global /api limiter.
 const validateLimiter = rateLimit({
@@ -19,6 +19,9 @@ const router = express.Router();
 router.get('/status', async (_req, res) => {
   res.set('Cache-Control', 'no-store').json({ success: true, data: { enabled: await isProgrammeEnabled() } });
 });
+
+const clickLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many requests' } });
+router.post('/click', clickLimiter, recordClick);
 
 // Server-side only: the browser never decides an amount.
 router.post('/validate', validateLimiter, validateReferral);

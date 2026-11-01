@@ -19,6 +19,8 @@ const SETTING_LABELS = {
   commission_base: ['Commission base', ['NET_EX_GST', 'LIST_EX_GST', 'NET_INCL_GST']],
   margin_guard_max_pct: ['Margin guard: max discount % + commission %', 'num'],
   margin_guard_mode: ['Margin guard mode', ['warn', 'block']],
+  portal_enabled: ['Promoter dashboard (self-service portal) enabled', 'bool'],
+  notifications_enabled: ['Email promoters about orders, payable commission and payouts', 'bool'],
   store_state_code: ['Store GST state code (2 digits, e.g. 05)', 'text'],
   tds_enabled: ['TDS enabled (confirm with CA)', 'bool'],
   tds_section: ['TDS section label', 'text'],
@@ -362,7 +364,7 @@ export async function loadPromoters(ctx) {
     body().innerHTML = '<div class="loading">Loading…</div>';
     const q = new URLSearchParams(); if (from) q.set('from', from); if (to) q.set('to', to);
     const qs = q.toString() ? `?${q}` : '';
-    const [liab, sum, perf, rec] = await Promise.all([call('/reports/liability'), call(`/reports/summary${qs}`), call(`/reports/promoters${qs}`), call('/reports/reconciliation')]);
+    const [liab, sum, perf, rec, links] = await Promise.all([call('/reports/liability'), call(`/reports/summary${qs}`), call(`/reports/promoters${qs}`), call('/reports/reconciliation'), call(`/reports/links${qs}`)]);
     let profit = null; try { profit = (await call(`/reports/profit${qs}`)).data; } catch { /* finance_manager has no access to cost data */ }
     const s = sum.data.summary, g = sum.data.gst, L = liab.data;
     body().innerHTML = `
@@ -383,6 +385,9 @@ export async function loadPromoters(ctx) {
         <b style="font-size:12px;display:block;margin-top:10px">GST effect of the discount (store reports lower taxable value by this much)</b>
         <table class="admin-table" style="margin-top:6px"><thead><tr><th>GST rate</th><th>Taxable value reported</th><th>GST reported</th><th>Taxable value reduced by</th><th>GST reduced by</th></tr></thead><tbody>
         ${g.rows.map((r) => `<tr><td>${r.gstRate}%</td><td>${inr(r.taxablePaise)}</td><td>${inr(r.gstPaise)}</td><td>${inr(r.taxableReductionPaise)}</td><td>${inr(r.gstReductionPaise)}</td></tr>`).join('') || '<tr><td colspan="5" class="loading">No data.</td></tr>'}</tbody></table></div>
+      <div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">Link performance (?ref= clicks vs orders)</b> <button class="btn" data-rp-csv="links">CSV</button>
+        <table class="admin-table" style="margin-top:6px"><thead><tr><th>Code</th><th>Promoter</th><th>Clicks</th><th>Orders</th><th>Conversion</th></tr></thead><tbody>
+        ${links.data.map((l) => `<tr><td>${esc(l.code)}</td><td>${esc(l.promoter)}</td><td>${l.clicks}</td><td>${l.orders}</td><td>${l.conversionPct}%</td></tr>`).join('') || '<tr><td colspan="5" class="loading">No clicks yet.</td></tr>'}</tbody></table></div>
       <div class="admin-card" style="padding:12px"><b style="font-size:12px">Promoter performance</b> <button class="btn" data-rp-csv="promoters">CSV</button>
         <table class="admin-table" style="margin-top:6px"><thead><tr><th>Promoter</th><th>Orders</th><th>Delivered</th><th>Cancelled/returned</th><th>Return rate</th><th>Discount</th><th>Commission</th></tr></thead><tbody>
         ${perf.data.map((p) => `<tr><td>${esc(p.name)}</td><td>${p.orders}</td><td>${p.delivered}</td><td>${p.cancelledOrReturned}</td><td>${p.returnRatePct}%</td><td>${inr(p.discountPaise)}</td><td>${inr(p.commissionPaise)}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">No data.</td></tr>'}</tbody></table></div>`;
@@ -534,7 +539,7 @@ export async function loadPromoters(ctx) {
       if (t.dataset.rpCsv) {
         const name = t.dataset.rpCsv; const q = new URLSearchParams({ format: 'csv' }); const f = document.getElementById('rp-from')?.value, to = document.getElementById('rp-to')?.value;
         if (f) q.set('from', f); if (to) q.set('to', to);
-        const path = name === 'liability' ? 'liability' : name === 'summary' ? 'summary' : 'promoters';
+        const path = ['liability', 'summary', 'links'].includes(name) ? name : 'promoters';
         return download(`${name}.csv`, await call(`/reports/${path}?${q}`));
       }
       if (t.id === 'set-save') {

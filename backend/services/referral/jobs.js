@@ -8,6 +8,10 @@ import { deriveSweepEntries } from './ledger.js';
 import Promoter from '../../models/referral/Promoter.js';
 import ReferralFraudFlag from '../../models/referral/ReferralFraudFlag.js';
 import { scanReferredOrder, scanPromoters } from './fraudScan.js';
+import PromoterNotification from '../../models/referral/PromoterNotification.js';
+import PayoutItem from '../../models/referral/PayoutItem.js';
+import { runNotificationSweep } from './notifications.js';
+import { sendEmail } from '../../utils/emailService.js';
 
 // Daily sweeper: reads each recent referred order and appends the ledger entries its
 // current status calls for (eligible after the return window, reversal on cancel/return).
@@ -91,9 +95,19 @@ export async function runReferralSweep(deps = realDeps(), now = new Date()) {
   }
 }
 
+// Emails to promoters (amounts only). A missing email provider throws, so events stay queued and retry.
+export const realNotificationDeps = () => ({
+  Ledger: CommissionLedger, PayoutItem, Notification: PromoterNotification, Promoter, getSettings, log: console,
+  portalUrl: `${(process.env.SITE_URL || 'https://sagona.in').replace(/\/$/, '')}/promoter.html`,
+  sendEmail: async (m) => { if (!process.env.RESEND_API_KEY) throw new Error('email provider not configured'); return sendEmail(m); }
+});
+
 export function startReferralJobs(intervalMs = 6 * 3600 * 1000) {
   if (!envEnabled()) return null;
-  const tick = () => runReferralSweep().catch((e) => console.error('[referral] sweep tick failed:', e.message));
+  const tick = async () => {
+    try { await runReferralSweep(); } catch (e) { console.error('[referral] sweep tick failed:', e.message); }
+    try { await runNotificationSweep(realNotificationDeps()); } catch (e) { console.error('[referral] notification sweep failed:', e.message); }
+  };
   const first = setTimeout(tick, 90 * 1000);
   const t = setInterval(tick, intervalMs);
   first.unref?.(); t.unref?.();

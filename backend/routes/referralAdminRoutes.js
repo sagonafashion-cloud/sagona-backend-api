@@ -67,6 +67,7 @@ router.post('/fraud/:id/confirm', write, rc.confirmFlag);
 router.get('/reports/liability', read, rc.reportLiability);
 router.get('/reports/summary', read, rc.reportSummary);
 router.get('/reports/promoters', read, rc.reportPromoters);
+router.get('/reports/links', read, rc.reportLinks);
 router.get('/reports/profit', write, rc.reportProfit);              // uses buying cost: super_admin only
 router.get('/reports/reconciliation', read, rc.reportReconciliation);
 

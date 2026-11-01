@@ -15,6 +15,8 @@ export const SETTING_DEFS = {
   tds_section:                  { def: '',           check: (v) => typeof v === 'string' && v.length <= 20 },
   tds_rate_bps:                 { def: 0,            check: (v) => Number.isInteger(v) && v >= 0 && v <= 10000 },
   tds_annual_threshold_paise:   { def: 0,            check: (v) => Number.isInteger(v) && v >= 0 },
+  portal_enabled:               { def: false,        check: (v) => typeof v === 'boolean' },   // promoter self-service portal
+  notifications_enabled:        { def: true,         check: (v) => typeof v === 'boolean' },   // emails to promoters
   store_state_code:             { def: '05',         check: (v) => typeof v === 'string' && /^\d{2}$/.test(v) },   // GST state code of the store (05 = Uttarakhand)
   gst_on_commission_bps:        { def: 1800,         check: (v) => Number.isInteger(v) && v >= 0 && v <= 10000 },
   reevaluate_gst_slab:          { def: false,        check: (v) => typeof v === 'boolean' },

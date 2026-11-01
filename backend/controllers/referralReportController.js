@@ -10,7 +10,8 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { audit } from '../services/referral/audit.js';
 import { fraudReversalEntries } from '../services/referral/ledger.js';
-import { liabilityReport, programmeSummary, gstImpact, promoterPerformance, profitReport, reconcile } from '../services/referral/reports.js';
+import ReferralClickDay from '../models/referral/ReferralClickDay.js';
+import { linkPerformance, liabilityReport, programmeSummary, gstImpact, promoterPerformance, profitReport, reconcile } from '../services/referral/reports.js';
 import { toCsv, rupees } from '../services/referral/payout.js';
 
 const isId = (v) => mongoose.isValidObjectId(v);
@@ -144,4 +145,11 @@ export const reportReconciliation = h(async (req, res) => {
   ]);
   const checks = reconcile({ refs: d.refs, lines: d.lines, ledger, orders: d.orders, payoutItems, codes, codeUseCounts: new Map(useAgg.map((u) => [String(u._id), u.n])) });
   res.json({ success: true, data: { ranAt: new Date(), allOk: checks.every((c) => c.ok), checks } });
+});
+
+export const reportLinks = h(async (req, res) => {
+  const { from, to } = range(req.query); const d = await load();
+  const [clickRows, codes] = await Promise.all([ReferralClickDay.find().select('codeId day clicks').lean(), ReferralCode.find().select('code promoterId').lean()]);
+  const rows = linkPerformance({ clickRows, refs: d.refs, orders: d.orders, codes, names: d.names, from, to });
+  respond(req, res, 'link-performance', rows, rows);
 });

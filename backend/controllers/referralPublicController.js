@@ -1,6 +1,25 @@
 import { computeOrderTotals } from '../utils/orderCalculator.js';
 import { isProgrammeEnabled } from '../services/referral/settings.js';
 import { ReferralError, GENERIC_MESSAGE } from '../services/referral/applyReferral.js';
+import ReferralCode from '../models/referral/ReferralCode.js';
+import ReferralClickDay from '../models/referral/ReferralClickDay.js';
+import { normalizeCode } from '../utils/referralValidators.js';
+
+const istDay = (d = new Date()) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
+
+// POST /api/referral/click  { code }  -> always 204, whatever the code (no probing, no errors to the page).
+export async function recordClick(req, res) {
+  try {
+    if (await isProgrammeEnabled()) {
+      const text = typeof req.body?.code === 'string' && req.body.code.length <= 40 ? normalizeCode(req.body.code) : '';
+      const code = text ? await ReferralCode.findOne({ code: text }).select('promoterId status').lean() : null;
+      if (code && code.status === 'active') {
+        await ReferralClickDay.updateOne({ codeId: code._id, day: istDay() }, { $setOnInsert: { promoterId: code.promoterId }, $inc: { clicks: 1 } }, { upsert: true });
+      }
+    }
+  } catch (e) { console.error('referral click:', e.message); }
+  res.status(204).end();
+}
 
 // POST /api/referral/validate
 // The browser sends the cart and a code; the server recomputes everything and answers

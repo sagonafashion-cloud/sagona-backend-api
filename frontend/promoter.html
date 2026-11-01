@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://via.placeholder.com https://www.googletagmanager.com; connect-src 'self' https://sagona-backend-api.onrender.com https://www.google-analytics.com https://region1.google-analytics.com https://cdn.jsdelivr.net https://storage.googleapis.com https://tfhub.dev https://www.kaggle.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Promoter dashboard | SAGONA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nc_assets/CCS/style.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+  <style>
+    body { background: var(--light, #f7f6f3); }
+    .pp-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+    .pp-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .pp-head h1 { font-family:'Playfair Display',serif; font-size:24px; margin:0; }
+    .pp-card { background:#fff; border:1px solid var(--border,#e5e5e5); border-radius:8px; padding:16px; margin-bottom:14px; }
+    .pp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:14px; }
+    .pp-stat b { display:block; font-size:22px; margin-top:4px; }
+    .pp-stat span { font-size:12px; color:var(--gray,#777); }
+    .pp-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+    .pp-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .pp-table th, .pp-table td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border,#eee); }
+    .pp-table th { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--gray,#777); }
+    .pp-input { padding:10px; border:1px solid var(--border,#ccc); border-radius:6px; width:100%; max-width:320px; font-size:15px; }
+    .pp-msg { font-size:13px; margin-top:8px; min-height:18px; }
+    .pp-link { font-family:monospace; font-size:12px; word-break:break-all; background:#f3f3f3; padding:6px 8px; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <div class="pp-wrap">
+    <div class="pp-head"><h1>SAGONA Promoter</h1><button class="btn ghost" id="pp-logout" style="display:none">Log out</button></div>
+    <div id="pp-root"><div class="pp-card">Loading…</div></div>
+  </div>
+  <script type="module" src="/nc_assets/js/promoter.js?v=20261105-p5"></script>
+</body>
+</html>

@@ -33,6 +33,7 @@ async function setup({ canWrite=true, pingFails=false, promoters=[], codes=[] }=
     if (path.startsWith('/admin/promoters/reports/liability')) return path.includes('format=csv') ? 'a,b\r\n' : { data:{ rows:[{ promoterId:'p1', name:'Asha', pendingPaise:300, payablePaise:700, reservedPaise:500, paidPaise:900, owedPaise:1500 }], total:{ pendingPaise:300, payablePaise:700, reservedPaise:500, paidPaise:900, owedPaise:1500 } } };
     if (path.startsWith('/admin/promoters/reports/summary')) return { data:{ summary:{ orders:3, cancelledOrReturned:1, listPaise:150000, discountPaise:15000, commissionPaise:1200, programmeCostPct:10.8, byCategory:{} }, gst:{ rows:[{ gstRate:5, taxablePaise:128571, gstPaise:6429, discountPaise:15000, taxableReductionPaise:14286, gstReductionPaise:714 }], total:{} } } };
     if (path.startsWith('/admin/promoters/reports/promoters')) return { data:[{ promoterId:'p1', name:'Asha', orders:3, delivered:2, cancelledOrReturned:1, returnRatePct:33.33, discountPaise:15000, commissionPaise:1200 }] };
+    if (path.startsWith('/admin/promoters/reports/links')) return path.includes('format=csv') ? 'a,b\r\n' : { data:[{ codeId:'c1', code:'RHEA25', promoter:'<u>Asha</u>', clicks:40, orders:2, conversionPct:5 }] };
     if (path.startsWith('/admin/promoters/reports/profit')) { if (!canWrite) throw new Error('Forbidden'); return { data:{ taxablePaise:100000, costPaise:50000, commissionPaise:1200, unknownCostPaise:0, marginPaise:48800, marginPct:48.8 } }; }
     if (path.startsWith('/admin/promoters/reports/reconciliation')) return { data:{ allOk:false, checks:[{ check:'Code usage counters equal referral records', ok:false, count:1, samples:['RHEA25'] }, { check:'Payout ledger entries equal approved + paid payout items', ok:true, count:0, samples:[] }] } };
     if (path.startsWith('/admin/promoters/audit')) return { data: [] };
@@ -181,6 +182,7 @@ const rb = s.w.document.getElementById('ref-body');
 t('reports: failed reconciliation check is surfaced with its sample', /needs attention/i.test(rb.textContent) && /1 issue/i.test(rb.textContent) && /RHEA25/.test(rb.textContent));
 t('reports: liability total, cost %, GST effect and margin shown', /₹15/.test(rb.textContent) && /10\.8%/.test(rb.textContent) && /₹142\.86/.test(rb.textContent) && /48\.8%/.test(rb.textContent));
 setv(s.w,'rp-from','2026-11-01'); click(s.w,'#rp-go'); await tick(150);
+t('reports: link performance shown (escaped) with conversion', /RHEA25/.test(rb.textContent) && /5%/.test(rb.textContent) && /&lt;u&gt;Asha/.test(rb.innerHTML));
 t('reports: date range is sent to the API', !!s.calls.find(c=>c.path.startsWith('/admin/promoters/reports/summary?from=2026-11-01')));
 click(s.w,'[data-rp-csv="liability"]'); await tick(100);
 t('reports: CSV download requested with format=csv', dl2.includes('liability.csv') && !!s.calls.find(c=>c.path.includes('reports/liability') && c.path.includes('format=csv')));

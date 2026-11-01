@@ -104,3 +104,13 @@ All amounts are integer **paise**; rates are **bps**. Everything below is additi
 | `return_rate` | medium | promoter-level: at least 5 orders in 30 days and cancel/return share >= `fraud_return_rate_alert_pct`; alert only, no hold |
 
 Scanning runs inside the existing 6-hourly sweeper, before an order could be made payable, so a flagged order is held in the same pass.
+
+---
+
+## Phase 5 additions (links, notifications, portal)
+
+- `referralclickdays` — one counter row per code per IST day (`clicks`). No IP, no visitor id, nothing personal is stored.
+- `promoternotifications` — email outbox. Unique `key` per underlying event (`led:<ledgerId>` / `pay:<payoutItemId>`), `status` pending/sent/failed/skipped, `attempts` (gives up after 5). `data` holds amounts only.
+- `promoterlogincodes` — hashed one-time login codes (HMAC), `attempts`, `used`, TTL-expiring after 10 minutes.
+- `promoters.notifyEmail` (default true) — the promoter's own opt-out.
+- New settings: `portal_enabled` (default **off**), `notifications_enabled` (default on).

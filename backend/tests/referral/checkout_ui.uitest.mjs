@@ -8,10 +8,11 @@ const html = fs.readFileSync(`${FRONT}/checkout.html`, 'utf8').replace(/<script[
 const results = []; const t = (n, ok, i = '') => results.push((ok ? 'PASS ' : 'FAIL ') + n + (i ? ' - ' + i : ''));
 const tick = (ms = 60) => new Promise((r) => setTimeout(r, ms));
 
-async function page({ statusEnabled, validate, orderResponse, cartQty = 1 } = {}) {
+async function page({ statusEnabled, validate, orderResponse, cartQty = 1, storedRef } = {}) {
   const dom = new JSDOM(html, { url: 'https://sagona.in/checkout.html', runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window; const calls = []; const alerts = [];
   w.localStorage.setItem('cart', JSON.stringify([{ id: 'p1', name: 'Kurta', price: 500, quantity: cartQty, size: '', image: '' }]));
+  if (storedRef) w.localStorage.setItem('sg_ref', JSON.stringify(storedRef));
   w.alert = (m) => alerts.push(m); w.confirm = () => false;
   const J = (status, body) => ({ ok: status < 400, status, headers: { get: () => 'application/json' }, json: async () => body, text: async () => JSON.stringify(body) });
   w.fetch = async (url, opts = {}) => {
@@ -84,5 +85,32 @@ t('stale code: Place Order button usable again', p.w.document.querySelector('#ch
 p = await page({ statusEnabled: true, validate: async () => OK('<img src=x onerror=alert(1)>', 50, 549) });
 click(p.w, p.$('referral-toggle')); p.$('referral-input').value = 'X'; click(p.w, p.$('referral-apply')); await tick();
 t('code label is text, not HTML', !p.w.document.querySelector('#referral-code-label img') && !p.w.document.querySelector('#referral-row-label img'));
+
+
+// ?ref= link: stored code is applied automatically
+p = await page({ statusEnabled: true, validate: async () => OK('RHEA25', 50, 549), storedRef: { code: 'RHEA25', at: Date.now() } });
+await tick(150);
+t('link: stored code auto-applied, total from server', p.$('checkout-total').textContent === '549' && p.$('referral-applied').style.display === 'block', p.$('checkout-total').textContent);
+t('link: validate called once with the stored code', p.calls.filter((c) => c.path === '/referral/validate').length === 1 && p.calls.find((c) => c.path === '/referral/validate').body.code === 'RHEA25');
+p.w.document.querySelector('[name="payment"][value="COD"]')?.setAttribute('checked', 'checked');
+p.$('checkout-form').dispatchEvent(new p.w.Event('submit', { cancelable: true, bubbles: true })); await tick(200);
+t('link: order carries the code and the stored link is forgotten after the order', p.calls.find((c) => c.path === '/orders')?.body.referralCode === 'RHEA25' && p.w.localStorage.getItem('sg_ref') === null);
+
+p = await page({ statusEnabled: true, validate: async () => BAD, storedRef: { code: 'DEAD1', at: Date.now() } });
+await tick(150);
+t('link: a stored code that is no longer valid is dropped silently (no error shown, no discount, link forgotten)', p.$('referral-msg') ? p.$('referral-msg').textContent === '' : true);
+t('link: dead code leaves legacy total and clears storage', p.$('checkout-total').textContent === '599' && p.w.localStorage.getItem('sg_ref') === null && p.$('referral-applied').style.display !== 'block');
+
+p = await page({ statusEnabled: true, validate: async () => OK('RHEA25', 50, 549), storedRef: { code: 'RHEA25', at: Date.now() - 31 * 86400000 } });
+await tick(150);
+t('link: code older than 30 days is ignored and removed', !p.calls.some((c) => c.path === '/referral/validate') && p.w.localStorage.getItem('sg_ref') === null);
+
+p = await page({ statusEnabled: true, validate: async () => OK('RHEA25', 50, 549), storedRef: { code: '<img src=x>', at: Date.now() } });
+await tick(150);
+t('link: malformed stored value is never sent to the server', !p.calls.some((c) => c.path === '/referral/validate'));
+
+p = await page({ validate: async () => OK('RHEA25', 50, 549), storedRef: { code: 'RHEA25', at: Date.now() } });
+await tick(150);
+t('link: programme off -> stored code does nothing', !p.calls.some((c) => c.path === '/referral/validate') && p.$('checkout-total').textContent === '599');
 
 console.log(results.join('\n')); process.exit(results.some((r) => r.startsWith('FAIL')) ? 1 : 0);
