@@ -28,6 +28,13 @@ async function setup({ canWrite=true, pingFails=false, promoters=[], codes=[] }=
     if (path.match(/^\/admin\/promoters\/payouts(\?|$)/) && opts.method!=='POST') return { data:[{ _id:'b1', batchNo:'PB/2026-27/0001', createdAt:'2026-11-03', itemCount:1, grossPaise:100000, netPaise:108000, status:'approved' }] };
     if (path.startsWith('/admin/promoters/statements/')) return { data:{ summary:{ openingPaise:0, accruedPaise:5000, reversedPaise:0, adjustedPaise:0, paidOutPaise:-5000, closingPaise:0, pendingClosingPaise:0, payableClosingPaise:0 } } };
     if (path.startsWith('/admin/promoters/exports/')) return 'a,b\r\n1,2\r\n';
+    if (path.startsWith('/admin/promoters/fraud/f1/')) return { data:{ reversedPaise: 1000 } };
+    if (path.startsWith('/admin/promoters/fraud')) return { data: path.includes('status=open') ? [{ _id:'f1', createdAt:'2026-11-03', promoterName:'<i>Asha</i>', orderNumber:'SAG-9', rule:'self_referral', severity:'high', detail:'Buyer phone or email matches the promoter', status:'open' }] : [] };
+    if (path.startsWith('/admin/promoters/reports/liability')) return path.includes('format=csv') ? 'a,b\r\n' : { data:{ rows:[{ promoterId:'p1', name:'Asha', pendingPaise:300, payablePaise:700, reservedPaise:500, paidPaise:900, owedPaise:1500 }], total:{ pendingPaise:300, payablePaise:700, reservedPaise:500, paidPaise:900, owedPaise:1500 } } };
+    if (path.startsWith('/admin/promoters/reports/summary')) return { data:{ summary:{ orders:3, cancelledOrReturned:1, listPaise:150000, discountPaise:15000, commissionPaise:1200, programmeCostPct:10.8, byCategory:{} }, gst:{ rows:[{ gstRate:5, taxablePaise:128571, gstPaise:6429, discountPaise:15000, taxableReductionPaise:14286, gstReductionPaise:714 }], total:{} } } };
+    if (path.startsWith('/admin/promoters/reports/promoters')) return { data:[{ promoterId:'p1', name:'Asha', orders:3, delivered:2, cancelledOrReturned:1, returnRatePct:33.33, discountPaise:15000, commissionPaise:1200 }] };
+    if (path.startsWith('/admin/promoters/reports/profit')) { if (!canWrite) throw new Error('Forbidden'); return { data:{ taxablePaise:100000, costPaise:50000, commissionPaise:1200, unknownCostPaise:0, marginPaise:48800, marginPct:48.8 } }; }
+    if (path.startsWith('/admin/promoters/reports/reconciliation')) return { data:{ allOk:false, checks:[{ check:'Code usage counters equal referral records', ok:false, count:1, samples:['RHEA25'] }, { check:'Payout ledger entries equal approved + paid payout items', ok:true, count:0, samples:[] }] } };
     if (path.startsWith('/admin/promoters/audit')) return { data: [] };
     if (path.startsWith('/admin/promoters/orders')) return { data: [{ _id:'r1', orderNumber:'SAG-1', orderDate:'2026-11-02', orderStatus:'delivered', promoter:'Asha', code:'RHEA25', customer:'B*** ******3210', grossPaise:50000, discountPaise:5000, taxablePaise:42857, gstPaise:2143, shippingPaise:9900, commissionPaise:4286, flags:{}, referralStatus:'applied' }] };
     if (path.startsWith('/admin/promoters/ledger/balances')) return { data: [{ promoterId:'p1', name:'Asha', pendingPaise:4286, payablePaise:1000 }] };
@@ -46,7 +53,7 @@ const setv = (w, id, v) => { const el=w.document.getElementById(id); el.value=v;
 let s = await setup({ canWrite:false, promoters:[{ _id:'1', name:'<img src=x onerror=alert(1)>', mobile:'9876543210', status:'active', kycStatus:'verified', agreementStatus:'signed', pan:'XXXXXX234F', gstRegistered:false }] });
 t('promoter name is escaped (no injected <img>)', !s.w.document.querySelector('#ref-body img') && s.w.document.getElementById('ref-body').innerHTML.includes('&lt;img'));
 t('read-only role: no Add button', !s.w.document.getElementById('ref-add-promoter'));
-t('tabs rendered', s.w.document.querySelectorAll('#ref-tabs button').length===8);
+t('tabs rendered', s.w.document.querySelectorAll('#ref-tabs button').length===10);
 
 // 2. module off
 s = await setup({ pingFails:true });
@@ -147,6 +154,39 @@ t('payouts: TDS export requested with FY and downloaded', !!s.calls.find(c=>c.pa
 s = await setup({ canWrite:false });
 click(s.w,'[data-tab="payouts"]'); await tick(100);
 t('payouts: read-only role has no create button', !s.w.document.getElementById('po-create'));
+
+
+// 6d. fraud queue + reports
+s = await setup({ promoters:[{ _id:'p1', name:'Asha', status:'active' }] });
+s.w.prompt = () => 'Self purchase proven';
+click(s.w,'[data-tab="fraud"]'); await tick(100);
+const fb = s.w.document.getElementById('ref-body');
+t('fraud: open flag listed with plain-language rule, names escaped', /Buyer looks like the promoter/.test(fb.textContent) && /&lt;i&gt;Asha/.test(fb.innerHTML) && /on hold/.test(fb.textContent));
+click(s.w,'[data-fr-confirm="f1"]'); await tick(100);
+const cf = s.calls.find(c=>c.path==='/admin/promoters/fraud/f1/confirm');
+t('fraud: confirm posts note and reports the clawback', cf && cf.body.note==='Self purchase proven' && s.toasts.some(x=>/clawed back/.test(x[0])));
+click(s.w,'[data-fr-clear="f1"]'); await tick(100);
+t('fraud: clear posts to /clear', !!s.calls.find(c=>c.path==='/admin/promoters/fraud/f1/clear'));
+s.w.prompt = () => null; const nBefore = s.calls.length;
+click(s.w,'[data-fr-clear="f1"]'); await tick(60);
+t('fraud: cancelling the prompt sends nothing', s.calls.length===nBefore);
+s = await setup({ canWrite:false });
+click(s.w,'[data-tab="fraud"]'); await tick(100);
+t('fraud: read-only role sees no Clear/Confirm buttons', !s.w.document.querySelector('[data-fr-clear],[data-fr-confirm]'));
+
+s = await setup({});
+const dl2 = []; s.w.URL.createObjectURL = () => 'blob:x'; s.w.URL.revokeObjectURL = () => {}; s.w.HTMLAnchorElement.prototype.click = function () { dl2.push(this.download); };
+click(s.w,'[data-tab="reports"]'); await tick(150);
+const rb = s.w.document.getElementById('ref-body');
+t('reports: failed reconciliation check is surfaced with its sample', /needs attention/i.test(rb.textContent) && /1 issue/i.test(rb.textContent) && /RHEA25/.test(rb.textContent));
+t('reports: liability total, cost %, GST effect and margin shown', /₹15/.test(rb.textContent) && /10\.8%/.test(rb.textContent) && /₹142\.86/.test(rb.textContent) && /48\.8%/.test(rb.textContent));
+setv(s.w,'rp-from','2026-11-01'); click(s.w,'#rp-go'); await tick(150);
+t('reports: date range is sent to the API', !!s.calls.find(c=>c.path.startsWith('/admin/promoters/reports/summary?from=2026-11-01')));
+click(s.w,'[data-rp-csv="liability"]'); await tick(100);
+t('reports: CSV download requested with format=csv', dl2.includes('liability.csv') && !!s.calls.find(c=>c.path.includes('reports/liability') && c.path.includes('format=csv')));
+s = await setup({ canWrite:false });
+click(s.w,'[data-tab="reports"]'); await tick(150);
+t('reports: finance role still gets reports, margin row hidden (no cost access)', /What you owe promoters/.test(s.w.document.getElementById('ref-body').textContent) && !/Margin after commission/.test(s.w.document.getElementById('ref-body').textContent));
 
 // 7. other modals are not hijacked
 s = await setup({});

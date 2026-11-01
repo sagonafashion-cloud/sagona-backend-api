@@ -5,6 +5,9 @@ import ReferralJobState from '../../models/referral/ReferralJobState.js';
 import Order from '../../models/Order.js';
 import { getSettings, envEnabled } from './settings.js';
 import { deriveSweepEntries } from './ledger.js';
+import Promoter from '../../models/referral/Promoter.js';
+import ReferralFraudFlag from '../../models/referral/ReferralFraudFlag.js';
+import { scanReferredOrder, scanPromoters } from './fraudScan.js';
 
 // Daily sweeper: reads each recent referred order and appends the ledger entries its
 // current status calls for (eligible after the return window, reversal on cancel/return).
@@ -15,7 +18,8 @@ const LOOKBACK_DAYS = 180;
 const BATCH = 200;
 const LOCK_MS = 10 * 60 * 1000;
 
-const realDeps = () => ({ OrderReferral, OrderReferralLine, CommissionLedger, ReferralJobState, Order, getSettings, log: console });
+const realDeps = () => ({ OrderReferral, OrderReferralLine, CommissionLedger, ReferralJobState, Order, getSettings, log: console,
+  fraud: { m: { Promoter, OrderReferral, ReferralFraudFlag, Order } } });
 
 async function acquireLease(d, name, now) {
   try {
@@ -39,6 +43,7 @@ export async function runReferralSweep(deps = realDeps(), now = new Date()) {
     const settings = await d.getSettings({ fresh: true });
     // Page through every recent referred order (by _id), so none is starved behind the others.
     let lastId;
+    const fraudCache = new Map();
     for (;;) {
       const q = { status: 'applied', createdAt: { $gte: new Date(now.getTime() - LOOKBACK_DAYS * 86400000) } };
       if (lastId) q._id = { $gt: lastId };
@@ -49,11 +54,15 @@ export async function runReferralSweep(deps = realDeps(), now = new Date()) {
       for (const ref of refs) {
         try {
           stats.checked++;
-          const order = await d.Order.findById(ref.orderId).select('status timeline shipments').lean();
+          const order = await d.Order.findById(ref.orderId).select('status timeline shipments shippingAddress').lean();
           if (!order) continue;
           const lines = await d.OrderReferralLine.find({ orderReferralId: ref._id }).lean();
           const existing = await d.CommissionLedger.find({ orderReferralLineId: { $in: lines.map((l) => l._id) } }).lean();
-          const held = !!(ref.flags && ref.flags.fraudHold);
+          let held = !!(ref.flags && ref.flags.fraudHold);
+          if (d.fraud) {                                   // automated rules (flag + hold only; never blocks a shopper)
+            try { held = (await scanReferredOrder({ m: d.fraud.m, ref, order, settings, cache: fraudCache })) || held; }
+            catch (fe) { d.log.error('[referral] fraud scan failed for order', String(ref.orderId), fe.message); }
+          }
           const { entries, outcome } = deriveSweepEntries({ lines, existing, order, windowDays: settings.return_window_days, held, now });
           if (!entries.length) continue;
           try {
@@ -73,6 +82,7 @@ export async function runReferralSweep(deps = realDeps(), now = new Date()) {
       }
       if (refs.length < BATCH) break;
     }
+    if (d.fraud) { try { stats.fraudAlerts = await scanPromoters({ m: d.fraud.m, settings, now }); } catch (fe) { d.log.error('[referral] promoter scan failed', fe.message); } }
     await d.ReferralJobState.updateOne({ name: 'sweep' }, { $set: { lastRunAt: now, lastResult: stats, lockedUntil: now } });
     return stats;
   } catch (e) {

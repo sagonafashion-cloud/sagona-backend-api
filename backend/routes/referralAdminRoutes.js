@@ -3,6 +3,7 @@ import multer from 'multer';
 import { adminProtect, requireRole } from '../middleware/adminAuth.js';
 import * as c from '../controllers/referralAdminController.js';
 import * as pc from '../controllers/referralPayoutController.js';
+import * as rc from '../controllers/referralReportController.js';
 
 // Mounted at /api/admin/promoters ONLY when REFERRAL_ENABLED=true (see server.js).
 //
@@ -58,6 +59,16 @@ router.post('/payout-items/:itemId/fail', write, pc.failItem);
 router.get('/statements/:promoterId', read, pc.statement);
 router.get('/exports/payouts', read, pc.accountingExport);
 router.get('/exports/tds', read, pc.tdsExport);
+
+// fraud review queue, reports, reconciliation (declared before '/:id')
+router.get('/fraud', read, rc.listFlags);
+router.post('/fraud/:id/clear', write, rc.clearFlag);
+router.post('/fraud/:id/confirm', write, rc.confirmFlag);
+router.get('/reports/liability', read, rc.reportLiability);
+router.get('/reports/summary', read, rc.reportSummary);
+router.get('/reports/promoters', read, rc.reportPromoters);
+router.get('/reports/profit', write, rc.reportProfit);              // uses buying cost: super_admin only
+router.get('/reports/reconciliation', read, rc.reportReconciliation);
 
 // commission rates (insert-only)
 router.get('/rates', read, c.listRates);

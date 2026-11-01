@@ -100,3 +100,22 @@ Reads: super_admin + finance_manager. Writes and the bank file: super_admin only
 
 A promoter is payable only if: active, KYC verified, agreement signed, bank details present, payable >= `min_payout_paise`, not already in an open batch, GSTIN + state present when GST applies, PAN present when TDS applies.
 All CSV cells starting with `= + - @` are prefixed with `'` to block spreadsheet formula injection.
+
+---
+
+## Phase 4 endpoints (`/api/admin/promoters/...`)
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/fraud?status=open\|cleared\|confirmed` | super_admin, finance_manager | Review queue (latest 200) |
+| POST | `/fraud/:id/clear` | super_admin | `{note}` (min 5 chars). False alarm; releases the hold if it was the last open flag |
+| POST | `/fraud/:id/confirm` | super_admin | `{note}`. Claws back the order's unreversed commission (`reversal_fraud`), voids the referral, closes sibling flags |
+| GET | `/reports/liability` | read | Per promoter: pending, payable, in approved payouts, total owed, paid to date |
+| GET | `/reports/summary?from&to` | read | Orders, list value, discount, commission, programme cost %, by category, and GST effect by rate |
+| GET | `/reports/promoters?from&to` | read | Orders, delivered, cancelled/returned, return rate, discount, commission |
+| GET | `/reports/profit?from&to` | **super_admin** | Margin after commission using product buying cost; products without a cost are excluded and reported separately, never guessed |
+| GET | `/reports/reconciliation` | read | Eight integrity checks with sample ids |
+
+Add `&format=csv` to liability, summary (GST rows), promoters and profit for a CSV. "Read" = super_admin + finance_manager.
+
+**Reconciliation checks:** order totals equal the sum of their lines; every commissioned line has its accrual; order discount equals the referral record; no negative pending/payable balance; releases balance to zero per line; payout ledger entries equal approved+paid payout items; code usage counters equal referral records; cancelled/returned orders have no unreversed commission (can show for up to one 6-hour sweep).

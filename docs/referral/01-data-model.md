@@ -85,3 +85,22 @@ All amounts are integer **paise**; rates are **bps**. Everything below is additi
 **Money flow:** draft (nothing reserved) -> approve (ledger `payout` debit per item, after re-checking the live balance) -> bank transfer outside the system -> mark paid with UTR. Failure/cancel before payment writes `payout_void`. Every step is idempotent (`<itemId>:payout`, `<itemId>:void`).
 
 **Tax maths** (all configurable, default OFF; confirm with your CA): net paid = commission + GST on commission - TDS. TDS is computed on commission excluding GST; with an annual threshold only the part of the payout that takes the financial-year total over the threshold is taxed. Payouts never touch customer invoices, store GST returns or turnover.
+
+---
+
+## Phase 4 additions (fraud, reports)
+
+- `referralfraudflags` — `key` (unique; `<orderReferralId>:<rule>` or `promoter:<id>:<rule>:<YYYY-MM>`), promoter, optional order, `rule`, `severity` low/medium/high, `detail`, `status` open/cleared/confirmed, resolver, note.
+- `orderreferrals.flags` gains `fraudScanned` (order checked once) and `fraudHold` (set when any flag was raised; cleared only when the last open flag is cleared) and `fraudConfirmed`.
+- Ledger entry `reversal_fraud` shares the idempotency key `<lineId>:reversal` with cancel/return reversals, so one order can never be reversed twice.
+
+**Rules (they only flag and hold; they never block a shopper at checkout):**
+| Rule | Severity | Fires when |
+|---|---|---|
+| `self_referral` | high | buyer phone/email, or the delivery phone, matches the promoter |
+| `address_match` | high | delivery address and pincode equal the promoter's own |
+| `velocity` | medium | more than `fraud_velocity_orders_24h` orders with one code in 24h |
+| `repeat_customer` | medium | same buyer used the promoter's codes 3+ times in 30 days |
+| `return_rate` | medium | promoter-level: at least 5 orders in 30 days and cancel/return share >= `fraud_return_rate_alert_pct`; alert only, no hold |
+
+Scanning runs inside the existing 6-hourly sweeper, before an order could be made payable, so a flagged order is held in the same pass.

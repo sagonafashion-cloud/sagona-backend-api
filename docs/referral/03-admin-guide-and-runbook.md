@@ -81,3 +81,20 @@ Manage promoters, their KYC and agreement status, referral codes, commission rat
 7. **Month end:** download Payouts CSV for your accountant; TDS CSV for the TDS return working; send promoters their statement (Statements section).
 
 **Rollback / safety:** a draft or approved batch can be cancelled (funds returned by `payout_void`). A paid batch cannot be cancelled; correct it with a ledger adjustment and note.
+
+---
+
+## Phase 4 runbook: fraud review and month-end checks
+
+**Fraud Review tab.** An order with an open flag is **on hold**: the commission stays pending and cannot be paid. For each flag:
+- *Clear* if it is a false alarm (add a note). When the last open flag on that order is cleared the hold lifts and the normal lifecycle continues.
+- *Confirm fraud* if it is real. The commission is clawed back, the referral is voided and the note is audited. Consider suspending the promoter from the Promoters tab.
+The customer's order and discount are not touched by either action.
+
+**Reports tab, monthly:**
+1. Check **Data checks** shows All OK. Anything else: note the sample ids and ask me/your developer before paying out.
+2. **What you owe promoters** is the figure for your books (pending + payable + approved-but-unpaid payouts).
+3. **GST effect of the discount** shows how much lower your reported taxable value and GST are because of referral discounts. Give this to your CA.
+4. **Margin after commission** (super_admin only) uses each product's buying cost; sales for products with no cost on file are shown as excluded.
+
+**Tuning:** if flags are noisy, raise `fraud_velocity_orders_24h` or `fraud_return_rate_alert_pct` in Settings. Rules never delay a customer's order.

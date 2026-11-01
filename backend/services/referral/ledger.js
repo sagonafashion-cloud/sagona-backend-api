@@ -85,3 +85,25 @@ export function deriveSweepEntries({ lines, existing, order, windowDays, held = 
 export function balances(rows) {
   return rows.reduce((b, r) => { b[r.bucket] = (b[r.bucket] || 0) + r.amountPaise; return b; }, { pending: 0, payable: 0 });
 }
+
+/**
+ * Confirmed fraud: claw back whatever commission has not already been reversed, in the bucket
+ * where it sits. Uses the same idempotency key as cancel/return reversals, so an order can
+ * never be reversed twice whichever path got there first.
+ */
+export function fraudReversalEntries({ lines, existing, now = new Date(), actor = 'system' }) {
+  const entries = [];
+  for (const line of lines) {
+    const mine = existing.filter((e) => String(e.orderReferralLineId) === String(line._id));
+    if (!line.commissionPaise || !mine.some((e) => e.entryType === 'accrual_pending')) continue;
+    const reversed = -sum(mine, (e) => e.entryType.startsWith('reversal_'));
+    const toReverse = line.commissionPaise - reversed;
+    if (toReverse <= 0) continue;
+    entries.push({
+      promoterId: line.promoterId, orderId: line.orderId, orderReferralLineId: line._id,
+      entryType: 'reversal_fraud', bucket: mine.some((e) => e.entryType === 'accrual_eligible') ? 'payable' : 'pending',
+      amountPaise: -toReverse, reason: 'Confirmed fraud', eventAt: now, actor, idempotencyKey: `${line._id}:reversal`
+    });
+  }
+  return entries;
+}

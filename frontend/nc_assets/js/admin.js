@@ -223,7 +223,7 @@ function showSection(name) {
     gst:       () => {},
     purchaseInvoices: loadPurchaseInvoices,
     promoters: async () => {
-      const m = await import('./admin-referral.js?v=20261103-p3');
+      const m = await import('./admin-referral.js?v=20261104-p4');
       await m.loadPromoters({ api, toast, openModal, closeModal });
     },
     users:     loadAdminUsers

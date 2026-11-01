@@ -65,7 +65,7 @@ export async function loadPromoters(ctx) {
     return;
   }
 
-  const TABS = [['promoters', 'Promoters'], ['codes', 'Referral Codes'], ['rates', 'Commission Rates'], ['orders', 'Referred Orders'], ['ledger', 'Commission Ledger'], ['payouts', 'Payouts'], ['settings', 'Settings'], ['audit', 'Audit Log']];
+  const TABS = [['promoters', 'Promoters'], ['codes', 'Referral Codes'], ['rates', 'Commission Rates'], ['orders', 'Referred Orders'], ['ledger', 'Commission Ledger'], ['payouts', 'Payouts'], ['fraud', 'Fraud Review'], ['reports', 'Reports'], ['settings', 'Settings'], ['audit', 'Audit Log']];
   const drawTabs = () => {
     document.getElementById('ref-tabs').innerHTML = TABS.map(([k, l]) =>
       `<button class="btn ${tab === k ? 'gold' : 'ghost'}" data-tab="${k}" style="padding:7px 14px;font-size:11px">${l}</button>`).join('');
@@ -341,6 +341,53 @@ export async function loadPromoters(ctx) {
       </tbody></table></div>`;
   }
 
+
+  /* ── Fraud review queue (Phase 4) ── */
+  const RULES = { self_referral: 'Buyer looks like the promoter', address_match: 'Delivered to promoter\'s address', velocity: 'Too many orders in 24h', repeat_customer: 'Same buyer, many orders', return_rate: 'High cancel/return rate' };
+  async function showFraud(status = 'open') {
+    body().innerHTML = '<div class="loading">Loading…</div>';
+    const { data } = await call(`/fraud?status=${status}`);
+    body().innerHTML = `
+      <div style="margin-bottom:8px;font-size:12px">Orders with an open flag are <b>on hold</b>: their commission cannot become payable until you clear or confirm the flag.
+        <select id="fr-status" style="margin-left:8px;padding:6px">${['open', 'cleared', 'confirmed'].map((x) => `<option ${x === status ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      <div class="admin-card"><table class="admin-table"><thead><tr><th>Raised</th><th>Promoter</th><th>Order</th><th>Rule</th><th>Severity</th><th>Detail</th><th></th></tr></thead><tbody>
+      ${data.map((f) => `<tr><td>${dt(f.createdAt)}</td><td>${esc(f.promoterName || '')}</td><td>${esc(f.orderNumber || '—')}</td><td>${esc(RULES[f.rule] || f.rule)}</td>
+        <td>${pill(f.severity, f.severity === 'low', f.severity === 'medium')}</td><td style="font-size:11px">${esc(f.detail || '')}${f.resolutionNote ? `<br><i>${esc(f.resolutionNote)}</i>` : ''}</td>
+        <td>${f.status === 'open' && canWrite ? `<button class="btn" data-fr-clear="${esc(f._id)}">Clear</button> <button class="btn gold" data-fr-confirm="${esc(f._id)}">Confirm fraud</button>` : pill(f.status, f.status === 'cleared', false)}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Nothing here.</td></tr>'}
+      </tbody></table></div>`;
+  }
+
+  /* ── Reports & reconciliation (Phase 4) ── */
+  async function showReports(from = '', to = '') {
+    body().innerHTML = '<div class="loading">Loading…</div>';
+    const q = new URLSearchParams(); if (from) q.set('from', from); if (to) q.set('to', to);
+    const qs = q.toString() ? `?${q}` : '';
+    const [liab, sum, perf, rec] = await Promise.all([call('/reports/liability'), call(`/reports/summary${qs}`), call(`/reports/promoters${qs}`), call('/reports/reconciliation')]);
+    let profit = null; try { profit = (await call(`/reports/profit${qs}`)).data; } catch { /* finance_manager has no access to cost data */ }
+    const s = sum.data.summary, g = sum.data.gst, L = liab.data;
+    body().innerHTML = `
+      <div style="display:flex;gap:8px;align-items:end;margin-bottom:12px;flex-wrap:wrap"><div><label>From</label><input id="rp-from" type="date" value="${esc(from)}"></div><div><label>To</label><input id="rp-to" type="date" value="${esc(to)}"></div><button class="btn" id="rp-go">Apply</button></div>
+      <div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">Data checks ${pill(rec.data.allOk ? 'All OK' : 'Needs attention', rec.data.allOk, false)}</b>
+        <table class="admin-table" style="margin-top:6px"><tbody>${rec.data.checks.map((c) => `<tr><td>${esc(c.check)}</td><td>${c.ok ? pill('OK', true, false) : pill(c.count + ' issue(s)', false, false)}</td><td style="font-size:11px">${c.ok ? '' : esc((c.samples || []).join(', '))}</td></tr>`).join('')}</tbody></table>
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">A cancelled order may show as unreversed for up to 6 hours until the next sweep.</div></div>
+      <div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">What you owe promoters</b> <button class="btn" data-rp-csv="liability">CSV</button>
+        <table class="admin-table" style="margin-top:6px"><thead><tr><th>Promoter</th><th>Pending</th><th>Payable</th><th>In approved payouts</th><th>Total owed</th><th>Paid to date</th></tr></thead><tbody>
+        ${L.rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${inr(r.pendingPaise)}</td><td>${inr(r.payablePaise)}</td><td>${inr(r.reservedPaise)}</td><td><b>${inr(r.owedPaise)}</b></td><td>${inr(r.paidPaise)}</td></tr>`).join('')}
+        <tr><td><b>Total</b></td><td>${inr(L.total.pendingPaise)}</td><td>${inr(L.total.payablePaise)}</td><td>${inr(L.total.reservedPaise)}</td><td><b>${inr(L.total.owedPaise)}</b></td><td>${inr(L.total.paidPaise)}</td></tr></tbody></table></div>
+      <div class="admin-card" style="padding:12px;margin-bottom:12px"><b style="font-size:12px">Programme summary</b> <button class="btn" data-rp-csv="summary">GST CSV</button>
+        <table class="admin-table" style="margin-top:6px"><tbody>
+        <tr><td>Referred orders (excluding cancelled/returned)</td><td>${s.orders}</td></tr><tr><td>Cancelled / returned</td><td>${s.cancelledOrReturned}</td></tr>
+        <tr><td>List value</td><td>${inr(s.listPaise)}</td></tr><tr><td>Customer discount given</td><td>${inr(s.discountPaise)}</td></tr><tr><td>Commission earned</td><td>${inr(s.commissionPaise)}</td></tr>
+        <tr><td><b>Programme cost (discount + commission) as % of list value</b></td><td><b>${s.programmeCostPct}%</b></td></tr>
+        ${profit ? `<tr><td>Margin after commission (from buying cost${profit.unknownCostPaise ? `; ${inr(profit.unknownCostPaise)} of sales have no cost on file and are excluded` : ''})</td><td><b>${inr(profit.marginPaise)}</b> (${profit.marginPct}%)</td></tr>` : ''}</tbody></table>
+        <b style="font-size:12px;display:block;margin-top:10px">GST effect of the discount (store reports lower taxable value by this much)</b>
+        <table class="admin-table" style="margin-top:6px"><thead><tr><th>GST rate</th><th>Taxable value reported</th><th>GST reported</th><th>Taxable value reduced by</th><th>GST reduced by</th></tr></thead><tbody>
+        ${g.rows.map((r) => `<tr><td>${r.gstRate}%</td><td>${inr(r.taxablePaise)}</td><td>${inr(r.gstPaise)}</td><td>${inr(r.taxableReductionPaise)}</td><td>${inr(r.gstReductionPaise)}</td></tr>`).join('') || '<tr><td colspan="5" class="loading">No data.</td></tr>'}</tbody></table></div>
+      <div class="admin-card" style="padding:12px"><b style="font-size:12px">Promoter performance</b> <button class="btn" data-rp-csv="promoters">CSV</button>
+        <table class="admin-table" style="margin-top:6px"><thead><tr><th>Promoter</th><th>Orders</th><th>Delivered</th><th>Cancelled/returned</th><th>Return rate</th><th>Discount</th><th>Commission</th></tr></thead><tbody>
+        ${perf.data.map((p) => `<tr><td>${esc(p.name)}</td><td>${p.orders}</td><td>${p.delivered}</td><td>${p.cancelledOrReturned}</td><td>${p.returnRatePct}%</td><td>${inr(p.discountPaise)}</td><td>${inr(p.commissionPaise)}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">No data.</td></tr>'}</tbody></table></div>`;
+  }
+
   /* ── Settings ── */
   async function showSettings() {
     const { data } = await call('/settings');
@@ -393,6 +440,8 @@ export async function loadPromoters(ctx) {
       else if (tab === 'orders') await showOrders();
       else if (tab === 'ledger') await showLedger();
       else if (tab === 'payouts') await showPayouts();
+      else if (tab === 'fraud') await showFraud();
+      else if (tab === 'reports') await showReports();
       else if (tab === 'settings') await showSettings();
       else await showAudit();
     } catch (e) { body().innerHTML = `<div class="admin-card" style="padding:16px">Failed to load: ${esc(e.message)}</div>`; }
@@ -475,6 +524,19 @@ export async function loadPromoters(ctx) {
         const fy = document.getElementById('ex-fy').value.trim(); const q = fy ? `?fy=${encodeURIComponent(fy)}` : '';
         const csv = await call(t.id === 'ex-pay' ? `/exports/payouts${q}` : `/exports/tds${q}`); return download(t.id === 'ex-pay' ? 'payouts.csv' : 'tds.csv', csv);
       }
+      if (t.dataset.frClear || t.dataset.frConfirm) {
+        const confirmIt = !!t.dataset.frConfirm;
+        const note = window.prompt(confirmIt ? 'Confirm this as fraud? The commission is clawed back. Reason (min 5 characters):' : 'Why is this a false alarm? (min 5 characters)'); if (!note) return;
+        const r = await call(`/fraud/${t.dataset.frClear || t.dataset.frConfirm}/${confirmIt ? 'confirm' : 'clear'}`, { method: 'POST', body: { note } });
+        toast(confirmIt ? `Confirmed; ${inr(r.data.reversedPaise)} clawed back` : 'Cleared; hold released if no other flags', 'success'); return showFraud();
+      }
+      if (t.id === 'rp-go') return showReports(document.getElementById('rp-from').value, document.getElementById('rp-to').value);
+      if (t.dataset.rpCsv) {
+        const name = t.dataset.rpCsv; const q = new URLSearchParams({ format: 'csv' }); const f = document.getElementById('rp-from')?.value, to = document.getElementById('rp-to')?.value;
+        if (f) q.set('from', f); if (to) q.set('to', to);
+        const path = name === 'liability' ? 'liability' : name === 'summary' ? 'summary' : 'promoters';
+        return download(`${name}.csv`, await call(`/reports/${path}?${q}`));
+      }
       if (t.id === 'set-save') {
         const r = await call('/settings', { method: 'PUT', body: readSettings() });
         toast(r.data.changed.length ? `Saved: ${r.data.changed.join(', ')}` : 'No changes', 'success'); return showSettings();
@@ -483,6 +545,7 @@ export async function loadPromoters(ctx) {
     root.addEventListener('change', act(async (e) => {
       if (e.target.id === 'code-status') return showCodes(e.target.value);
       if (e.target.id === 'aud-entity') return showAudit(e.target.value);
+      if (e.target.id === 'fr-status') return showFraud(e.target.value);
       if (e.target.id === 'led-promoter') return showLedger(e.target.value);
       if (e.target.id === 'ro-promoter') return showOrders(e.target.value, document.getElementById('ro-code').value.trim());
     }));
