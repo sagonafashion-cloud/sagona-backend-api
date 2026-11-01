@@ -20,6 +20,9 @@ async function setup({ canWrite=true, pingFails=false, promoters=[], codes=[] }=
     if (path.startsWith('/admin/promoters/settings')) return { data:{ settings:{ enabled:false, return_window_days:10, min_payout_paise:50000, payout_day:5, commission_base:'NET_EX_GST', margin_guard_max_pct:40, margin_guard_mode:'warn', tds_enabled:false, tds_section:'', tds_rate_bps:0, tds_annual_threshold_paise:0, gst_on_commission_bps:1800, reevaluate_gst_slab:false, fraud_velocity_orders_24h:5, fraud_return_rate_alert_pct:40, agreement_template_version:'v1', agreement_grace_days:30, terms_url:'/x', support_contact:'' } } };
     if (path.startsWith('/admin/promoters/codes')) return { data: codes, warnings: [], ...(opts.method==='POST' ? { data:{ codes:['A','B'] } } : {}) };
     if (path.startsWith('/admin/promoters/audit')) return { data: [] };
+    if (path.startsWith('/admin/promoters/orders')) return { data: [{ _id:'r1', orderNumber:'SAG-1', orderDate:'2026-11-02', orderStatus:'delivered', promoter:'Asha', code:'RHEA25', customer:'B*** ******3210', grossPaise:50000, discountPaise:5000, taxablePaise:42857, gstPaise:2143, shippingPaise:9900, commissionPaise:4286, flags:{}, referralStatus:'applied' }] };
+    if (path.startsWith('/admin/promoters/ledger/balances')) return { data: [{ promoterId:'p1', name:'Asha', pendingPaise:4286, payablePaise:1000 }] };
+    if (path.startsWith('/admin/promoters/ledger')) return { data: [{ promoterId:'p1', entryType:'accrual_pending', bucket:'pending', amountPaise:4286, eventAt:'2026-11-02', reason:'Order placed' }] };
     if (path.match(/^\/admin\/promoters\/\?/)) return { data: promoters };
     return { data: {}, warnings: [] };
   };
@@ -34,7 +37,7 @@ const setv = (w, id, v) => { const el=w.document.getElementById(id); el.value=v;
 let s = await setup({ canWrite:false, promoters:[{ _id:'1', name:'<img src=x onerror=alert(1)>', mobile:'9876543210', status:'active', kycStatus:'verified', agreementStatus:'signed', pan:'XXXXXX234F', gstRegistered:false }] });
 t('promoter name is escaped (no injected <img>)', !s.w.document.querySelector('#ref-body img') && s.w.document.getElementById('ref-body').innerHTML.includes('&lt;img'));
 t('read-only role: no Add button', !s.w.document.getElementById('ref-add-promoter'));
-t('tabs rendered', s.w.document.querySelectorAll('#ref-tabs button').length===5);
+t('tabs rendered', s.w.document.querySelectorAll('#ref-tabs button').length===7);
 
 // 2. module off
 s = await setup({ pingFails:true });
@@ -86,6 +89,21 @@ s.w.document.querySelector('[data-k="return_window_days"]').value='14';
 click(s.w,'#set-save'); await tick(80);
 const sp = s.calls.find(c=>c.method==='PUT' && c.path==='/admin/promoters/settings');
 t('settings: 2% -> 200 bps, ₹750 -> 75000 paise, bool, int', sp && sp.body.tds_rate_bps===200 && sp.body.min_payout_paise===75000 && sp.body.tds_enabled===true && sp.body.return_window_days===14 && sp.body.gst_on_commission_bps===1800, JSON.stringify(sp?.body));
+
+// 6b. referred orders + ledger tabs
+s = await setup({ promoters:[{_id:'p1',name:'Asha',status:'active'}] });
+click(s.w,'[data-tab="orders"]'); await tick(100);
+const ot = s.w.document.getElementById('ref-body').textContent;
+t('referred orders: row shows code, masked customer, amounts in rupees', /RHEA25/.test(ot) && /B\*\*\* \*{6}3210/.test(ot) && /₹428\.57/.test(ot) && /₹42\.86/.test(ot), ot.slice(0,200));
+click(s.w,'[data-tab="ledger"]'); await tick(100);
+const lt = s.w.document.getElementById('ref-body').textContent;
+t('ledger: balances and entries render', /₹42\.86/.test(lt) && /₹10/.test(lt) && /accrual_pending/.test(lt));
+setv(s.w,'adj-amt','-25.5'); setv(s.w,'adj-reason','Goodwill correction'); click(s.w,'#adj-save'); await tick(100);
+const ap = s.calls.find(c=>c.path==='/admin/promoters/ledger/adjust');
+t('adjustment: -25.5 rupees -> -2550 paise with reason and promoter', ap && ap.body.amountPaise===-2550 && ap.body.reason==='Goodwill correction' && ap.body.promoterId==='p1' && ap.body.bucket==='payable', JSON.stringify(ap?.body));
+s = await setup({ canWrite:false });
+click(s.w,'[data-tab="ledger"]'); await tick(100);
+t('read-only role: no adjustment form', !s.w.document.getElementById('adj-save'));
 
 // 7. other modals are not hijacked
 s = await setup({});

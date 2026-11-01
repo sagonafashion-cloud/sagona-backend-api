@@ -5,6 +5,9 @@ import ReferralCode from '../models/referral/ReferralCode.js';
 import CommissionRate from '../models/referral/CommissionRate.js';
 import ReferralSetting from '../models/referral/ReferralSetting.js';
 import ReferralAuditLog from '../models/referral/ReferralAuditLog.js';
+import OrderReferral from '../models/referral/OrderReferral.js';
+import CommissionLedger from '../models/referral/CommissionLedger.js';
+import Order from '../models/Order.js';
 import { audit } from '../services/referral/audit.js';
 import { getSettings, clearSettingsCache, validateSettingsUpdate, isProgrammeEnabled, SETTING_DEFS } from '../services/referral/settings.js';
 import { pickRate, marginCheck, canActivatePromoter } from '../services/referral/rates.js';
@@ -609,4 +612,91 @@ export const listAudit = h(async (req, res) => {
     ReferralAuditLog.countDocuments(f)
   ]);
   res.json({ success: true, data: rows, total, page: pg, limit });
+});
+
+/* ─────────────────────────── referred orders & ledger (Phase 2) ─────────────────────────── */
+
+const maskName = (n) => String(n || '').split(/\s+/).filter(Boolean).map((w) => `${w[0]}***`).join(' ');
+const maskPhone = (p) => (p ? `******${String(p).slice(-4)}` : '');
+
+export const listReferredOrders = h(async (req, res) => {
+  const { page: pg, limit, skip } = page(req.query);
+  const f = {};
+  if (req.query.promoterId && isId(req.query.promoterId)) f.promoterId = req.query.promoterId;
+  if (req.query.code) f.codeText = normalizeCode(req.query.code);
+  if (req.query.status) f.status = String(req.query.status);
+  if (req.query.from || req.query.to) {
+    f.createdAt = {};
+    if (req.query.from) f.createdAt.$gte = new Date(String(req.query.from));
+    if (req.query.to) f.createdAt.$lte = new Date(String(req.query.to));
+  }
+  const [refs, total] = await Promise.all([
+    OrderReferral.find(f).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('promoterId', 'name').lean(),
+    OrderReferral.countDocuments(f)
+  ]);
+  const orders = await Order.find({ _id: { $in: refs.map((r) => r.orderId) } })
+    .select('orderNumber status createdAt billing customer').lean();
+  const byId = new Map(orders.map((o) => [String(o._id), o]));
+  const rows = refs.map((r) => {
+    const o = byId.get(String(r.orderId)) || {};
+    return {
+      _id: r._id, orderNumber: r.orderNumber, orderDate: o.createdAt || r.createdAt, orderStatus: o.status,
+      promoter: r.promoterId?.name, code: r.codeText,
+      customer: `${maskName(o.customer?.name)} ${maskPhone(o.customer?.phone)}`.trim(),   // masked: promoters never see this, admins see a masked form
+      grossPaise: Math.round((o.billing?.subtotal || 0) * 100),
+      discountPaise: r.discountTotalPaise,
+      taxablePaise: Math.round((o.billing?.taxableAmount || 0) * 100),
+      gstPaise: Math.round(((o.billing?.cgst || 0) + (o.billing?.sgst || 0) + (o.billing?.igst || 0)) * 100),
+      shippingPaise: Math.round((o.billing?.shippingCharge || 0) * 100),
+      commissionPaise: r.commissionTotalPaise, referralStatus: r.status, flags: r.flags
+    };
+  });
+  res.json({ success: true, data: rows, total, page: pg, limit });
+});
+
+export const listLedger = h(async (req, res) => {
+  const { page: pg, limit, skip } = page(req.query);
+  const f = {};
+  if (req.query.promoterId && isId(req.query.promoterId)) f.promoterId = req.query.promoterId;
+  if (req.query.orderId && isId(req.query.orderId)) f.orderId = req.query.orderId;
+  if (req.query.type) f.entryType = String(req.query.type);
+  const [rows, total] = await Promise.all([
+    CommissionLedger.find(f).sort({ eventAt: -1, _id: -1 }).skip(skip).limit(limit).lean(),
+    CommissionLedger.countDocuments(f)
+  ]);
+  res.json({ success: true, data: rows, total, page: pg, limit });
+});
+
+// SUM(ledger) per promoter and bucket: the single source of truth for what is owed.
+export const ledgerBalances = h(async (_req, res) => {
+  const rows = await CommissionLedger.aggregate([
+    { $group: { _id: { promoterId: '$promoterId', bucket: '$bucket' }, amountPaise: { $sum: '$amountPaise' } } }
+  ]);
+  const by = {};
+  for (const r of rows) {
+    const k = String(r._id.promoterId);
+    by[k] = by[k] || { promoterId: k, pendingPaise: 0, payablePaise: 0 };
+    by[k][r._id.bucket === 'pending' ? 'pendingPaise' : 'payablePaise'] += r.amountPaise;
+  }
+  const promoters = await Promoter.find({ _id: { $in: Object.keys(by) } }).select('name').lean();
+  const names = new Map(promoters.map((p) => [String(p._id), p.name]));
+  res.json({ success: true, data: Object.values(by).map((b) => ({ ...b, name: names.get(b.promoterId) })) });
+});
+
+// Manual correction: a NEW ledger row (never an edit), super_admin only, reason mandatory.
+export const adjustLedger = h(async (req, res) => {
+  const b = req.body || {};
+  const amount = Number(b.amountPaise);
+  const reason = String(b.reason || '').trim();
+  if (!b.promoterId || !isId(b.promoterId) || !(await Promoter.exists({ _id: b.promoterId }))) throw bad('Promoter not found');
+  if (!Number.isInteger(amount) || amount === 0) throw bad('amountPaise must be a non-zero whole number (negative to deduct)');
+  if (Math.abs(amount) > 100000000) throw bad('Amount is unreasonably large');
+  if (reason.length < 5) throw bad('A reason of at least 5 characters is required');
+  const bucket = b.bucket === 'pending' ? 'pending' : 'payable';
+  const entry = await CommissionLedger.create({
+    promoterId: b.promoterId, entryType: 'adjustment', bucket, amountPaise: amount, reason: reason.slice(0, 300),
+    eventAt: new Date(), actor: String(req.adminUser._id), idempotencyKey: `adj:${crypto.randomUUID()}`
+  });
+  await audit(req, { action: 'ledger.adjust', entity: 'Ledger', entityId: entry._id, after: { promoterId: b.promoterId, amountPaise: amount, bucket }, reason });
+  res.status(201).json({ success: true, data: entry });
 });

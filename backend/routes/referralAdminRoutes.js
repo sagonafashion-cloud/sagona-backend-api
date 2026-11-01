@@ -38,6 +38,12 @@ router.get('/settings', read, c.getAllSettings);
 router.put('/settings', write, c.updateSettings);
 router.get('/audit', read, c.listAudit);
 
+// referred orders + commission ledger (declared before '/:id')
+router.get('/orders', read, c.listReferredOrders);
+router.get('/ledger', read, c.listLedger);
+router.get('/ledger/balances', read, c.ledgerBalances);
+router.post('/ledger/adjust', write, c.adjustLedger);
+
 // commission rates (insert-only)
 router.get('/rates', read, c.listRates);
 router.get('/rates/effective', read, c.effectiveRate);
