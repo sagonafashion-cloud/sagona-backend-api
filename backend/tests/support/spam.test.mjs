@@ -66,7 +66,11 @@ import http from 'node:http';
 const emails = [];
 process.env.RESEND_API_KEY = 'test'; process.env.SUPPORT_EMAIL = 'care@test.in';
 const axios = (await import('axios')).default;
-axios.post = async (_u, payload) => { emails.push(payload); return { data: { id: 'x' } }; };
+const verifyCalls = []; let verifyResult = { data: { success: true } };
+axios.post = async (u, payload, opts) => {
+  if (String(u).includes('turnstile')) { verifyCalls.push({ u, payload, opts }); if (verifyResult instanceof Error) throw verifyResult; return verifyResult; }
+  emails.push(payload); return { data: { id: 'x' } };
+};
 const { default: router } = await import('../../routes/supportRoutes.js');
 const app = express(); app.use(express.json()); app.set('trust proxy', 1); app.use('/api/support', router);
 const server = http.createServer(app); await new Promise((r) => server.listen(0, r));
@@ -112,5 +116,36 @@ test('route: validation still enforced (bad email / short message send nothing)'
   emails.length = 0;
   const r1 = await post(goodBody({ email: 'nope' }), '7.7.7.7'); const r2 = await post(goodBody({ message: 'short' }), '7.7.7.8'); await settle();
   assert.ok(r1.status >= 400 && r2.status >= 400); assert.equal(emails.length, 0);
+});
+test('turnstile: secret NOT set -> check skipped, form works exactly as before', async () => {
+  delete process.env.TURNSTILE_SECRET_KEY; emails.length = 0; verifyCalls.length = 0;
+  const r = await post(goodBody({ email: 'ts0@example.com' }), '8.1.1.1'); await settle();
+  assert.equal(r.status, 200); assert.equal(verifyCalls.length, 0); assert.equal(emails.length, 2);
+});
+test('turnstile: secret set -> missing token is refused with a retry message and sends nothing', async () => {
+  process.env.TURNSTILE_SECRET_KEY = 'sekret'; emails.length = 0; verifyCalls.length = 0;
+  const r = await post(goodBody({ email: 'ts1@example.com' }), '8.1.1.2'); await settle();
+  assert.equal(r.status, 400); assert.match(r.json.message, /verification/i); assert.equal(emails.length, 0); assert.equal(verifyCalls.length, 0, 'no call to Cloudflare without a token');
+});
+test('turnstile: Cloudflare says no -> refused; says yes -> delivered; secret/token/ip are sent correctly', async () => {
+  process.env.TURNSTILE_SECRET_KEY = 'sekret'; emails.length = 0; verifyCalls.length = 0;
+  verifyResult = { data: { success: false, 'error-codes': ['invalid-input-response'] } };
+  let r = await post(goodBody({ email: 'ts2@example.com', turnstileToken: 'bad' }), '8.1.1.3'); await settle();
+  assert.equal(r.status, 400); assert.equal(emails.length, 0);
+  verifyResult = { data: { success: true } };
+  r = await post(goodBody({ email: 'ts3@example.com', turnstileToken: 'good-token' }), '8.1.1.4'); await settle();
+  assert.equal(r.status, 200); assert.equal(emails.length, 2);
+  const last = verifyCalls.at(-1); assert.match(String(last.u), /challenges\.cloudflare\.com\/turnstile\/v0\/siteverify/);
+  const f = new URLSearchParams(last.payload); assert.equal(f.get('secret'), 'sekret'); assert.equal(f.get('response'), 'good-token'); assert.equal(f.get('remoteip'), '8.1.1.4');
+});
+test('turnstile: captcha passed but still a bot-like message (gibberish, no form token) is dropped by the other layers', async () => {
+  process.env.TURNSTILE_SECRET_KEY = 'sekret'; verifyResult = { data: { success: true } }; emails.length = 0;
+  const r = await post({ name: 'Jwmems Iktfbsvku', email: 'v@c.com', message: 'Hello I have an order issue', turnstileToken: 'ok' }, '8.1.1.5'); await settle();
+  assert.equal(r.status, 200); assert.equal(emails.length, 0);
+});
+test('turnstile: Cloudflare unreachable -> message allowed (other layers still apply)', async () => {
+  process.env.TURNSTILE_SECRET_KEY = 'sekret'; emails.length = 0; verifyResult = new Error('network down');
+  const r = await post(goodBody({ email: 'ts4@example.com', turnstileToken: 'x' }), '8.1.1.6'); await settle();
+  assert.equal(r.status, 200); assert.equal(emails.length, 2); verifyResult = { data: { success: true } }; delete process.env.TURNSTILE_SECRET_KEY;
 });
 test.after(() => server.close());

@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import { validate } from '../middleware/validate.js';
 import { sendEmail } from '../utils/emailService.js';
 import { contactLimiter, contactIpLimiter } from '../middleware/rateLimiters.js';
+import { verifyTurnstile } from '../utils/turnstile.js';
 import { classify, makeToken, makeReplyLimiter } from '../utils/spamGuard.js';
 
 const router = express.Router();
@@ -25,6 +26,13 @@ router.post('/contact', contactIpLimiter, contactLimiter, contactRules, validate
   try {
     const { name, email, orderNumber, subject, message } = req.body;
     const supportEmail = process.env.SUPPORT_EMAIL || 'care@sagona.in';
+
+    // CAPTCHA (when configured). A person who fails it can simply retry, so say so plainly.
+    const captcha = await verifyTurnstile(req.body.turnstileToken, req.ip);
+    if (!captcha.ok) {
+      console.warn('[support] captcha rejected:', captcha.reason);
+      return res.status(400).json({ success: false, message: 'Please complete the verification and try again.' });
+    }
 
     const verdict = classify({ body: req.body });
     if (verdict.action === 'drop') {

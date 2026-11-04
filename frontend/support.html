@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://via.placeholder.com https://www.googletagmanager.com; connect-src 'self' https://sagona-backend-api.onrender.com https://www.google-analytics.com https://region1.google-analytics.com https://cdn.jsdelivr.net https://storage.googleapis.com https://tfhub.dev https://www.kaggle.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://checkout.razorpay.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://via.placeholder.com https://www.googletagmanager.com; connect-src 'self' https://sagona-backend-api.onrender.com https://www.google-analytics.com https://region1.google-analytics.com https://cdn.jsdelivr.net https://storage.googleapis.com https://tfhub.dev https://www.kaggle.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://checkout.razorpay.com https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
   <title>Help & Support | SAGONA</title>
   <meta name="description" content="Sagona help centre — returns, delivery, size guide, payment issues and contact form.">
   <meta name="robots" content="index, follow">
@@ -97,6 +97,7 @@
           <option>Other</option>
         </select>
         <textarea id="s-message" placeholder="Describe your issue *" required></textarea>
+        <div id="s-turnstile" style="margin:8px 0"></div>
         <button type="submit" class="btn gold">Send Message</button>
         <p class="success-msg" id="s-success">✓ Message received! We'll reply within 24 hours.</p>
       </form>
@@ -116,6 +117,7 @@
     <p style="font-size:13px;">© 2026 Sagona Retail Pvt. Ltd. · <a href="privacy.html" style="color:var(--gold)">Privacy</a> · <a href="terms.html" style="color:var(--gold)">Terms</a> · <a href="shipping.html" style="color:var(--gold)">Shipping</a> · <a href="returns.html" style="color:var(--gold)">Returns</a> · <a href="support.html" style="color:var(--gold)">Support</a></p>
   </footer>
 
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <script type="module">
     import { API_BASE } from '/nc_assets/js/config.js';
 
@@ -130,10 +132,21 @@
     const loadToken = () => fetch(`${API_BASE}/support/token`).then((r) => r.json()).then((j) => { formToken = j.token || ''; }).catch(() => {});
     loadToken();
 
+    // Cloudflare Turnstile (invisible for most visitors). The site key is public by design.
+    const TURNSTILE_SITE_KEY = '0x4AAAAAAFz5ssuD53qi4bim';
+    let turnstileId = null;
+    const mountTurnstile = () => {
+      if (turnstileId !== null || !window.turnstile) return;
+      turnstileId = window.turnstile.render('#s-turnstile', { sitekey: TURNSTILE_SITE_KEY });
+    };
+    const waitForTurnstile = setInterval(() => { if (window.turnstile) { clearInterval(waitForTurnstile); mountTurnstile(); } }, 200);
+    setTimeout(() => clearInterval(waitForTurnstile), 15000);
+
     // Contact form
     document.getElementById('support-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = e.target.querySelector('button');
+      const turnstileToken = window.turnstile && turnstileId !== null ? window.turnstile.getResponse(turnstileId) : '';
       btn.disabled = true; btn.textContent = 'Sending…';
       try {
         const res = await fetch(`${API_BASE}/support/contact`, {
@@ -147,16 +160,19 @@
             message: document.getElementById('s-message').value,
             website: document.getElementById('s-website').value,
             formToken,
+            turnstileToken,
           })
         });
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
-          alert(res.status === 429 ? (j.message || 'Too many messages. Please try again later.') : 'Failed to send. Please email care@sagona.in directly.');
+          if (window.turnstile && turnstileId !== null) window.turnstile.reset(turnstileId);
+          alert([400, 422, 429].includes(res.status) && j.message ? j.message : 'Failed to send. Please email care@sagona.in directly.');
           return;
         }
         document.getElementById('s-success').style.display = 'block';
         e.target.reset();
         formToken = ''; loadToken();
+        if (window.turnstile && turnstileId !== null) window.turnstile.reset(turnstileId);
       } catch {
         alert('Failed to send. Please email care@sagona.in directly.');
       } finally {
