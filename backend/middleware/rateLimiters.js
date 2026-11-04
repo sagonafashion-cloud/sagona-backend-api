@@ -113,6 +113,14 @@ export const pincodeLimiter = makeLimiter({
 // repeatedly submit a third party's address as "email" to email-bomb them
 // (in addition to spamming the support inbox). Keyed by the submitted email,
 // same pattern as adminLoginLimiter, falling back to IP when absent.
+// Per-IP ceiling on top of the per-email budget below: a bot that rotates fake email
+// addresses gets a new "email" budget every time, but not a new IP.
+export const contactIpLimiter = makeLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  message: 'Too many messages sent from this network. Please try again later.',
+});
+
 export const contactLimiter = makeLimiter({
   windowMs: 60 * 60 * 1000,
   max: 5,

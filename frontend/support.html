@@ -79,6 +79,10 @@
     <div class="contact-form">
       <h2 style="margin-top:0">Contact Us</h2>
       <form id="support-form">
+        <!-- Anti-spam honeypot: invisible to people, bots fill it in. Leave empty. -->
+        <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden">
+          <label>Website <input type="text" id="s-website" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
         <input type="text" id="s-name" placeholder="Your name *" required>
         <input type="email" id="s-email" placeholder="Email address *" required>
         <input type="text" id="s-order" placeholder="Order number (if applicable)">
@@ -120,13 +124,19 @@
       item.querySelector('.faq-question').addEventListener('click', () => item.classList.toggle('open'));
     });
 
+    // Anti-spam: ask the server for a signed "form opened" token. Real visitors take a few
+    // seconds to fill the form; bots posting straight to the API never have one.
+    let formToken = '';
+    const loadToken = () => fetch(`${API_BASE}/support/token`).then((r) => r.json()).then((j) => { formToken = j.token || ''; }).catch(() => {});
+    loadToken();
+
     // Contact form
     document.getElementById('support-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = e.target.querySelector('button');
       btn.disabled = true; btn.textContent = 'Sending…';
       try {
-        await fetch(`${API_BASE}/support/contact`, {
+        const res = await fetch(`${API_BASE}/support/contact`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -135,10 +145,18 @@
             orderNumber: document.getElementById('s-order').value,
             subject: document.getElementById('s-subject').value,
             message: document.getElementById('s-message').value,
+            website: document.getElementById('s-website').value,
+            formToken,
           })
         });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          alert(res.status === 429 ? (j.message || 'Too many messages. Please try again later.') : 'Failed to send. Please email care@sagona.in directly.');
+          return;
+        }
         document.getElementById('s-success').style.display = 'block';
         e.target.reset();
+        formToken = ''; loadToken();
       } catch {
         alert('Failed to send. Please email care@sagona.in directly.');
       } finally {
